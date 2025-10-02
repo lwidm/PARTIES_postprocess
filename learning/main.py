@@ -1,9 +1,14 @@
 import h5py  # type: ignore
 import numpy as np
 import matplotlib
+import glob
+
+from numpy._core.fromnumeric import squeeze
 
 matplotlib.use("Qt5Agg")
 from matplotlib import pyplot as plt
+
+Re: float = 2800.0
 
 
 def load_data_with_comments(filename, comment_chars="#%") -> list[np.ndarray]:
@@ -28,10 +33,12 @@ def viscous_sublayer(y_plus: np.ndarray) -> np.ndarray:
     u_plus: np.ndarray = y_plus
     return u_plus
 
+
 # y+ > 30
 def log_law(y_plus: np.ndarray, kappa: float = 0.41, C_plus: float = 5.0):
     u_plus: np.ndarray = 1 / kappa * np.log(y_plus) + C_plus
     return u_plus
+
 
 def law_of_the_wall(
     y_plus: np.ndarray, kappa: float = 0.41, C_plus: float = 5.0
@@ -51,8 +58,10 @@ def law_of_the_wall(
     return (y_plus_viscous, U_plus_viscous, y_plus_log, U_plus_log)
 
 
-def fit_law_of_the_wall_parameters( y_plus_experimental: np.ndarray, U_plus_experimental: np.ndarray) -> tuple[float, float]:
-    from scipy.optimize import curve_fit # type: ignore
+def fit_law_of_the_wall_parameters(
+    y_plus_experimental: np.ndarray, U_plus_experimental: np.ndarray
+) -> tuple[float, float]:
+    from scipy.optimize import curve_fit  # type: ignore
 
     log_mask: np.ndarray = y_plus_experimental > 30
     y_plus_log: np.ndarray = y_plus_experimental[log_mask]
@@ -70,6 +79,76 @@ def fit_law_of_the_wall_parameters( y_plus_experimental: np.ndarray, U_plus_expe
     except Exception as e:
         print(f"Fitting of log law parameters failed: {e}")
         return 0.41, 5.0
+
+
+def get_numerical_data() -> tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
+    sum_U_mean: np.ndarray | None = None
+    sum_upup: np.ndarray | None = None
+    count: int = 0
+
+    y: np.ndarray | None = None
+
+    for data_file in sorted(glob.glob("./data/Data_*.h5")):
+        with h5py.File(data_file, "r") as f:
+            u_raw: np.ndarray = f["u"][:]  # type: ignore
+            u: np.ndarray = u_raw[:-1, :-1, :-1]
+            print(f"Processing file \"{data_file}\" ... ")
+
+            Ny: int = u.shape[1]
+
+            if Ny % 2 != 0:
+                u = np.delete(u, Ny // 2, axis=1)
+                Ny = Ny - 1
+
+            mid: int = Ny // 2
+            u_top: np.ndarray = u[:, :mid, :]
+            u_bottom: np.ndarray = np.flip(u[:, mid:, :], axis=1)
+            u = np.concatenate((u_top, u_bottom), axis=2)
+            uu: np.ndarray = u * u
+
+            if y is None:
+                y_raw: np.ndarray = f["grid"]["yc"]  # type: ignore
+                y = y_raw[:-1]
+                Ny = u.shape[1]
+                if Ny % 2 != 0:
+                    y = np.delete(y, Ny // 2)
+                    Ny = Ny - 1
+                y = y[:mid]
+
+
+            U_mean_single: np.ndarray = np.mean(u, axis=(0, 2))
+
+            UU_mean_single: np.ndarray = np.mean(uu, axis=(0, 2))
+            upup_single: np.ndarray = UU_mean_single - U_mean_single * U_mean_single
+
+            if sum_U_mean is None:
+                sum_U_mean = np.zeros_like(U_mean_single)
+                sum_upup = np.zeros_like(upup_single)
+
+            sum_U_mean += U_mean_single
+            sum_upup += upup_single
+            count += 1
+
+    U_mean: np.ndarray = np.array([])
+    upup: np.ndarray = np.array([])
+    if sum_U_mean is None or sum_upup is None or y is None:
+        return np.array([]), np.array([]), np.array([]), 0.0, 0.0
+
+    print(f"u: {sum_U_mean.shape}")
+    U_mean = np.concatenate((np.array([0]), np.squeeze(sum_U_mean / count)))
+    upup = np.concatenate((np.array([0]), np.squeeze(sum_upup / count)))
+    y = np.concatenate((np.array([0]), np.squeeze(y)))
+
+    du_dy: np.ndarray = (U_mean[1:] - U_mean[:-1]) / (y[1:] - y[:-1])
+
+    tau_w: float = 1 / Re * du_dy[0]
+    u_tau: float = np.sqrt(tau_w)
+
+    y_plus: np.ndarray = Re * y * u_tau
+    U_plus: np.ndarray = U_mean / u_tau
+
+    return y_plus, U_plus, upup, u_tau, tau_w
+
 
 def main() -> None:
     utexas_filename: str = "./data/LM_Channel_0180_mean_prof.dat"
@@ -93,15 +172,89 @@ def main() -> None:
     U_plus_viscous: np.ndarray
     y_plus_log: np.ndarray
     U_plus_log: np.ndarray
-    y_plus_viscous, U_plus_viscous, y_plus_log, U_plus_log = law_of_the_wall(y_plus_utexas, kappa, C_plus)
+    y_plus_viscous, U_plus_viscous, y_plus_log, U_plus_log = law_of_the_wall(
+        y_plus_utexas, kappa, C_plus
+    )
 
-    plt.semilogx(y_plus_utexas, U_plus_utexas, '-k', label="utexas data")
-    plt.semilogx(y_plus_viscous, U_plus_viscous, '--k', label="law of the wall")
-    plt.semilogx(y_plus_log, U_plus_log, '--k')
-    plt.xlim([1e0, np.max(y_plus_utexas)])
-    plt.ylim([0e0, np.max(U_plus_utexas)])
-    plt.legend()
+    y_plus_numerical: np.ndarray
+    U_plus_numerical: np.ndarray
+    upup_numerical: np.ndarray
+    u_tau: float
+    tau_w: float
+    y_plus_numerical, U_plus_numerical, upup_numerical, u_tau, tau_w = (
+        get_numerical_data()
+    )
+    Re_tau: float = Re * u_tau
+
+    print(f"u_tau: {u_tau}, tau_w: {tau_w}, Re_tau: {Re_tau}")
+
+
+    # ---------- Plot ----------
+
+    fig, ax = plt.subplots(figsize=(6.5, 5.5))
+    ax.semilogx(y_plus_utexas, U_plus_utexas, "-k", label="utexas data")
+    ax.semilogx(y_plus_numerical, U_plus_numerical, ":k", label="PARTIES data")
+    ax.semilogx(y_plus_viscous, U_plus_viscous, "--k", label="law of the wall")
+    ax.semilogx(y_plus_log, U_plus_log, "--k")
+
+    viscous_boundary: float = 5.0  # end of viscous sublayer
+    buffer_boundary: float = 30.0
+
+    for x in (viscous_boundary, buffer_boundary):
+        ax.axvline(x=x, color="0.25", linewidth=0.6, linestyle=":", alpha=0.7, zorder=0)
+
+    ax.set_xlim((1e0, np.max(y_plus_utexas)))
+    ax.set_ylim((0e0, np.max([np.max(U_plus_utexas), np.max(U_plus_numerical)])*1.05))
+    ax.set_xlabel(r"$y^+$", fontsize=12)
+    ax.set_ylabel(r"$u^+$", fontsize=12)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_linewidth(1.2)
+    ax.spines["bottom"].set_linewidth(1.0)
+    ax.tick_params(axis="both", which="both", direction="out", labelsize=10)
+    legend = ax.legend(loc="lower right", frameon=False, fontsize=10)
+
+    x_visc_center: float = np.sqrt(1.0 * viscous_boundary)
+    x_buffer_center: float = np.sqrt(viscous_boundary * buffer_boundary)
+    x_right = ax.get_xlim()[1]
+    x_log_center = np.sqrt(buffer_boundary * x_right)
+    y_top = ax.get_ylim()[1]
+    y_label_top = 0.99 * y_top
+
+    ax.text(
+        x_visc_center,
+        y_label_top,
+        "Viscous sublayer\n$y^+<5$",
+        ha="center",
+        va="top",
+        fontsize=9,
+        bbox=dict(facecolor="white", edgecolor="none", alpha=0.0),
+    )
+
+    ax.text(
+        x_buffer_center,
+        y_label_top,
+        "Buffer layer\n$5<y^+<30$",
+        ha="center",
+        va="top",
+        fontsize=9,
+        bbox=dict(facecolor="white", edgecolor="none", alpha=0.0),
+    )
+
+    ax.text(
+        x_log_center,
+        y_label_top,
+        "Log-law region\n$30<y^+$",
+        ha="center",
+        va="top",
+        fontsize=9,
+        bbox=dict(facecolor="white", edgecolor="none", alpha=0.0),
+    )
+
+    plt.tight_layout()
+    plt.savefig(f"Re={Re}_Re_tau={Re_tau}-y+_u+.png", dpi=300)
     plt.show()
+    plt.close(fig)
 
 
 if __name__ == "__main__":
