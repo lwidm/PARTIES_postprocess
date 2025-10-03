@@ -6,12 +6,14 @@ import glob
 matplotlib.use("Qt5Agg")
 from matplotlib import pyplot as plt
 
-plt.rcParams.update({
-    "text.usetex": True,
-    "font.family": "serif",
-    "font.serif": ["Computer Modern"],
-    "text.latex.preamble": r"\usepackage{amsmath}"
-    })
+plt.rcParams.update(
+    {
+        "text.usetex": True,
+        "font.family": "serif",
+        "font.serif": ["Computer Modern"],
+        "text.latex.preamble": r"\usepackage{amsmath}",
+    }
+)
 
 Re: float = 2800.0
 
@@ -106,10 +108,14 @@ def get_numerical_data() -> tuple[np.ndarray, np.ndarray, np.ndarray, float, flo
                 Ny = Ny - 1
 
             mid: int = Ny // 2
+            sum_u: np.ndarray = np.zeros((mid,), dtype=u.dtype)
+            sum_uu: np.ndarray = np.zeros((mid,), dtype=u.dtype)
             u_top: np.ndarray = u[:, :mid, :]
             u_bottom: np.ndarray = np.flip(u[:, mid:, :], axis=1)
-            u = np.concatenate((u_top, u_bottom), axis=2)
-            uu: np.ndarray = u * u
+            sum_u += u_top.sum(axis=(0, 2))
+            sum_uu += (u_top * u_top).sum(axis=(0, 2))
+            sum_u += u_bottom.sum(axis=(0, 2))
+            sum_uu += (u_bottom * u_bottom).sum(axis=(0, 2))
 
             if y is None:
                 y_raw: np.ndarray = f["grid"]["yc"]  # type: ignore
@@ -119,10 +125,12 @@ def get_numerical_data() -> tuple[np.ndarray, np.ndarray, np.ndarray, float, flo
                     y = np.delete(y, Ny // 2)
                     Ny = Ny - 1
                 y = y[:mid]
+ 
+            Nz: int = u.shape[0]
+            Nx: int = u_top.shape[2] + u_bottom.shape[2]
+            U_mean_single: np.ndarray = sum_u / (Nx * Nz)
 
-            U_mean_single: np.ndarray = np.mean(u, axis=(0, 2))
-
-            UU_mean_single: np.ndarray = np.mean(uu, axis=(0, 2))
+            UU_mean_single: np.ndarray = sum_uu / (Nx * Nz)
             upup_single: np.ndarray = UU_mean_single - U_mean_single * U_mean_single
 
             if sum_U_mean is None:
@@ -254,7 +262,9 @@ def main() -> None:
     ax.spines["left"].set_linewidth(1.2)
     ax.spines["bottom"].set_linewidth(1.0)
     ax.tick_params(axis="both", which="both", direction="out", labelsize=12)
-    legend = ax.legend(loc="lower right", frameon=False, fontsize=12, bbox_to_anchor=(1.0, 0.20))
+    legend = ax.legend(
+        loc="lower right", frameon=False, fontsize=12, bbox_to_anchor=(1.0, 0.20)
+    )
 
     x_visc_center: float = np.sqrt(1.0 * viscous_boundary)
     x_buffer_center: float = np.sqrt(viscous_boundary * buffer_boundary)
@@ -294,7 +304,7 @@ def main() -> None:
     )
 
     plt.tight_layout()
-    plt.savefig(f"Re={Re}_Re_tau={Re_tau}-y+_u+.png", dpi=300)
+    plt.savefig(f"output/Re={Re}_Re_tau={Re_tau}-y+_u+.png", dpi=300)
     plt.show()
     plt.close(fig)
 
