@@ -3,10 +3,15 @@ import numpy as np
 import matplotlib
 import glob
 
-from numpy._core.fromnumeric import squeeze
-
 matplotlib.use("Qt5Agg")
 from matplotlib import pyplot as plt
+
+plt.rcParams.update({
+    "text.usetex": True,
+    "font.family": "serif",
+    "font.serif": ["Computer Modern"],
+    "text.latex.preamble": r"\usepackage{amsmath}"
+    })
 
 Re: float = 2800.0
 
@@ -45,7 +50,7 @@ def law_of_the_wall(
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
 
     viscous_buffer: float = 10.0
-    log_buffer: float = 25.0
+    log_buffer: float = 24.0
     viscous_mask: np.ndarray = y_plus < (5.0 + viscous_buffer)
     log_mask: np.ndarray = y_plus > (30.0 - log_buffer)
 
@@ -92,7 +97,7 @@ def get_numerical_data() -> tuple[np.ndarray, np.ndarray, np.ndarray, float, flo
         with h5py.File(data_file, "r") as f:
             u_raw: np.ndarray = f["u"][:]  # type: ignore
             u: np.ndarray = u_raw[:-1, :-1, :-1]
-            print(f"Processing file \"{data_file}\" ... ")
+            print(f'Processing file "{data_file}" ... ')
 
             Ny: int = u.shape[1]
 
@@ -114,7 +119,6 @@ def get_numerical_data() -> tuple[np.ndarray, np.ndarray, np.ndarray, float, flo
                     y = np.delete(y, Ny // 2)
                     Ny = Ny - 1
                 y = y[:mid]
-
 
             U_mean_single: np.ndarray = np.mean(u, axis=(0, 2))
 
@@ -163,19 +167,6 @@ def main() -> None:
         load_data_with_comments(utexas_filename)
     )
 
-    kappa: float
-    C_plus: float
-    kappa, C_plus = fit_law_of_the_wall_parameters(y_plus_utexas, U_plus_utexas)
-    print(f"Law of the wall parameters: kappa={kappa}, C_plus={C_plus}")
-
-    y_plus_viscous: np.ndarray
-    U_plus_viscous: np.ndarray
-    y_plus_log: np.ndarray
-    U_plus_log: np.ndarray
-    y_plus_viscous, U_plus_viscous, y_plus_log, U_plus_log = law_of_the_wall(
-        y_plus_utexas, kappa, C_plus
-    )
-
     y_plus_numerical: np.ndarray
     U_plus_numerical: np.ndarray
     upup_numerical: np.ndarray
@@ -188,31 +179,82 @@ def main() -> None:
 
     print(f"u_tau: {u_tau}, tau_w: {tau_w}, Re_tau: {Re_tau}")
 
+    kappa_utexas: float
+    C_plus_utexas: float
+    kappa_utexas, C_plus_utexas = fit_law_of_the_wall_parameters(
+        y_plus_utexas, U_plus_utexas
+    )
+
+    y_plus_viscous_utexas: np.ndarray
+    U_plus_viscous_utexas: np.ndarray
+    y_plus_log_utexas: np.ndarray
+    U_plus_log_utexas: np.ndarray
+    (
+        y_plus_viscous_utexas,
+        U_plus_viscous_utexas,
+        y_plus_log_utexas,
+        U_plus_log_utexas,
+    ) = law_of_the_wall(y_plus_utexas, kappa_utexas, C_plus_utexas)
+
+    kappa_PARTIES: float
+    C_plus_PARTIES: float
+    kappa_PARTIES, C_plus_PARTIES = fit_law_of_the_wall_parameters(
+        y_plus_numerical, U_plus_numerical
+    )
+
+    y_plus_viscous_PARTIES: np.ndarray
+    U_plus_viscous_PARTIES: np.ndarray
+    y_plus_log_PARTIES: np.ndarray
+    U_plus_log_PARTIES: np.ndarray
+    (
+        y_plus_viscous_PARTIES,
+        U_plus_viscous_PARTIES,
+        y_plus_log_PARTIES,
+        U_plus_log_PARTIES,
+    ) = law_of_the_wall(y_plus_numerical, kappa_PARTIES, C_plus_PARTIES)
+
+    print(
+        f"Law of the wall parameters (utexas):  kappa={kappa_utexas}, C_plus={C_plus_utexas}\n"
+        f"Law of the wall parameters (PARTIES): kappa={kappa_PARTIES}, C_plus={C_plus_PARTIES}"
+    )
 
     # ---------- Plot ----------
 
     fig, ax = plt.subplots(figsize=(6.5, 5.5))
     ax.semilogx(y_plus_utexas, U_plus_utexas, "-k", label="utexas data")
-    ax.semilogx(y_plus_numerical, U_plus_numerical, ":k", label="PARTIES data")
-    ax.semilogx(y_plus_viscous, U_plus_viscous, "--k", label="law of the wall")
-    ax.semilogx(y_plus_log, U_plus_log, "--k")
+    ax.semilogx(y_plus_numerical, U_plus_numerical, "-.k", label="PARTIES data")
+    ax.semilogx(
+        y_plus_viscous_utexas,
+        U_plus_viscous_utexas,
+        "--k",
+        linewidth=0.9,
+        label="law of the wall (utexas)",
+    )
+    ax.semilogx(y_plus_log_utexas, U_plus_log_utexas, "--k", linewidth=0.8)
+    ax.semilogx(
+        y_plus_log_PARTIES,
+        U_plus_log_PARTIES,
+        ":k",
+        linewidth=0.9,
+        label="law of the wall (PARTIES)",
+    )
 
     viscous_boundary: float = 5.0  # end of viscous sublayer
     buffer_boundary: float = 30.0
 
     for x in (viscous_boundary, buffer_boundary):
-        ax.axvline(x=x, color="0.25", linewidth=0.6, linestyle=":", alpha=0.7, zorder=0)
+        ax.axvline(x=x, color="0.25", linewidth=0.8, linestyle=":", alpha=0.7, zorder=0)
 
     ax.set_xlim((1e0, np.max(y_plus_utexas)))
-    ax.set_ylim((0e0, np.max([np.max(U_plus_utexas), np.max(U_plus_numerical)])*1.05))
-    ax.set_xlabel(r"$y^+$", fontsize=12)
-    ax.set_ylabel(r"$u^+$", fontsize=12)
+    ax.set_ylim((0e0, np.max([np.max(U_plus_utexas), np.max(U_plus_numerical)]) * 1.05))
+    ax.set_xlabel(r"$y^+$", fontsize=14)
+    ax.set_ylabel(r"$u^+$", fontsize=14)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     ax.spines["left"].set_linewidth(1.2)
     ax.spines["bottom"].set_linewidth(1.0)
-    ax.tick_params(axis="both", which="both", direction="out", labelsize=10)
-    legend = ax.legend(loc="lower right", frameon=False, fontsize=10)
+    ax.tick_params(axis="both", which="both", direction="out", labelsize=12)
+    legend = ax.legend(loc="lower right", frameon=False, fontsize=12, bbox_to_anchor=(1.0, 0.20))
 
     x_visc_center: float = np.sqrt(1.0 * viscous_boundary)
     x_buffer_center: float = np.sqrt(viscous_boundary * buffer_boundary)
@@ -227,7 +269,7 @@ def main() -> None:
         "Viscous sublayer\n$y^+<5$",
         ha="center",
         va="top",
-        fontsize=9,
+        fontsize=12,
         bbox=dict(facecolor="white", edgecolor="none", alpha=0.0),
     )
 
@@ -237,7 +279,7 @@ def main() -> None:
         "Buffer layer\n$5<y^+<30$",
         ha="center",
         va="top",
-        fontsize=9,
+        fontsize=12,
         bbox=dict(facecolor="white", edgecolor="none", alpha=0.0),
     )
 
@@ -247,7 +289,7 @@ def main() -> None:
         "Log-law region\n$30<y^+$",
         ha="center",
         va="top",
-        fontsize=9,
+        fontsize=12,
         bbox=dict(facecolor="white", edgecolor="none", alpha=0.0),
     )
 
