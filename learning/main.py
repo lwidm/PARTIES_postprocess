@@ -38,8 +38,10 @@ Re: float = 2800.0
 output_dir: str = "output"
 data_dir: str = "data"
 
+num_workers: Optional[int] = None
 if on_anvil:
     data_dir = "."
+    num_workers = None
 
 def load_data_with_comments(filename, comment_chars="#%") -> List[np.ndarray]:
     lines: List[str]
@@ -395,7 +397,7 @@ def main() -> None:
     #     get_numerical_data_singlethreaded()
     # )
     y_plus_numerical, U_plus_numerical, upup_numerical, u_tau, tau_w = (
-        get_nuerical_data_concurrent()
+        get_nuerical_data_concurrent(num_workers=num_workers)
     )
     # y_plus_numerical, U_plus_numerical, upup_numerical, u_tau, tau_w = (
     #     get_numerical_data_saved()
