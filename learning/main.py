@@ -7,8 +7,6 @@ import os
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from typing import Optional
 
-from numpy._core.numeric import dtype
-
 matplotlib.use("Qt5Agg")
 from matplotlib import pyplot as plt
 
