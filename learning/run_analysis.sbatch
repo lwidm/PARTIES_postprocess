@@ -11,6 +11,6 @@
 
 # Manage processing environment, load compilers and applications.
 module load python
-source /home/x-lwidmer/Documents/PARTIES_postprocess/venv_anvil/bin/activate
+source /home/x-lwidmer/Documents/PARTIES_postprocess/venv_default/bin/activate
 
 python ./main.py
