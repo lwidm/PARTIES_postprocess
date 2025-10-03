@@ -21,7 +21,12 @@ plt.rcParams.update(
     }
 )
 
-BLAS_THREAD_ENV_VARS = ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKD_NUM_THREADS", "NUMEXPR_NUM_THREADS")
+BLAS_THREAD_ENV_VARS = (
+    "OMP_NUM_THREADS",
+    "OPENBLAS_NUM_THREADS",
+    "MKD_NUM_THREADS",
+    "NUMEXPR_NUM_THREADS",
+)
 
 Re: float = 2800.0
 
@@ -140,6 +145,8 @@ def _process_file(path: str) -> tuple[np.ndarray, np.ndarray, Optional[np.ndarra
 
 
 def get_nuerical_data_concurrent(
+    min_index: int | None = None,
+    max_index: int | None = None,
     num_workers: int | None = None,
     use_threads: bool = False,
     set_blas_threads_to_1: bool = True,
@@ -150,6 +157,18 @@ def get_nuerical_data_concurrent(
     y: np.ndarray | None = None
 
     files: list[str] = sorted(glob.glob("./data/Data_*.h5"))
+    if min_index is not None or max_index is not None:
+        filtered_files: list[str] = []
+        for file in files:
+            try:
+                file_index: int = int(file.split("_")[-1].split(".")[0])
+                if (min_index is None or file_index >= min_index) and (
+                    max_index is None or file_index <= max_index
+                ):
+                    filtered_files.append(file)
+            except (ValueError, IndexError):
+                continue
+        files = filtered_files
     if len(files) == 0:
         return np.array([]), np.array([]), np.array([]), 0.0, 0.0
 
@@ -172,7 +191,6 @@ def get_nuerical_data_concurrent(
                 sum_U_mean = np.zeros_like(U_mean_single, dtype=np.float64)
                 sum_upup = np.zeros_like(upup_single, dtype=np.float64)
 
-
             sum_U_mean += U_mean_single
             sum_upup += upup_single
             count += 1
@@ -180,9 +198,12 @@ def get_nuerical_data_concurrent(
         if sum_U_mean is None or sum_upup is None or y is None or count == 0:
             return np.array([]), np.array([]), np.array([]), 0.0, 0.0
 
-
-    U_mean: np.ndarray = np.concatenate((np.array([0]), np.squeeze(sum_U_mean / float(count))))
-    upup: np.ndarray = np.concatenate((np.array([0]), np.squeeze(sum_upup / float(count))))
+    U_mean: np.ndarray = np.concatenate(
+        (np.array([0]), np.squeeze(sum_U_mean / float(count)))
+    )
+    upup: np.ndarray = np.concatenate(
+        (np.array([0]), np.squeeze(sum_upup / float(count)))
+    )
     y = np.concatenate((np.array([0]), np.squeeze(y)))
 
     du_dy: np.ndarray = (U_mean[1:] - U_mean[:-1]) / (y[1:] - y[:-1])
@@ -196,16 +217,30 @@ def get_nuerical_data_concurrent(
     return y_plus, U_plus, upup, u_tau, tau_w
 
 
-def get_numerical_data_singlethreaded() -> (
-    tuple[np.ndarray, np.ndarray, np.ndarray, float, float]
-):
+def get_numerical_data_singlethreaded(
+    min_index: int | None = None, max_index: int | None = None
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
     sum_U_mean: np.ndarray | None = None
     sum_upup: np.ndarray | None = None
     count: int = 0
 
     y: np.ndarray | None = None
 
-    for data_file in sorted(glob.glob("./data/Data_*.h5")):
+    files: list[str] = sorted(glob.glob("./data/Data_*.h5"))
+    if min_index is not None or max_index is not None:
+        filtered_files: list[str] = []
+        for file in files:
+            try:
+                file_index: int = int(file.split("_")[-1].split(".")[0])
+                if (min_index is None or file_index >= min_index) and (
+                    max_index is None or file_index <= max_index
+                ):
+                    filtered_files.append(file)
+            except (ValueError, IndexError):
+                continue
+
+        files = filtered_files
+    for data_file in files:
         with h5py.File(data_file, "r") as f:
             u_raw: np.ndarray = f["u"][:]  # type: ignore
             u: np.ndarray = u_raw[:-1, :-1, :-1]
