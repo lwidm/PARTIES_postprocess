@@ -397,7 +397,7 @@ def main() -> None:
     #     get_numerical_data_singlethreaded()
     # )
     y_plus_numerical, U_plus_numerical, upup_numerical, u_tau, tau_w = (
-        get_nuerical_data_concurrent(num_workers=num_workers)
+        get_nuerical_data_concurrent(num_workers=num_workers, use_threads=False)
     )
     # y_plus_numerical, U_plus_numerical, upup_numerical, u_tau, tau_w = (
     #     get_numerical_data_saved()
