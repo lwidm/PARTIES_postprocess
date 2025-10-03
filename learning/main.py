@@ -143,10 +143,31 @@ def _process_file(path: str) -> tuple[np.ndarray, np.ndarray, Optional[np.ndarra
 
         return U_mean_single.astype(np.float64), upup_single.astype(np.float64), y
 
+def save_results_to_h5(results: tuple, output_path: str, metadata: dict | None = None) -> None:
+    y_plus: np.ndarray = results[0]
+    U_plus: np.ndarray = results[1]
+    upup: np.ndarray = results[2]
+    u_tau: np.ndarray = results[3]
+    tau_w: np.ndarray = results[4]
+
+    os.makedirs(os.path.dirname(output_path) if os.path.dirname(output_path) else '.', exist_ok=True)
+
+    with h5py.File(output_path, 'w') as f:
+        f.create_dataset('y_plus', data=y_plus)
+        f.create_dataset('U_plus', data=U_plus)
+        f.create_dataset('upup', data=upup)
+        f.create_dataset('u_tau', data=u_tau)
+        f.create_dataset('tau_w', data=tau_w)
+
+        if metadata:
+            for key, value in metadata.items():
+                if isinstance(value, (str, int, float, bool)):
+                    f.attrs[key] = value
 
 def get_nuerical_data_concurrent(
     min_index: int | None = None,
     max_index: int | None = None,
+    save_output: bool = True,
     num_workers: int | None = None,
     use_threads: bool = False,
     set_blas_threads_to_1: bool = True,
@@ -214,11 +235,22 @@ def get_nuerical_data_concurrent(
     y_plus: np.ndarray = Re * y * u_tau
     U_plus: np.ndarray = U_mean / u_tau
 
-    return y_plus, U_plus, upup, u_tau, tau_w
+    result = (y_plus, U_plus, upup, u_tau, tau_w)
+
+    if save_output:
+        metadata = {
+            "min_index": min_index,
+            "max_index": max_index,
+            "num_files_processed": count,
+            "function": "get_numerical_data_concurrent",
+        }
+        save_results_to_h5(result, f"output/numerical_data.h5", metadata)
+
+    return result
 
 
 def get_numerical_data_singlethreaded(
-    min_index: int | None = None, max_index: int | None = None
+    min_index: int | None = None, max_index: int | None = None, save_output: bool = True
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
     sum_U_mean: np.ndarray | None = None
     sum_upup: np.ndarray | None = None
@@ -303,6 +335,31 @@ def get_numerical_data_singlethreaded(
     y_plus: np.ndarray = Re * y * u_tau
     U_plus: np.ndarray = U_mean / u_tau
 
+    result = (y_plus, U_plus, upup, u_tau, tau_w)
+
+    if save_output:
+        metadata = {
+            "min_index": min_index,
+            "max_index": max_index,
+            "num_files_processed": count,
+            "function": "get_numerical_data_singlethreaded",
+        }
+        save_results_to_h5(result, f"output/numerical_data.h5", metadata)
+
+    return result
+
+def get_numerical_data_saved(file_path: str = "./output/numerical_data.h5") -> tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Saved data file not found: {file_path}")
+    
+    with h5py.File(file_path, 'r') as f:
+        # Load all required datasets
+        y_plus = f['y_plus'][:]
+        U_plus = f['U_plus'][:]
+        upup = f['upup'][:]
+        u_tau = f['u_tau'][()]  # [()] to get scalar value
+        tau_w = f['tau_w'][()]  # [()] to get scalar value
+    
     return y_plus, U_plus, upup, u_tau, tau_w
 
 
@@ -327,8 +384,11 @@ def main() -> None:
     # y_plus_numerical, U_plus_numerical, upup_numerical, u_tau, tau_w = (
     #     get_numerical_data_singlethreaded()
     # )
+    # y_plus_numerical, U_plus_numerical, upup_numerical, u_tau, tau_w = (
+    #     get_nuerical_data_concurrent()
+    # )
     y_plus_numerical, U_plus_numerical, upup_numerical, u_tau, tau_w = (
-        get_nuerical_data_concurrent()
+        get_numerical_data_saved()
     )
     Re_tau: float = Re * u_tau
 
@@ -373,7 +433,7 @@ def main() -> None:
         f"Law of the wall parameters (PARTIES): kappa={kappa_PARTIES}, C_plus={C_plus_PARTIES}"
     )
 
-    # ---------- Plot ----------
+    # ---------- U_mean Plot ----------
 
     fig, ax = plt.subplots(figsize=(6.5, 5.5))
     ax.semilogx(y_plus_utexas, U_plus_utexas, "-k", label="utexas data")
@@ -454,6 +514,8 @@ def main() -> None:
     plt.savefig(f"output/Re={Re}_Re_tau={Re_tau}-y+_u+.png", dpi=300)
     plt.show()
     plt.close(fig)
+
+    # ---------- u_rms Plot ----------
 
 
 if __name__ == "__main__":
