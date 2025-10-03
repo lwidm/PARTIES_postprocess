@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib
 import glob
 import os
+import gc
 
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from typing import Optional, List, Tuple, Dict
@@ -10,7 +11,7 @@ from typing import Optional, List, Tuple, Dict
 
 on_anvil: bool = False
 
-if (os.getenv("MY_MACHINE", "") == "anvil"):
+if os.getenv("MY_MACHINE", "") == "anvil":
     on_anvil = True
 
 if not on_anvil:
@@ -30,7 +31,7 @@ plt.rcParams.update(
 BLAS_THREAD_ENV_VARS = (
     "OMP_NUM_THREADS",
     "OPENBLAS_NUM_THREADS",
-    "MKD_NUM_THREADS",
+    "MKL_NUM_THREADS",
     "NUMEXPR_NUM_THREADS",
 )
 
@@ -41,8 +42,10 @@ data_dir: str = "data"
 num_workers: Optional[int] = None
 if on_anvil:
     data_dir = "."
-    # num_workers = 8
+    num_workers = None
 
+
+# -------------------- utility functions --------------------
 def load_data_with_comments(filename, comment_chars="#%") -> List[np.ndarray]:
     lines: List[str]
     with open(filename, "r") as f:
@@ -58,6 +61,154 @@ def load_data_with_comments(filename, comment_chars="#%") -> List[np.ndarray]:
     data: np.ndarray = np.genfromtxt(data_lines, dtype=np.float64)
 
     return [data[:, i] for i in range(data.shape[1])]
+
+
+def list_data_files(
+    name: str, min_index: Optional[int], max_index: Optional[int]
+) -> List[str]:
+    files: List[str] = sorted(glob.glob(f"./{data_dir}/{name}_*.h5"))
+    if min_index is None and max_index is None:
+        return files
+
+    filtered_files: List[str] = []
+    for file in files:
+        try:
+            file_index: int = int(file.split("_")[-1].split(".")[0])
+            if (min_index is None or file_index >= min_index) and (
+                max_index is None or file_index <= max_index
+            ):
+                filtered_files.append(file)
+        except (ValueError, IndexError):
+            continue
+    return filtered_files
+
+
+def _read_y(path: str) -> np.ndarray:
+    y_raw: np.ndarray
+    with h5py.File(path, "r") as f:
+        y_raw = f["grid"]["yc"][:]  # type: ignore
+    y: np.ndarray = y_raw[:-1]
+    Ny: int = y.shape[0]
+    y = y[: Ny // 2]
+    return y
+
+
+def save_results_to_h5(
+    results: Tuple, output_path: str, metadata: Optional[Dict] = None
+) -> None:
+    y_plus: np.ndarray = results[0]
+    U_plus: np.ndarray = results[1]
+    upup: np.ndarray = results[2]
+    u_tau: np.ndarray = results[3]
+    tau_w: np.ndarray = results[4]
+
+    os.makedirs(
+        os.path.dirname(output_path) if os.path.dirname(output_path) else ".",
+        exist_ok=True,
+    )
+
+    with h5py.File(output_path, "w") as f:
+        f.create_dataset("y_plus", data=y_plus)
+        f.create_dataset("U_plus", data=U_plus)
+        f.create_dataset("upup", data=upup)
+        f.create_dataset("u_tau", data=u_tau)
+        f.create_dataset("tau_w", data=tau_w)
+
+        if metadata:
+            for key, value in metadata.items():
+                if isinstance(value, (str, int, float, bool)):
+                    f.attrs[key] = value
+
+
+def calc_statistics_u(path: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    print(f"Processing {path} ...")
+    u: np.ndarray
+    vfu: np.ndarray
+    with h5py.File(path, "r") as f:
+        u = f["u"][:]  # type: ignore
+        vfu = f["vfu"][:]  # type: ignore
+    u = u[:-1, :-1, :-1]
+    vfu = vfu[:-1, :-1, :-1]
+    Ny: int = u.shape[1]
+    if Ny % 2 != 0:
+        u = np.delete(u, Ny // 2, axis=1)
+        vfu = np.delete(vfu, Ny // 2, axis=1)
+        Ny -= 1
+    mid: int = Ny // 2
+    # vfu = np.zeros_like(vfu) + 1
+
+    sum_u: np.ndarray = (
+        u[:, :mid, :] * vfu[:, :mid, :]
+        + np.flip(u[:, mid:, :], axis=1) * np.flip(vfu[:, mid:, :], axis=1)
+    ).sum(axis=(0, 2))
+    sum_uu: np.ndarray = (
+        u[:, :mid, :] * u[:, :mid, :] * vfu[:, :mid, :]
+        + np.flip(u[:, mid:, :], axis=1)
+        * np.flip(u[:, mid:, :], axis=1)
+        * np.flip(vfu[:, mid:, :], axis=1)
+    ).sum(axis=(0, 2))
+    del u
+    gc.collect()
+    sum_vfu: np.ndarray = (vfu[:, :mid, :] + np.flip(vfu[:, mid:, :], axis=1)).sum(
+        axis=(0, 2)
+    )
+    del vfu
+    gc.collect()
+
+    # Avoid division by zero
+    epsilon = 1e-10
+    sum_vfu = np.where(sum_vfu > epsilon, sum_vfu, epsilon)
+
+    # Calculate volume-weighted averages
+    U_mean_single = sum_u / sum_vfu
+    UU_mean_single = sum_uu / sum_vfu
+    del sum_u, sum_uu, sum_vfu
+    gc.collect()
+    upup_single = UU_mean_single - U_mean_single * U_mean_single
+
+    return U_mean_single, UU_mean_single, upup_single
+
+
+def finalize_results(
+    sum_U_mean: np.ndarray,
+    sum_upup: np.ndarray,
+    y: np.ndarray,
+    count: int,
+    save_output: bool,
+    min_index: Optional[int],
+    max_index: Optional[int],
+    function_name: str,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
+    U_mean: np.ndarray = np.concatenate(
+        (np.ndarray([0]), np.squeeze(sum_U_mean) / float(count))
+    )
+    upup: np.ndarray = np.concatenate(
+        (np.ndarray([0]), np.squeeze(sum_upup) / float(count))
+    )
+
+    du_dy: np.ndarray = (U_mean[1:] - U_mean[:-1]) / (y[1:] - y[:-1])
+
+    tau_w = 1 / Re * du_dy[0]
+    u_tau = np.sqrt(tau_w)
+
+    y_plus = Re * y * u_tau
+    U_plus = U_mean / u_tau
+
+    result = (y_plus, U_plus, upup, u_tau, tau_w)
+
+    if save_output:
+        metadata = {
+            "min_index": min_index,
+            "max_index": max_index,
+            "num_files_processed": count,
+            "function": function_name,
+        }
+        save_results_to_h5(result, f"{output_dir}/numerical_data.h5", metadata)
+
+    return result
+
+
+# -------------------- main functions -------------------
 
 
 # y+ < 5
@@ -113,70 +264,7 @@ def fit_law_of_the_wall_parameters(
         return 0.41, 5.0
 
 
-def _process_file(path: str) -> Tuple[np.ndarray, np.ndarray, Optional[np.ndarray]]:
-    import h5py
-    import numpy as np
-
-    with h5py.File(path, "r") as f:
-        u_raw: np.ndarray = f["u"][:]  # type: ignore
-        u: np.ndarray = u_raw[:-1, :-1, :-1]
-        print(f'Processing file "{path}" ... ')
-
-        Ny: int = u.shape[1]
-
-        if Ny % 2 != 0:
-            u = np.delete(u, Ny // 2, axis=1)
-            Ny = Ny - 1
-
-        mid: int = Ny // 2
-        sum_u: np.ndarray = np.zeros((mid,), dtype=u.dtype)
-        sum_uu: np.ndarray = np.zeros((mid,), dtype=u.dtype)
-        u_top: np.ndarray = u[:, :mid, :]
-        u_bottom: np.ndarray = np.flip(u[:, mid:, :], axis=1)
-        sum_u += u_top.sum(axis=(0, 2))
-        sum_uu += (u_top * u_top).sum(axis=(0, 2))
-        sum_u += u_bottom.sum(axis=(0, 2))
-        sum_uu += (u_bottom * u_bottom).sum(axis=(0, 2))
-
-        y_raw: np.ndarray = f["grid"]["yc"]  # type: ignore
-        y = y_raw[:-1]
-        Ny = u.shape[1]
-        if Ny % 2 != 0:
-            y = np.delete(y, Ny // 2)
-            Ny = Ny - 1
-        y = y[:mid]
-
-        Nz: int = u.shape[0]
-        Nx: int = u_top.shape[2] + u_bottom.shape[2]
-        U_mean_single: np.ndarray = sum_u / (Nx * Nz)
-
-        UU_mean_single: np.ndarray = sum_uu / (Nx * Nz)
-        upup_single: np.ndarray = UU_mean_single - U_mean_single * U_mean_single
-
-        return U_mean_single.astype(np.float64), upup_single.astype(np.float64), y
-
-def save_results_to_h5(results: Tuple, output_path: str, metadata: Optional[Dict] = None) -> None:
-    y_plus: np.ndarray = results[0]
-    U_plus: np.ndarray = results[1]
-    upup: np.ndarray = results[2]
-    u_tau: np.ndarray = results[3]
-    tau_w: np.ndarray = results[4]
-
-    os.makedirs(os.path.dirname(output_path) if os.path.dirname(output_path) else '.', exist_ok=True)
-
-    with h5py.File(output_path, 'w') as f:
-        f.create_dataset('y_plus', data=y_plus)
-        f.create_dataset('U_plus', data=U_plus)
-        f.create_dataset('upup', data=upup)
-        f.create_dataset('u_tau', data=u_tau)
-        f.create_dataset('tau_w', data=tau_w)
-
-        if metadata:
-            for key, value in metadata.items():
-                if isinstance(value, (str, int, float, bool)):
-                    f.attrs[key] = value
-
-def get_nuerical_data_concurrent(
+def get_numerical_data_concurrent(
     min_index: Optional[int] = None,
     max_index: Optional[int] = None,
     save_output: bool = True,
@@ -187,21 +275,11 @@ def get_nuerical_data_concurrent(
     sum_U_mean: Optional[np.ndarray] = None
     sum_upup: Optional[np.ndarray] = None
     count: int = 0
-    y: Optional[np.ndarray] = None
 
-    files: List[str] = sorted(glob.glob(f"./{data_dir}/Data_*.h5"))
-    if min_index is not None or max_index is not None:
-        filtered_files: List[str] = []
-        for file in files:
-            try:
-                file_index: int = int(file.split("_")[-1].split(".")[0])
-                if (min_index is None or file_index >= min_index) and (
-                    max_index is None or file_index <= max_index
-                ):
-                    filtered_files.append(file)
-            except (ValueError, IndexError):
-                continue
-        files = filtered_files
+    files: List[str] = list_data_files("Data", min_index, max_index)
+
+    y: np.ndarray = _read_y(files[0])
+
     if len(files) == 0:
         return np.array([]), np.array([]), np.array([]), 0.0, 0.0
 
@@ -216,10 +294,11 @@ def get_nuerical_data_concurrent(
     Executor = ThreadPoolExecutor if use_threads else ProcessPoolExecutor
 
     with Executor(max_workers=num_workers) as ex:
-        for U_mean_single, upup_single, y_single in ex.map(_process_file, files):
-            if y is None and y_single is not None:
-                y = np.asarray(y_single, dtype=np.float64).copy()
-
+        for (
+            U_mean_single,
+            UU_mean_single,
+            upup_single,
+        ) in ex.map(calc_statistics_u, files):
             if sum_U_mean is None:
                 sum_U_mean = np.zeros_like(U_mean_single, dtype=np.float64)
                 sum_upup = np.zeros_like(upup_single, dtype=np.float64)
@@ -231,148 +310,69 @@ def get_nuerical_data_concurrent(
         if sum_U_mean is None or sum_upup is None or y is None or count == 0:
             return np.array([]), np.array([]), np.array([]), 0.0, 0.0
 
-    U_mean: np.ndarray = np.concatenate(
-        (np.array([0]), np.squeeze(sum_U_mean / float(count)))
+    return finalize_results(
+        sum_U_mean,
+        sum_upup,
+        y,
+        count,
+        save_output,
+        min_index,
+        max_index,
+        "get_numerical_data_concurrent",
     )
-    upup: np.ndarray = np.concatenate(
-        (np.array([0]), np.squeeze(sum_upup / float(count)))
-    )
-    y = np.concatenate((np.array([0]), np.squeeze(y)))
-
-    du_dy: np.ndarray = (U_mean[1:] - U_mean[:-1]) / (y[1:] - y[:-1])
-
-    tau_w: float = 1 / Re * du_dy[0]
-    u_tau: float = np.sqrt(tau_w)
-
-    y_plus: np.ndarray = Re * y * u_tau
-    U_plus: np.ndarray = U_mean / u_tau
-
-    result = (y_plus, U_plus, upup, u_tau, tau_w)
-
-    if save_output:
-        metadata = {
-            "min_index": min_index,
-            "max_index": max_index,
-            "num_files_processed": count,
-            "function": "get_numerical_data_concurrent",
-        }
-        save_results_to_h5(result, f"{output_dir}/numerical_data.h5", metadata)
-
-    return result
 
 
 def get_numerical_data_singlethreaded(
-    min_index: Optional[int] = None, max_index: Optional[int] = None, save_output: bool = True
+    min_index: Optional[int] = None,
+    max_index: Optional[int] = None,
+    save_output: bool = True,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
     sum_U_mean: Optional[np.ndarray] = None
     sum_upup: Optional[np.ndarray] = None
     count: int = 0
 
-    y: Optional[np.ndarray] = None
+    files: list[str] = list_data_files("Data", min_index, max_index)
+    y: np.ndarray = _read_y(files[0])
 
-    files: List[str] = sorted(glob.glob(f"./{data_dir}/Data_*.h5"))
-    if min_index is not None or max_index is not None:
-        filtered_files: List[str] = []
-        for file in files:
-            try:
-                file_index: int = int(file.split("_")[-1].split(".")[0])
-                if (min_index is None or file_index >= min_index) and (
-                    max_index is None or file_index <= max_index
-                ):
-                    filtered_files.append(file)
-            except (ValueError, IndexError):
-                continue
+    for file in files:
+        U_mean_single, UU_mean_single, upup_single = calc_statistics_u(file)
+        if sum_U_mean is None:
+            sum_U_mean = np.zeros_like(U_mean_single, dtype=np.float64)
+            sum_upup = np.zeros_like(upup_single, dtype=np.float64)
 
-        files = filtered_files
-    for data_file in files:
-        with h5py.File(data_file, "r") as f:
-            u_raw: np.ndarray = f["u"][:]  # type: ignore
-            u: np.ndarray = u_raw[:-1, :-1, :-1]
-            print(f'Processing file "{data_file}" ... ')
+        sum_U_mean += U_mean_single
+        sum_upup += upup_single
+        count += 1
 
-            Ny: int = u.shape[1]
-
-            if Ny % 2 != 0:
-                u = np.delete(u, Ny // 2, axis=1)
-                Ny = Ny - 1
-
-            mid: int = Ny // 2
-            sum_u: np.ndarray = np.zeros((mid,), dtype=u.dtype)
-            sum_uu: np.ndarray = np.zeros((mid,), dtype=u.dtype)
-            u_top: np.ndarray = u[:, :mid, :]
-            u_bottom: np.ndarray = np.flip(u[:, mid:, :], axis=1)
-            sum_u += u_top.sum(axis=(0, 2))
-            sum_uu += (u_top * u_top).sum(axis=(0, 2))
-            sum_u += u_bottom.sum(axis=(0, 2))
-            sum_uu += (u_bottom * u_bottom).sum(axis=(0, 2))
-
-            if y is None:
-                y_raw: np.ndarray = f["grid"]["yc"]  # type: ignore
-                y = y_raw[:-1]
-                Ny = u.shape[1]
-                if Ny % 2 != 0:
-                    y = np.delete(y, Ny // 2)
-                    Ny = Ny - 1
-                y = y[:mid]
-
-            Nz: int = u.shape[0]
-            Nx: int = u_top.shape[2] + u_bottom.shape[2]
-            U_mean_single: np.ndarray = sum_u / (Nx * Nz)
-
-            UU_mean_single: np.ndarray = sum_uu / (Nx * Nz)
-            upup_single: np.ndarray = UU_mean_single - U_mean_single * U_mean_single
-
-            if sum_U_mean is None:
-                sum_U_mean = np.zeros_like(U_mean_single)
-                sum_upup = np.zeros_like(upup_single)
-
-            sum_U_mean += U_mean_single
-            sum_upup += upup_single
-            count += 1
-
-    U_mean: np.ndarray = np.array([])
-    upup: np.ndarray = np.array([])
-    if sum_U_mean is None or sum_upup is None or y is None:
+    if sum_U_mean is None or sum_upup is None or y is None or count == 0:
         return np.array([]), np.array([]), np.array([]), 0.0, 0.0
 
-    U_mean = np.concatenate((np.array([0]), np.squeeze(sum_U_mean / count)))
-    upup = np.concatenate((np.array([0]), np.squeeze(sum_upup / count)))
-    y = np.concatenate((np.array([0]), np.squeeze(y)))
+    return finalize_results(
+        sum_U_mean,
+        sum_upup,
+        y,
+        count,
+        save_output,
+        min_index,
+        max_index,
+        "get_numerical_data_concurrent",
+    )
 
-    du_dy: np.ndarray = (U_mean[1:] - U_mean[:-1]) / (y[1:] - y[:-1])
 
-    tau_w: float = 1 / Re * du_dy[0]
-    u_tau: float = np.sqrt(tau_w)
-
-    y_plus: np.ndarray = Re * y * u_tau
-    U_plus: np.ndarray = U_mean / u_tau
-
-    result = (y_plus, U_plus, upup, u_tau, tau_w)
-
-    if save_output:
-        metadata = {
-            "min_index": min_index,
-            "max_index": max_index,
-            "num_files_processed": count,
-            "function": "get_numerical_data_singlethreaded",
-        }
-        save_results_to_h5(result, f"{output_dir}/numerical_data.h5", metadata)
-
-    return result
-
-def get_numerical_data_saved(file_path: str = f"./{output_dir}/numerical_data.h5") -> Tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
+def get_numerical_data_saved(
+    file_path: str = f"./{output_dir}/numerical_data.h5",
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Saved data file not found: {file_path}")
-    
-    with h5py.File(file_path, 'r') as f:
-        # Load all required datasets
-        y_plus = f['y_plus'][:]
-        U_plus = f['U_plus'][:]
-        upup = f['upup'][:]
-        u_tau = f['u_tau'][()]  # [()] to get scalar value
-        tau_w = f['tau_w'][()]  # [()] to get scalar value
-    
-    return y_plus, U_plus, upup, u_tau, tau_w
+
+    with h5py.File(file_path, "r") as f:
+        y_plus = f["y_plus"][:]  # type: ignore
+        U_plus = f["U_plus"][:]  # type: ignore
+        upup = f["upup"][:]  # type: ignore
+        u_tau = f["u_tau"][()]  # type: ignore
+        tau_w = f["tau_w"][()]  # type: ignore
+
+    return y_plus, U_plus, upup, u_tau, tau_w  # type: ignore
 
 
 def main() -> None:
@@ -397,7 +397,7 @@ def main() -> None:
     #     get_numerical_data_singlethreaded()
     # )
     y_plus_numerical, U_plus_numerical, upup_numerical, u_tau, tau_w = (
-        get_nuerical_data_concurrent(num_workers=num_workers, use_threads=False)
+        get_numerical_data_concurrent(num_workers=num_workers, use_threads=False)
     )
     # y_plus_numerical, U_plus_numerical, upup_numerical, u_tau, tau_w = (
     #     get_numerical_data_saved()
