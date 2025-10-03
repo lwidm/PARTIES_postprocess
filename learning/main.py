@@ -7,7 +7,15 @@ import os
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from typing import Optional, List, Tuple, Dict
 
-matplotlib.use("Qt5Agg")
+
+on_anvil: bool = False
+
+if (os.getenv("MY_MACHINE", "") == "anvil"):
+    on_anvil = True
+
+if not on_anvil:
+    matplotlib.use("Qt5Agg")
+
 from matplotlib import pyplot as plt
 
 plt.rcParams.update(
@@ -30,6 +38,8 @@ Re: float = 2800.0
 output_dir: str = "output"
 data_dir: str = "data"
 
+if on_anvil:
+    data_dir = "."
 
 def load_data_with_comments(filename, comment_chars="#%") -> List[np.ndarray]:
     lines: List[str]
@@ -512,7 +522,8 @@ def main() -> None:
 
     plt.tight_layout()
     plt.savefig(f"{output_dir}/Re={Re}_Re_tau={Re_tau}-y+_u+.png", dpi=300)
-    plt.show()
+    if not on_anvil:
+        plt.show()
     plt.close(fig)
 
     # ---------- u_rms Plot ----------

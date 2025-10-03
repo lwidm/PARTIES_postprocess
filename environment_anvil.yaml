@@ -1,0 +1,10 @@
+name: PARTIES_postprocess_anvil
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - numpy
+  - cipy
+  - h5py
+  - matplotlib
+
