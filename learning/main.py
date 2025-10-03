@@ -5,7 +5,7 @@ import glob
 import os
 
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
-from typing import Optional
+from typing import Optional, List, Tuple, Dict
 
 matplotlib.use("Qt5Agg")
 from matplotlib import pyplot as plt
@@ -27,14 +27,16 @@ BLAS_THREAD_ENV_VARS = (
 )
 
 Re: float = 2800.0
+output_dir: str = "output"
+data_dir: str = "data"
 
 
-def load_data_with_comments(filename, comment_chars="#%") -> list[np.ndarray]:
-    lines: list[str]
+def load_data_with_comments(filename, comment_chars="#%") -> List[np.ndarray]:
+    lines: List[str]
     with open(filename, "r") as f:
         lines = f.readlines()
 
-    data_lines: list[str] = []
+    data_lines: List[str] = []
     line: str
     for line in lines:
         stripped: str = line.strip()
@@ -60,7 +62,7 @@ def log_law(y_plus: np.ndarray, kappa: float = 0.41, C_plus: float = 5.0):
 
 def law_of_the_wall(
     y_plus: np.ndarray, kappa: float = 0.41, C_plus: float = 5.0
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
 
     viscous_buffer: float = 10.0
     log_buffer: float = 24.0
@@ -78,17 +80,17 @@ def law_of_the_wall(
 
 def fit_law_of_the_wall_parameters(
     y_plus_experimental: np.ndarray, U_plus_experimental: np.ndarray
-) -> tuple[float, float]:
+) -> Tuple[float, float]:
     from scipy.optimize import curve_fit  # type: ignore
 
     log_mask: np.ndarray = y_plus_experimental > 30
     y_plus_log: np.ndarray = y_plus_experimental[log_mask]
     U_plus_log: np.ndarray = U_plus_experimental[log_mask]
 
-    initial_guess: tuple[float, float] = (0.41, 5.0)
+    initial_guess: Tuple[float, float] = (0.41, 5.0)
 
     try:
-        popt: tuple[float, float]
+        popt: Tuple[float, float]
         popt, _ = curve_fit(log_law, y_plus_log, U_plus_log, p0=initial_guess)
         kappa_fit: float
         C_plus_fit: float
@@ -99,7 +101,7 @@ def fit_law_of_the_wall_parameters(
         return 0.41, 5.0
 
 
-def _process_file(path: str) -> tuple[np.ndarray, np.ndarray, Optional[np.ndarray]]:
+def _process_file(path: str) -> Tuple[np.ndarray, np.ndarray, Optional[np.ndarray]]:
     import h5py
     import numpy as np
 
@@ -141,7 +143,7 @@ def _process_file(path: str) -> tuple[np.ndarray, np.ndarray, Optional[np.ndarra
 
         return U_mean_single.astype(np.float64), upup_single.astype(np.float64), y
 
-def save_results_to_h5(results: tuple, output_path: str, metadata: dict | None = None) -> None:
+def save_results_to_h5(results: Tuple, output_path: str, metadata: Optional[Dict] = None) -> None:
     y_plus: np.ndarray = results[0]
     U_plus: np.ndarray = results[1]
     upup: np.ndarray = results[2]
@@ -163,21 +165,21 @@ def save_results_to_h5(results: tuple, output_path: str, metadata: dict | None =
                     f.attrs[key] = value
 
 def get_nuerical_data_concurrent(
-    min_index: int | None = None,
-    max_index: int | None = None,
+    min_index: Optional[int] = None,
+    max_index: Optional[int] = None,
     save_output: bool = True,
-    num_workers: int | None = None,
+    num_workers: Optional[int] = None,
     use_threads: bool = False,
     set_blas_threads_to_1: bool = True,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
-    sum_U_mean: np.ndarray | None = None
-    sum_upup: np.ndarray | None = None
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
+    sum_U_mean: Optional[np.ndarray] = None
+    sum_upup: Optional[np.ndarray] = None
     count: int = 0
-    y: np.ndarray | None = None
+    y: Optional[np.ndarray] = None
 
-    files: list[str] = sorted(glob.glob("./data/Data_*.h5"))
+    files: List[str] = sorted(glob.glob(f"./{data_dir}/Data_*.h5"))
     if min_index is not None or max_index is not None:
-        filtered_files: list[str] = []
+        filtered_files: List[str] = []
         for file in files:
             try:
                 file_index: int = int(file.split("_")[-1].split(".")[0])
@@ -242,23 +244,23 @@ def get_nuerical_data_concurrent(
             "num_files_processed": count,
             "function": "get_numerical_data_concurrent",
         }
-        save_results_to_h5(result, f"output/numerical_data.h5", metadata)
+        save_results_to_h5(result, f"{output_dir}/numerical_data.h5", metadata)
 
     return result
 
 
 def get_numerical_data_singlethreaded(
-    min_index: int | None = None, max_index: int | None = None, save_output: bool = True
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
-    sum_U_mean: np.ndarray | None = None
-    sum_upup: np.ndarray | None = None
+    min_index: Optional[int] = None, max_index: Optional[int] = None, save_output: bool = True
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
+    sum_U_mean: Optional[np.ndarray] = None
+    sum_upup: Optional[np.ndarray] = None
     count: int = 0
 
-    y: np.ndarray | None = None
+    y: Optional[np.ndarray] = None
 
-    files: list[str] = sorted(glob.glob("./data/Data_*.h5"))
+    files: List[str] = sorted(glob.glob(f"./{data_dir}/Data_*.h5"))
     if min_index is not None or max_index is not None:
-        filtered_files: list[str] = []
+        filtered_files: List[str] = []
         for file in files:
             try:
                 file_index: int = int(file.split("_")[-1].split(".")[0])
@@ -342,11 +344,11 @@ def get_numerical_data_singlethreaded(
             "num_files_processed": count,
             "function": "get_numerical_data_singlethreaded",
         }
-        save_results_to_h5(result, f"output/numerical_data.h5", metadata)
+        save_results_to_h5(result, f"{output_dir}/numerical_data.h5", metadata)
 
     return result
 
-def get_numerical_data_saved(file_path: str = "./output/numerical_data.h5") -> tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
+def get_numerical_data_saved(file_path: str = f"./{output_dir}/numerical_data.h5") -> Tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Saved data file not found: {file_path}")
     
@@ -382,12 +384,12 @@ def main() -> None:
     # y_plus_numerical, U_plus_numerical, upup_numerical, u_tau, tau_w = (
     #     get_numerical_data_singlethreaded()
     # )
-    # y_plus_numerical, U_plus_numerical, upup_numerical, u_tau, tau_w = (
-    #     get_nuerical_data_concurrent()
-    # )
     y_plus_numerical, U_plus_numerical, upup_numerical, u_tau, tau_w = (
-        get_numerical_data_saved()
+        get_nuerical_data_concurrent()
     )
+    # y_plus_numerical, U_plus_numerical, upup_numerical, u_tau, tau_w = (
+    #     get_numerical_data_saved()
+    # )
     Re_tau: float = Re * u_tau
 
     print(f"u_tau: {u_tau}, tau_w: {tau_w}, Re_tau: {Re_tau}")
@@ -509,7 +511,7 @@ def main() -> None:
     )
 
     plt.tight_layout()
-    plt.savefig(f"output/Re={Re}_Re_tau={Re_tau}-y+_u+.png", dpi=300)
+    plt.savefig(f"{output_dir}/Re={Re}_Re_tau={Re_tau}-y+_u+.png", dpi=300)
     plt.show()
     plt.close(fig)
 
