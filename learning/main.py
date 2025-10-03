@@ -41,7 +41,7 @@ data_dir: str = "data"
 num_workers: Optional[int] = None
 if on_anvil:
     data_dir = "."
-    num_workers = None
+    num_workers = 8
 
 def load_data_with_comments(filename, comment_chars="#%") -> List[np.ndarray]:
     lines: List[str]
