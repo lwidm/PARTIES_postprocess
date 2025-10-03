@@ -2,6 +2,12 @@ import h5py  # type: ignore
 import numpy as np
 import matplotlib
 import glob
+import os
+
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from typing import Optional
+
+from numpy._core.numeric import dtype
 
 matplotlib.use("Qt5Agg")
 from matplotlib import pyplot as plt
@@ -14,6 +20,8 @@ plt.rcParams.update(
         "text.latex.preamble": r"\usepackage{amsmath}",
     }
 )
+
+BLAS_THREAD_ENV_VARS = ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKD_NUM_THREADS", "NUMEXPR_NUM_THREADS")
 
 Re: float = 2800.0
 
@@ -88,7 +96,109 @@ def fit_law_of_the_wall_parameters(
         return 0.41, 5.0
 
 
-def get_numerical_data() -> tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
+def _process_file(path: str) -> tuple[np.ndarray, np.ndarray, Optional[np.ndarray]]:
+    import h5py
+    import numpy as np
+
+    with h5py.File(path, "r") as f:
+        u_raw: np.ndarray = f["u"][:]  # type: ignore
+        u: np.ndarray = u_raw[:-1, :-1, :-1]
+        print(f'Processing file "{path}" ... ')
+
+        Ny: int = u.shape[1]
+
+        if Ny % 2 != 0:
+            u = np.delete(u, Ny // 2, axis=1)
+            Ny = Ny - 1
+
+        mid: int = Ny // 2
+        sum_u: np.ndarray = np.zeros((mid,), dtype=u.dtype)
+        sum_uu: np.ndarray = np.zeros((mid,), dtype=u.dtype)
+        u_top: np.ndarray = u[:, :mid, :]
+        u_bottom: np.ndarray = np.flip(u[:, mid:, :], axis=1)
+        sum_u += u_top.sum(axis=(0, 2))
+        sum_uu += (u_top * u_top).sum(axis=(0, 2))
+        sum_u += u_bottom.sum(axis=(0, 2))
+        sum_uu += (u_bottom * u_bottom).sum(axis=(0, 2))
+
+        y_raw: np.ndarray = f["grid"]["yc"]  # type: ignore
+        y = y_raw[:-1]
+        Ny = u.shape[1]
+        if Ny % 2 != 0:
+            y = np.delete(y, Ny // 2)
+            Ny = Ny - 1
+        y = y[:mid]
+
+        Nz: int = u.shape[0]
+        Nx: int = u_top.shape[2] + u_bottom.shape[2]
+        U_mean_single: np.ndarray = sum_u / (Nx * Nz)
+
+        UU_mean_single: np.ndarray = sum_uu / (Nx * Nz)
+        upup_single: np.ndarray = UU_mean_single - U_mean_single * U_mean_single
+
+        return U_mean_single.astype(np.float64), upup_single.astype(np.float64), y
+
+
+def get_nuerical_data_concurrent(
+    num_workers: int | None = None,
+    use_threads: bool = False,
+    set_blas_threads_to_1: bool = True,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
+    sum_U_mean: np.ndarray | None = None
+    sum_upup: np.ndarray | None = None
+    count: int = 0
+    y: np.ndarray | None = None
+
+    files: list[str] = sorted(glob.glob("./data/Data_*.h5"))
+    if len(files) == 0:
+        return np.array([]), np.array([]), np.array([]), 0.0, 0.0
+
+    if num_workers is None:
+        num_workers = min(len(files), (os.cpu_count() or 1))
+
+    if set_blas_threads_to_1:
+        for var in BLAS_THREAD_ENV_VARS:
+            if os.environ.get(var) is None:
+                os.environ[var] = "1"
+
+    Executor = ThreadPoolExecutor if use_threads else ProcessPoolExecutor
+
+    with Executor(max_workers=num_workers) as ex:
+        for U_mean_single, upup_single, y_single in ex.map(_process_file, files):
+            if y is None and y_single is not None:
+                y = np.asarray(y_single, dtype=np.float64).copy()
+
+            if sum_U_mean is None:
+                sum_U_mean = np.zeros_like(U_mean_single, dtype=np.float64)
+                sum_upup = np.zeros_like(upup_single, dtype=np.float64)
+
+
+            sum_U_mean += U_mean_single
+            sum_upup += upup_single
+            count += 1
+
+        if sum_U_mean is None or sum_upup is None or y is None or count == 0:
+            return np.array([]), np.array([]), np.array([]), 0.0, 0.0
+
+
+    U_mean: np.ndarray = np.concatenate((np.array([0]), np.squeeze(sum_U_mean / float(count))))
+    upup: np.ndarray = np.concatenate((np.array([0]), np.squeeze(sum_upup / float(count))))
+    y = np.concatenate((np.array([0]), np.squeeze(y)))
+
+    du_dy: np.ndarray = (U_mean[1:] - U_mean[:-1]) / (y[1:] - y[:-1])
+
+    tau_w: float = 1 / Re * du_dy[0]
+    u_tau: float = np.sqrt(tau_w)
+
+    y_plus: np.ndarray = Re * y * u_tau
+    U_plus: np.ndarray = U_mean / u_tau
+
+    return y_plus, U_plus, upup, u_tau, tau_w
+
+
+def get_numerical_data_singlethreaded() -> (
+    tuple[np.ndarray, np.ndarray, np.ndarray, float, float]
+):
     sum_U_mean: np.ndarray | None = None
     sum_upup: np.ndarray | None = None
     count: int = 0
@@ -125,7 +235,7 @@ def get_numerical_data() -> tuple[np.ndarray, np.ndarray, np.ndarray, float, flo
                     y = np.delete(y, Ny // 2)
                     Ny = Ny - 1
                 y = y[:mid]
- 
+
             Nz: int = u.shape[0]
             Nx: int = u_top.shape[2] + u_bottom.shape[2]
             U_mean_single: np.ndarray = sum_u / (Nx * Nz)
@@ -146,7 +256,6 @@ def get_numerical_data() -> tuple[np.ndarray, np.ndarray, np.ndarray, float, flo
     if sum_U_mean is None or sum_upup is None or y is None:
         return np.array([]), np.array([]), np.array([]), 0.0, 0.0
 
-    print(f"u: {sum_U_mean.shape}")
     U_mean = np.concatenate((np.array([0]), np.squeeze(sum_U_mean / count)))
     upup = np.concatenate((np.array([0]), np.squeeze(sum_upup / count)))
     y = np.concatenate((np.array([0]), np.squeeze(y)))
@@ -180,8 +289,11 @@ def main() -> None:
     upup_numerical: np.ndarray
     u_tau: float
     tau_w: float
+    # y_plus_numerical, U_plus_numerical, upup_numerical, u_tau, tau_w = (
+    #     get_numerical_data_singlethreaded()
+    # )
     y_plus_numerical, U_plus_numerical, upup_numerical, u_tau, tau_w = (
-        get_numerical_data()
+        get_nuerical_data_concurrent()
     )
     Re_tau: float = Re * u_tau
 
