@@ -10,7 +10,6 @@
 #SBATCH --mail-type=all
 
 # Manage processing environment, load compilers and applications.
-module load python
-source /home/x-lwidmer/Documents/PARTIES_postprocess/venv_default/bin/activate
+module load conda
 
 python ./main.py
