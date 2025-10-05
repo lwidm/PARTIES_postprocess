@@ -40,9 +40,11 @@ output_dir: str = "output"
 data_dir: str = "data"
 
 num_workers: Optional[int] = None
+min_index: Optional[int] = None
 if on_anvil:
     data_dir = "."
     num_workers = 64
+    min_index = 180
 
 
 # -------------------- utility functions --------------------
@@ -394,10 +396,12 @@ def main() -> None:
     u_tau: float
     tau_w: float
     # y_plus_numerical, U_plus_numerical, upup_numerical, u_tau, tau_w = (
-    #     get_numerical_data_singlethreaded()
+    #     get_numerical_data_singlethreaded(min_index=min_index)
     # )
     y_plus_numerical, U_plus_numerical, upup_numerical, u_tau, tau_w = (
-        get_numerical_data_concurrent(num_workers=num_workers, use_threads=False)
+        get_numerical_data_concurrent(
+            num_workers=num_workers, use_threads=False, min_index=min_index
+        )
     )
     # y_plus_numerical, U_plus_numerical, upup_numerical, u_tau, tau_w = (
     #     get_numerical_data_saved()
