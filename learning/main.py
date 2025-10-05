@@ -43,7 +43,7 @@ num_workers: Optional[int] = None
 min_index: Optional[int] = None
 if on_anvil:
     data_dir = "."
-    num_workers = 64
+    num_workers = 8
     min_index = 180
 
 

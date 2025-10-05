@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-tas=64
+#SBATCH --cpus-per-tas=8
 #SBATCH --mem-per-cpu=32G
 #SBATCH --time=1:00:00
 #SBATCH -J analysis
