@@ -1,12 +1,15 @@
 import h5py  # type: ignore
 import numpy as np
 import matplotlib
+from matplotlib.axes import Axes
 import glob
 import os
 import gc
 
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
-from typing import Optional, List, Tuple, Dict
+from typing import Optional, List, Tuple, Dict, Literal
+
+from numpy._core.numeric import ndarray
 
 
 on_anvil: bool = False
@@ -39,7 +42,7 @@ Re: float = 2800.0
 output_dir: str = "output"
 data_dir: str = "data"
 
-num_workers: Optional[int] = None
+num_workers: Optional[int] = 4
 min_index: Optional[int] = None
 if on_anvil:
     data_dir = "."
@@ -377,7 +380,24 @@ def get_numerical_data_saved(
     return y_plus, U_plus, upup, u_tau, tau_w  # type: ignore
 
 
-def main() -> None:
+def get_data(
+    processing_type: Literal["singlethreaded", "multithreaded", "saved"],
+) -> Tuple[
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    float,
+    float,
+]:
     utexas_filename: str = "./data/LM_Channel_0180_mean_prof.dat"
 
     y_delta_utexas: np.ndarray
@@ -390,22 +410,32 @@ def main() -> None:
         load_data_with_comments(utexas_filename)
     )
 
-    y_plus_numerical: np.ndarray
-    U_plus_numerical: np.ndarray
-    upup_numerical: np.ndarray
+    y_plus_PARTIES: np.ndarray
+    U_plus_PARTIES: np.ndarray
+    upup_PARTIES: np.ndarray
     u_tau: float
     tau_w: float
-    # y_plus_numerical, U_plus_numerical, upup_numerical, u_tau, tau_w = (
-    #     get_numerical_data_singlethreaded(min_index=min_index)
-    # )
-    y_plus_numerical, U_plus_numerical, upup_numerical, u_tau, tau_w = (
-        get_numerical_data_concurrent(
-            num_workers=num_workers, use_threads=False, min_index=min_index
+    if processing_type == "singlethreaded":
+        y_plus_PARTIES, U_plus_PARTIES, upup_PARTIES, u_tau, tau_w = (
+            get_numerical_data_singlethreaded(min_index=min_index)
         )
-    )
-    # y_plus_numerical, U_plus_numerical, upup_numerical, u_tau, tau_w = (
-    #     get_numerical_data_saved()
-    # )
+
+    elif processing_type == "multithreaded":
+        y_plus_PARTIES, U_plus_PARTIES, upup_PARTIES, u_tau, tau_w = (
+            get_numerical_data_concurrent(
+                num_workers=num_workers, use_threads=False, min_index=min_index
+            )
+        )
+    elif processing_type == "saved":
+        y_plus_PARTIES, U_plus_PARTIES, upup_numerical, u_tau, tau_w = (
+            get_numerical_data_saved()
+        )
+    else:
+        err: str = (
+            f'processing_type must be in ["singlethreaded", "multithreaded", "saved"]. Instead got ${processing_type}'
+        )
+        raise ValueError(err)
+
     Re_tau: float = Re * u_tau
 
     print(f"u_tau: {u_tau}, tau_w: {tau_w}, Re_tau: {Re_tau}")
@@ -430,7 +460,7 @@ def main() -> None:
     kappa_PARTIES: float
     C_plus_PARTIES: float
     kappa_PARTIES, C_plus_PARTIES = fit_law_of_the_wall_parameters(
-        y_plus_numerical, U_plus_numerical
+        y_plus_PARTIES, U_plus_PARTIES
     )
 
     y_plus_viscous_PARTIES: np.ndarray
@@ -442,18 +472,64 @@ def main() -> None:
         U_plus_viscous_PARTIES,
         y_plus_log_PARTIES,
         U_plus_log_PARTIES,
-    ) = law_of_the_wall(y_plus_numerical, kappa_PARTIES, C_plus_PARTIES)
+    ) = law_of_the_wall(y_plus_PARTIES, kappa_PARTIES, C_plus_PARTIES)
 
     print(
         f"Law of the wall parameters (utexas):  kappa={kappa_utexas}, C_plus={C_plus_utexas}\n"
         f"Law of the wall parameters (PARTIES): kappa={kappa_PARTIES}, C_plus={C_plus_PARTIES}"
     )
 
-    # ---------- U_mean Plot ----------
+    return (
+        y_plus_utexas,
+        U_plus_utexas,
+        y_plus_viscous_utexas,
+        U_plus_viscous_utexas,
+        y_plus_log_utexas,
+        U_plus_log_utexas,
+        y_plus_PARTIES,
+        U_plus_PARTIES,
+        y_plus_viscous_PARTIES,
+        U_plus_viscous_PARTIES,
+        y_plus_log_PARTIES,
+        U_plus_log_PARTIES,
+        Re,
+        Re_tau,
+    )
 
+
+def style_ax(ax: Axes) -> Axes:
+    ax.set_xlabel(r"$y^+$", fontsize=14)
+    ax.set_ylabel(r"$u^+$", fontsize=14)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_linewidth(1.2)
+    ax.spines["bottom"].set_linewidth(1.0)
+    ax.tick_params(axis="both", which="both", direction="out", labelsize=12)
+    ax.legend(lframeon=False, fontsize=12)
+
+    plt.tight_layout()
+    return ax
+
+
+def plot_u_plus_y_plus(
+    y_plus_utexas: np.ndarray,
+    U_plus_utexas: np.ndarray,
+    y_plus_viscous_utexas: np.ndarray,
+    U_plus_viscous_utexas: np.ndarray,
+    y_plus_log_utexas: np.ndarray,
+    U_plus_log_utexas: np.ndarray,
+    y_plus_PARTIES: np.ndarray,
+    U_plus_PARTIES: np.ndarray,
+    y_plus_viscous_PARTIES: np.ndarray,
+    U_plus_viscous_PARTIES: np.ndarray,
+    y_plus_log_PARTIES: np.ndarray,
+    U_plus_log_PARTIES: np.ndarray,
+    Re: float,
+    Re_tau: float,
+) -> None:
     fig, ax = plt.subplots(figsize=(6.5, 5.5))
     ax.semilogx(y_plus_utexas, U_plus_utexas, "-k", label="utexas data")
-    ax.semilogx(y_plus_numerical, U_plus_numerical, "-.k", label="PARTIES data")
+    ax.semilogx(y_plus_PARTIES, U_plus_PARTIES, "-.k", label="PARTIES data")
     ax.semilogx(
         y_plus_viscous_utexas,
         U_plus_viscous_utexas,
@@ -476,19 +552,6 @@ def main() -> None:
     for x in (viscous_boundary, buffer_boundary):
         ax.axvline(x=x, color="0.25", linewidth=0.8, linestyle=":", alpha=0.7, zorder=0)
 
-    ax.set_xlim((1e0, np.max(y_plus_utexas)))
-    ax.set_ylim((0e0, np.max([np.max(U_plus_utexas), np.max(U_plus_numerical)]) * 1.05))
-    ax.set_xlabel(r"$y^+$", fontsize=14)
-    ax.set_ylabel(r"$u^+$", fontsize=14)
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["left"].set_linewidth(1.2)
-    ax.spines["bottom"].set_linewidth(1.0)
-    ax.tick_params(axis="both", which="both", direction="out", labelsize=12)
-    legend = ax.legend(
-        loc="lower right", frameon=False, fontsize=12, bbox_to_anchor=(1.0, 0.20)
-    )
-
     x_visc_center: float = np.sqrt(1.0 * viscous_boundary)
     x_buffer_center: float = np.sqrt(viscous_boundary * buffer_boundary)
     x_right = ax.get_xlim()[1]
@@ -496,14 +559,17 @@ def main() -> None:
     y_top = ax.get_ylim()[1]
     y_label_top = 0.99 * y_top
 
+    law_of_the_wall_fontsize: int = 12
+    law_of_the_wall_bbox: Dict = dict(facecolor="white", edgecolor="none", alpha=0.0)
+
     ax.text(
         x_visc_center,
         y_label_top,
         "Viscous sublayer\n$y^+<5$",
         ha="center",
         va="top",
-        fontsize=12,
-        bbox=dict(facecolor="white", edgecolor="none", alpha=0.0),
+        fontsize=law_of_the_wall_fontsize,
+        bbox=law_of_the_wall_bbox,
     )
 
     ax.text(
@@ -512,8 +578,8 @@ def main() -> None:
         "Buffer layer\n$5<y^+<30$",
         ha="center",
         va="top",
-        fontsize=12,
-        bbox=dict(facecolor="white", edgecolor="none", alpha=0.0),
+        fontsize=law_of_the_wall_fontsize,
+        bbox=law_of_the_wall_bbox,
     )
 
     ax.text(
@@ -522,17 +588,54 @@ def main() -> None:
         "Log-law region\n$30<y^+$",
         ha="center",
         va="top",
-        fontsize=12,
-        bbox=dict(facecolor="white", edgecolor="none", alpha=0.0),
+        fontsize=law_of_the_wall_fontsize,
+        bbox=law_of_the_wall_bbox,
     )
 
-    plt.tight_layout()
-    plt.savefig(f"{output_dir}/Re={Re}_Re_tau={Re_tau}-y+_u+.png", dpi=300)
+    ax = style_ax(ax)
+    legend = ax.legend(loc="lower right", bbox_to_anchor=(1.0, 0.20))
+
+    plt.savefig(f"{output_dir}/Re={Re:.0f}_Re_tau={Re_tau:.0f}-y+_u+.png", dpi=300)
     if not on_anvil:
         plt.show()
     plt.close(fig)
 
-    # ---------- u_rms Plot ----------
+
+def main() -> None:
+
+    (
+        y_plus_utexas,
+        U_plus_utexas,
+        y_plus_viscous_utexas,
+        U_plus_viscous_utexas,
+        y_plus_log_utexas,
+        U_plus_log_utexas,
+        y_plus_PARTIES,
+        U_plus_PARTIES,
+        y_plus_viscous_PARTIES,
+        U_plus_viscous_PARTIES,
+        y_plus_log_PARTIES,
+        U_plus_log_PARTIES,
+        Re,
+        Re_tau,
+    ) = get_data("multithreaded")
+
+    plot_u_plus_y_plus(
+        y_plus_utexas,
+        U_plus_utexas,
+        y_plus_viscous_utexas,
+        U_plus_viscous_utexas,
+        y_plus_log_utexas,
+        U_plus_log_utexas,
+        y_plus_PARTIES,
+        U_plus_PARTIES,
+        y_plus_viscous_PARTIES,
+        U_plus_viscous_PARTIES,
+        y_plus_log_PARTIES,
+        U_plus_log_PARTIES,
+        Re,
+        Re_tau,
+    )
 
 
 if __name__ == "__main__":
