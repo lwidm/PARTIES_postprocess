@@ -1,7 +1,6 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --mem=400G
 #SBATCH --cpus-per-task=64
 #SBATCH --time=1:00:00
 #SBATCH -J analysis

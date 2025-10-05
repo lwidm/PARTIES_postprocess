@@ -42,7 +42,7 @@ data_dir: str = "data"
 num_workers: Optional[int] = None
 if on_anvil:
     data_dir = "."
-    num_workers = None
+    num_workers = 64
 
 
 # -------------------- utility functions --------------------
