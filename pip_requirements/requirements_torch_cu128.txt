@@ -1,9 +1,2 @@
-numpy
-scipy
-h5py
-matplotlib
-PyQt5
-snakeviz
-
 torch
 torchvision
