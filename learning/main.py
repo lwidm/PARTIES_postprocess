@@ -280,7 +280,7 @@ def compute_single_component_statistics(
     volume_fraction_data: np.ndarray
     with h5py.File(file_path, "r") as h5_file:
         velocity_data = h5_file[component][:]  # type: ignore
-        volume_fraction_data = h5_file["vf" + component][:]  # type: ignore
+        volume_fraction_data = 1.0 - h5_file["vf" + component][:]  # type: ignore
 
     # Remove boundary points and ensure even grid
     if component != "v":
@@ -372,7 +372,7 @@ def compute_cross_component_statistics(
         ) -> Tuple[np.ndarray, np.ndarray]:
 
             velocity: np.ndarray = h5_file[component][:]  # type: ignore
-            volume_fraction: np.ndarray = h5_file["vf" + component1][:]  # type: ignore
+            volume_fraction: np.ndarray = 1.0 - h5_file["vf" + component1][:]  # type: ignore
             match component:
                 case "u":
                     velocity = (velocity[:-1, :-1, 1:] + velocity[:-1, :-1, :-1]) / 2
@@ -1205,7 +1205,10 @@ def create_normal_stress_plot(
     )
 
     axes.set_xlabel(r"$y^+$", fontsize=14)
-    axes.set_ylabel(r"$\left\{\langle u^\prime u^\prime \rangle, \langle v^\prime v^\prime \rangle, \langle w^\prime w^\prime \rangle, \langle k \rangle\right\} / u_\tau^2$", fontsize=14)
+    axes.set_ylabel(
+        r"$\left\{\langle u^\prime u^\prime \rangle, \langle v^\prime v^\prime \rangle, \langle w^\prime w^\prime \rangle, \langle k \rangle\right\} / u_\tau^2$",
+        fontsize=14,
+    )
     axes.set_xlim(
         0.0,
         min(
@@ -1231,7 +1234,7 @@ def create_normal_stress_plot(
                 np.max(parties_wpwp_plus),
                 np.max(parties_k_plus),
             ),
-            6.0,
+            8.0,
         ),
     )
     axes.legend(loc="lower right", bbox_to_anchor=(1.0, 0.70))
@@ -1244,6 +1247,95 @@ def create_normal_stress_plot(
         plt.show()
 
     plt.close(figure)
+
+
+def create_particle_slice_plot(
+    Re: float,
+    Re_tau: float,
+    min_file_index: Optional[int] = None,
+    max_file_index: Optional[int] = None,
+):
+    data_files: List[str] = find_data_files("Data", min_file_index, max_file_index)
+    data_file: str = data_files[-1]
+    print(f"Showing slice of {data_file}")
+
+    vfu: np.ndarray
+    u: np.ndarray
+    xu: np.ndarray
+    yc: np.ndarray
+    with h5py.File(data_file, "r") as h5_file:
+        vfu = h5_file["vfu"][:]  # type: ignore
+        u = h5_file["u"][:]  # type: ignore
+        xu = h5_file["grid"]["xu"][:-1]  # type: ignore
+        yc = h5_file["grid"]["yc"][:-1]  # type: ignore
+
+    u = u[:-1, :-1, :-1]
+    vfu = vfu[:-1, :-1, :-1]
+
+    k: int = u.shape[0] // 2
+    u = np.squeeze(u[k, :, :])
+    particle_search_width: int = 5
+    vfu_2d: np.ndarray = np.zeros_like(u)
+    idx = k - particle_search_width // 2
+    while idx < k - particle_search_width // 2 + particle_search_width:
+        vfu_2d += vfu[idx, :, :]
+        idx += 1
+    np.clip(vfu_2d, 0, 1, out=vfu_2d)
+
+    X, Y = np.meshgrid(xu, yc)
+    fig, ax = plt.subplots(figsize=(12, 4))
+    pcm = ax.pcolormesh(X, Y, u, shading="auto", cmap="rainbow")
+
+    cbar = fig.colorbar(pcm, ax=ax)
+    cbar.set_label("u")
+
+    eps = 1e-12
+    mask_interior = np.isclose(vfu_2d, 1.0, atol=eps)
+    mask_interface = (vfu_2d > 0.0 + eps) & (vfu_2d < 1.0 - eps)
+
+    interior_plot = np.where(mask_interior, 0.5, np.nan)
+    ax.pcolormesh(X, Y, interior_plot, shading="auto", cmap="Greys", vmin=0, vmax=1)
+
+    interface_plot = np.where(mask_interface, 1.0, np.nan)
+    ax.pcolormesh(X, Y, interface_plot, shading="auto", cmap="Greys", vmin=0, vmax=1)
+
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_aspect("equal", adjustable="box")
+
+    plot_filename = f"{output_dir}/Re={Re:.0f}_Re_tau={Re_tau:.0f}-particles.png"
+    plt.savefig(plot_filename, dpi=300)
+
+    if not ON_ANVIL:
+        plt.show()
+
+    plt.close(fig)
+
+
+def calc_tot_vol_frac(
+    min_file_index: Optional[int] = None, max_file_index: Optional[int] = None
+) -> float:
+
+    data_files: List[str] = find_data_files("Data", min_file_index, max_file_index)
+    data_file: str = data_files[-1]
+    print(f"Calculating volume fraction using {data_file}")
+
+    vfu: np.ndarray
+    with h5py.File(data_file, "r") as h5_file:
+        vfu = h5_file["vfu"][:]  # type: ignore
+
+    vfu = vfu[:-1, :-1, :-1]
+
+    Nx: int
+    Ny: int
+    Nz: int
+    Nz, Ny, Nx = vfu.shape
+
+    phi: float = np.sum(vfu, axis=None) / (Nx * Ny * Nz)
+
+    print(f"Total volume fraction is {phi*100} %")
+
+    return phi
 
 
 # =============================================================================
@@ -1315,6 +1407,9 @@ def main() -> None:
         u_tau,
     )
 
+    create_particle_slice_plot(Re, Re_tau)
+
+    phi = calc_tot_vol_frac()
 
 if __name__ == "__main__":
     main()
