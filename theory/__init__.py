@@ -1,6 +1,6 @@
 # -- thoery/__init__.py
 """
-MyIO subpackage for physics from theory.
+Subpackage for physics from theory.
 
 This package provides:
 - law_of_the_wall: function to calculate law of the wall profiles and fitting of its parameters

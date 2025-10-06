@@ -42,7 +42,7 @@ def fit_parameters(
     experimental_yc_plus: np.ndarray, experimental_plus_velocity: np.ndarray
 ) -> Tuple[float, float]:
 
-    log_region_mask: np.ndarray = experimental_yc_plus > 30
+    log_region_mask: np.ndarray = (experimental_yc_plus > 30) & (experimental_yc_plus < 1e2)
     log_region_yc_plus: np.ndarray = experimental_yc_plus[log_region_mask]
     log_region_velocity: np.ndarray = experimental_plus_velocity[log_region_mask]
 

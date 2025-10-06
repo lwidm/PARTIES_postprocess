@@ -10,6 +10,7 @@ from typing import Optional, List, Tuple, Dict, Literal, Any, Union
 
 from myio import myio
 import theory
+from fluid import flow_statistics
 
 # =============================================================================
 # CONFIGURATION AND CONSTANTS
@@ -44,7 +45,7 @@ utexas_data_dir: str = "./learning/data"
 
 num_workers_single_component: Optional[int] = 5
 num_workers_cross_component: Optional[int] = 2
-min_file_index: Optional[int] = None
+min_file_index: Optional[int] = 233
 
 if ON_ANVIL:
     output_dir = "/home/x-lwidmer/Documents/PARTIES_postprocess/learning/output"
@@ -179,7 +180,7 @@ def compute_cross_component_statistics(
         component2: Second velocity component
 
     Returns:
-        Cross-component mean (e.g., UV_mean for components "u" and "v")
+        Cross-component mean (e.g., UV for components "u" and "v")
     """
     print(f"Processing {component1}{component2} from {file_path} ...")
 
@@ -480,43 +481,43 @@ def compute_all_reynolds_stresses_step_by_step(
 
     # STEP 1: Process u-component and compute upup
     print("Step 1: Processing u-component...")
-    U_mean: np.ndarray
-    UU_mean: np.ndarray
-    U_mean, UU_mean = process_single_component(
+    U: np.ndarray
+    UU: np.ndarray
+    U, UU = process_single_component(
         "u", min_file_index, max_file_index, num_workers_single_component, use_threads
     )
 
-    upup = UU_mean - U_mean * U_mean
-    final_results["U_mean"] = U_mean
-    final_results["UU_mean"] = UU_mean
+    upup = UU - U * U
+    final_results["U"] = U
+    final_results["UU"] = UU
     final_results["upup"] = upup
 
     # Free u-component memory
-    del UU_mean, upup
+    del UU, upup
     gc.collect()
     print("Step 1 complete: upup computed")
 
     # STEP 2: Process v-component and compute vpvp
     print("Step 2: Processing v-component...")
-    V_mean: np.ndarray
-    VV_mean: np.ndarray
-    V_mean, VV_mean = process_single_component(
+    V: np.ndarray
+    VV: np.ndarray
+    V, VV = process_single_component(
         "v", min_file_index, max_file_index, num_workers_single_component, use_threads
     )
 
-    vpvp = VV_mean - V_mean * V_mean
-    final_results["V_mean"] = V_mean
-    final_results["VV_mean"] = VV_mean
+    vpvp = VV - V * V
+    final_results["V"] = V
+    final_results["VV"] = VV
     final_results["vpvp"] = vpvp
 
     # Free v-component memory
-    del VV_mean, vpvp
+    del VV, vpvp
     gc.collect()
     print("Step 2 complete: vpvp computed")
 
     # STEP 3: Process uv cross-component and compute upvp
     print("Step 3: Processing uv cross-component...")
-    UV_mean = process_cross_components(
+    UV = process_cross_components(
         "u",
         "v",
         min_file_index,
@@ -525,30 +526,30 @@ def compute_all_reynolds_stresses_step_by_step(
         use_threads,
     )
 
-    upvp = UV_mean - U_mean * V_mean
-    final_results["UV_mean"] = UV_mean
+    upvp = UV - U * V
+    final_results["UV"] = UV
     final_results["upvp"] = upvp
 
-    # Free UV memory and U_mean (no longer needed)
-    del UV_mean, U_mean
+    # Free UV memory and U (no longer needed)
+    del UV, U
     gc.collect()
     print("Step 3 complete: upvp computed")
 
     # STEP 4: Process w-component and compute wpwp
     print("Step 4: Processing w-component...")
-    W_mean: np.ndarray
-    WW_mean: np.ndarray
-    W_mean, WW_mean = process_single_component(
+    W: np.ndarray
+    WW: np.ndarray
+    W, WW = process_single_component(
         "w", min_file_index, max_file_index, num_workers_single_component, use_threads
     )
 
-    wpwp = WW_mean - W_mean * W_mean
-    final_results["W_mean"] = W_mean
-    final_results["WW_mean"] = WW_mean
+    wpwp = WW - W * W
+    final_results["W"] = W
+    final_results["WW"] = WW
     final_results["wpwp"] = wpwp
 
     # Free w-component memory
-    del WW_mean, wpwp
+    del WW, wpwp
     gc.collect()
     print("Step 4 complete: wpwp computed")
 
@@ -556,7 +557,7 @@ def compute_all_reynolds_stresses_step_by_step(
     print("Step 5: Processing remaining cross-components...")
 
     # Process uw
-    UW_mean = process_cross_components(
+    UW = process_cross_components(
         "u",
         "w",
         min_file_index,
@@ -564,16 +565,16 @@ def compute_all_reynolds_stresses_step_by_step(
         num_workers_cross_component,
         use_threads,
     )
-    if UW_mean.size > 0:
-        upwp = UW_mean - final_results["U_mean"] * W_mean
-        final_results["UW_mean"] = UW_mean
+    if UW.size > 0:
+        upwp = UW - final_results["U"] * W
+        final_results["UW"] = UW
         final_results["upwp"] = upwp
-        del UW_mean
+        del UW
         gc.collect()
         print("Step 5a complete: upwp computed")
 
     # Process vw
-    VW_mean = process_cross_components(
+    VW = process_cross_components(
         "v",
         "w",
         min_file_index,
@@ -581,45 +582,30 @@ def compute_all_reynolds_stresses_step_by_step(
         num_workers_cross_component,
         use_threads,
     )
-    if VW_mean.size > 0:
-        vpwp = VW_mean - V_mean * W_mean
-        final_results["VW_mean"] = VW_mean
+    if VW.size > 0:
+        vpwp = VW - V * W
+        final_results["VW"] = VW
         final_results["vpwp"] = vpwp
-        del VW_mean, V_mean, W_mean
+        del VW, V, W
         gc.collect()
         print("Step 5b complete: vpwp computed")
 
-    # STEP 6: Compute friction velocity and convert to wall units
-    print("Step 6: Computing wall units...")
-    du_dy_0: float = (final_results["U_mean"][0] - (-final_results["U_mean"][0])) / (
-        yc[0] * 2
-    )
-    tau_w: float = 1.0 / Re * du_dy_0
-    u_tau: float = float(np.sqrt(tau_w))
-
-    yc_plus: np.ndarray = Re * yc * u_tau
-    yv_plus: np.ndarray = Re * yv * u_tau
-    final_results["u_tau"] = u_tau
-    final_results["tau_w"] = tau_w
-    final_results["yc_plus"] = yc_plus
-    final_results["yv_plus"] = yv_plus
-    final_results["Re_tau"] = Re * u_tau
     final_results["k"] = 0.5 * (
         final_results["upup"] + final_results["vpvp"] + final_results["wpwp"]
     )
 
-    # Convert to wall units
-    final_results["U_plus"] = final_results["U_mean"] / u_tau
-    final_results["upup_plus"] = final_results["upup"] / (u_tau * u_tau)
-    final_results["vpvp_plus"] = final_results["vpvp"] / (u_tau * u_tau)
-    final_results["wpwp_plus"] = final_results["wpwp"] / (u_tau * u_tau)
-    final_results["upvp_plus"] = final_results["upvp"] / (u_tau * u_tau)
-    final_results["k_plus"] = final_results["k"] / (u_tau * u_tau)
+    # STEP 6: Compute friction velocity and convert to wall units
+    print("Step 6: Computing wall units...")
+    tmp_grid: Dict[str, np.ndarray] = {"yc": yc, "yv": yv}  # type: ignore
+    tau_w, u_tau = flow_statistics.calc_friction_velocity(final_results, tmp_grid, Re)
 
-    if "upwp" in final_results:
-        final_results["upwp_plus"] = final_results["upwp"] / (u_tau * u_tau)
-    if "vpwp" in final_results:
-        final_results["vpwp_plus"] = final_results["vpwp"] / (u_tau * u_tau)
+    wall_results: Dict[str, Any] = flow_statistics.get_wall_units(
+        final_results, tmp_grid, Re, tau_w, u_tau
+    )
+
+    final_results = final_results | wall_results
+    del wall_results
+    gc.collect()
 
     print("Step 6 complete: All quantities converted to wall units")
 
@@ -638,6 +624,59 @@ def compute_all_reynolds_stresses_step_by_step(
     return final_results
 
 
+def compute_all_reynolds_stresses_ADLeonelli(
+    min_file_index: Optional[int] = None,
+    max_file_index: Optional[int] = None,
+    num_workers_single_component: Optional[int] = None,
+    num_workers_cross_component: Optional[int] = None,
+    use_threads: bool = False,
+    save_intermediates: bool = True,
+) -> Dict[str, Any]:
+    """
+    Compute all Reynolds stresses using ADLeonelli's code
+
+    This function processes components one at a time, saves intermediate results,
+    and computes Reynolds stresses while minimizing memory usage.
+
+    Args:
+        min_file_index: Minimum file index to process
+        max_file_index: Maximum file index to process
+        num_workers: Number of parallel workers
+        use_threads: Use threads instead of processes
+        save_intermediates: Whether to save intermediate results
+
+    Returns:
+        Dictionary containing all final results including wall units
+    """
+    print("Starting Reynolds stress computation...")
+
+    data_files: List[Path] = myio.list_parties_data_files(
+        parties_data_dir, "Data", min_file_index, max_file_index
+    )
+    if not data_files:
+        return {}
+
+    grid: Dict[str, np.ndarray] = flow_statistics.get_grid(data_files[0])
+
+    results = flow_statistics.process_mean_flow(data_files, grid)
+    results = results | flow_statistics.process_fluctuations(data_files, results, grid)
+
+    tau_w, u_tau = flow_statistics.calc_friction_velocity(results, grid, Re)
+
+    results = results | flow_statistics.get_wall_units(results, grid, Re, tau_w, u_tau)
+
+    myio.save_to_h5(
+        f"{output_dir}/reynolds_stresses.h5",
+        results,
+        {
+            "min_index": min_file_index,
+            "max_index": max_file_index,
+            "num_files_processed": len(data_files),
+        },
+    )
+
+    return results
+
 
 # =============================================================================
 # DATA COORDINATION AND PLOTTING FUNCTIONS
@@ -645,7 +684,7 @@ def compute_all_reynolds_stresses_step_by_step(
 
 
 def get_processed_data(
-    processing_method: Literal["step_by_step", "saved"],
+    processing_method: Literal["step_by_step", "saved", "ADLeonelli"],
 ) -> Tuple[
     np.ndarray,
     np.ndarray,
@@ -705,7 +744,14 @@ def get_processed_data(
     ) = myio.load_columns_from_txt_numpy(utexas_fluc_data_file)
 
     parties_results: Dict[str, Any]
-    if processing_method == "step_by_step":
+    if processing_method == "ADLeonelli":
+        parties_results = compute_all_reynolds_stresses_ADLeonelli(
+            min_file_index=min_file_index,
+            num_workers_single_component=num_workers_single_component,
+            num_workers_cross_component=num_workers_cross_component,
+            use_threads=False,
+        )
+    elif processing_method == "step_by_step":
         parties_results = compute_all_reynolds_stresses_step_by_step(
             min_file_index=min_file_index,
             num_workers_single_component=num_workers_single_component,
@@ -716,7 +762,7 @@ def get_processed_data(
         parties_results, _ = myio.load_from_h5(f"{output_dir}/reynolds_stresses.h5")
     else:
         raise ValueError(
-            f'processing_method must be one of ["step_by_step", "saved"]. Got: {processing_method}'
+            f'processing_method must be one of ["step_by_step", "saved", "ADLeonelli"]. Got: {processing_method}'
         )
 
     # Extract required values from results dictionary
@@ -747,14 +793,18 @@ def get_processed_data(
         utexas_viscous_u_plus,
         utexas_log_y_plus,
         utexas_log_u_plus,
-    ) = theory.law_of_the_wall.generate_profile(utexas_y_plus, utexas_kappa, utexas_constant)
+    ) = theory.law_of_the_wall.generate_profile(
+        utexas_y_plus, utexas_kappa, utexas_constant
+    )
 
     (
         parties_viscous_yc_plus,
         parties_viscous_u_plus,
         parties_log_yc_plus,
         parties_log_u_plus,
-    ) = theory.law_of_the_wall.generate_profile(parties_yc_plus, parties_kappa, parties_constant)
+    ) = theory.law_of_the_wall.generate_profile(
+        parties_yc_plus, parties_kappa, parties_constant
+    )
 
     print(
         f"Law of the wall parameters (utexas):  κ={utexas_kappa:.3f}, C+={utexas_constant:.3f}\n"
@@ -818,6 +868,9 @@ def create_velocity_profile_plot(
 ) -> None:
     figure, axes = plt.subplots(figsize=(6.5, 5.5))
 
+    axes.set_xlim(1.0, min(max(np.max(utexas_y_plus), np.max(parties_yc_plus)), 1e2))
+    axes.set_ylim(0.0, 1.1 * max(np.max(utexas_u_plus), np.max(parties_u_plus)))
+
     axes.semilogx(utexas_y_plus, utexas_u_plus, "-k", label="utexas data")
     axes.semilogx(parties_yc_plus, parties_u_plus, "-.k", label="PARTIES data")
     axes.semilogx(
@@ -874,8 +927,6 @@ def create_velocity_profile_plot(
 
     axes.set_xlabel(r"$y^+$", fontsize=14)
     axes.set_ylabel(r"$u^+$", fontsize=14)
-    axes.set_xlim(1.0, max(np.max(utexas_y_plus), np.max(parties_yc_plus)))
-    axes.set_ylim(0.0, 1.1 * max(np.max(utexas_u_plus), np.max(parties_u_plus)))
     axes.legend(loc="lower right", bbox_to_anchor=(1.0, 0.20))
     axes = format_plot_axes(axes)
 
@@ -950,7 +1001,7 @@ def create_normal_stress_plot(
     )
 
     axes.plot(
-        parties_yv_plus,
+        parties_yc_plus,
         parties_upup_plus,
         "-k",
         label=r"$\langle u^{\prime}u^{\prime}\rangle / u_{\tau}$ (PARTIES)",
@@ -1083,43 +1134,15 @@ def create_particle_slice_plot(
 
     plt.close(fig)
 
-
-def calc_tot_vol_frac(
-    min_file_index: Optional[int] = None, max_file_index: Optional[int] = None
-) -> float:
-
-    data_files: List[Path] = myio.list_parties_data_files(
-        parties_data_dir, "Data", min_file_index, max_file_index
-    )
-    data_file: Path = data_files[-1]
-    print(f"Calculating volume fraction using {data_file}")
-
-    vfu: np.ndarray
-    with h5py.File(data_file, "r") as h5_file:
-        vfu = h5_file["vfu"][:]  # type: ignore
-
-    vfu = vfu[:-1, :-1, :-1]
-
-    Nx: int
-    Ny: int
-    Nz: int
-    Nz, Ny, Nx = vfu.shape
-
-    phi: float = np.sum(vfu, axis=None) / (Nx * Ny * Nz)
-
-    print(f"Total volume fraction is {phi*100} %")
-
-    return phi
-
-
 # =============================================================================
 # MAIN EXECUTION
 # =============================================================================
 
 
 def main() -> None:
-    method: Literal["step_by_step", "saved"] = "step_by_step"
-    # method: Literal["step_by_step", "saved"] = "saved"
+    # method: Literal["step_by_step", "saved", "ADLeonelli"] = "step_by_step"
+    # method: Literal["step_by_step", "saved", "ADLeonelli"] = "saved"
+    method: Literal["step_by_step", "saved", "ADLeonelli"] = "ADLeonelli"
     (
         utexas_y_plus,
         utexas_u_plus,
@@ -1183,7 +1206,13 @@ def main() -> None:
 
     create_particle_slice_plot(Re, Re_tau)
 
-    phi = calc_tot_vol_frac()
+
+    data_files: List[Path] = myio.list_parties_data_files(
+        parties_data_dir, "Data"
+    )
+    data_file: Path = data_files[-1]
+    phi = flow_statistics.calc_tot_vol_frac(data_file)
+    print(f"Total volume fraction is {phi*100} %")
 
 
 if __name__ == "__main__":
