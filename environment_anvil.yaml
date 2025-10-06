@@ -7,4 +7,9 @@ dependencies:
   - scipy
   - h5py
   - matplotlib
+  - natsort
+  - pip:
+      - torch
+      - torchvision
+      - --index-url https://download.pytorch.org/whl/cpu
 

@@ -1,9 +1,13 @@
+# -- myio/myio_torch.py
+
 import torch
-from myio import load_columns_from_txt
+import numpy as np
+
+from . import myio
 
 def load_columns_from_txt_torch(filename: str, split_chars: str = ",;", comment_chars: str = "#%"):
     """
     Same as io/io.py -> load_columns_from_txt(...) but returns a list of PyTorch tensors.
     """
-    cols = load_columns_from_txt(filename, split_chars=split_chars, comment_chars=comment_chars)
+    cols = myio.load_columns_from_txt_numpy(filename, split_chars=split_chars, comment_chars=comment_chars)
     return [torch.from_numpy(np.ascontiguousarray(c)) for c in cols]

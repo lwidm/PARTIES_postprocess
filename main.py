@@ -2,13 +2,14 @@ import h5py  # type: ignore
 import numpy as np
 import matplotlib
 from matplotlib.axes import Axes
-import glob
+from pathlib import Path
 import os
 import gc
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
-from typing import Optional, List, Tuple, Dict, Literal, Any
+from typing import Optional, List, Tuple, Dict, Literal, Any, Union
 
 from myio import myio
+import theory
 
 # =============================================================================
 # CONFIGURATION AND CONSTANTS
@@ -58,43 +59,7 @@ if ON_ANVIL:
 # =============================================================================
 
 
-
-def find_data_files(
-    base_name: str, min_index: Optional[int] = None, max_index: Optional[int] = None
-) -> List[str]:
-    """
-    Find HDF5 data files matching the pattern and filter by index range.
-
-    Args:
-        base_name: Base pattern for file names (e.g., "Data" for Data_*.h5)
-        min_index: Minimum file index to include (inclusive)
-        max_index: Maximum file index to include (inclusive)
-
-    Returns:
-        Sorted list of file paths matching the criteria
-    """
-    file_pattern = f"{parties_data_dir}/{base_name}_*.h5"
-    all_files = sorted(glob.glob(file_pattern))
-
-    if min_index is None and max_index is None:
-        return all_files
-
-    filtered_files = []
-    for file_path in all_files:
-        try:
-            # Extract index from filename (assumes pattern: base_index.h5)
-            file_index = int(file_path.split("_")[-1].split(".")[0])
-            if (min_index is None or file_index >= min_index) and (
-                max_index is None or file_index <= max_index
-            ):
-                filtered_files.append(file_path)
-        except (ValueError, IndexError):
-            continue
-
-    return filtered_files
-
-
-def load_y_coordinates(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
+def load_y_coordinates(file_path: Union[str, Path]) -> Tuple[np.ndarray, np.ndarray]:
     """
     Load and process y-coordinates from HDF5 file.
 
@@ -109,126 +74,6 @@ def load_y_coordinates(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
         yv: np.ndarray = h5_file["grid"]["yv"][:]  # type: ignore
 
     results = (yc[: yc.shape[0] // 2], yv[: yv.shape[0] // 2])
-    return results
-
-
-def save_intermediate_results(
-    results: Dict[str, np.ndarray],
-    component: str,
-    output_path: str,
-    metadata: Optional[Dict] = None,
-) -> None:
-    """
-    Save intermediate processing results to HDF5 file.
-
-    Args:
-        results: Dictionary containing intermediate results
-        component: Velocity component name (e.g., "u", "v", "w")
-        output_path: Path where results should be saved
-        metadata: Optional dictionary of metadata to store as attributes
-    """
-    # Create output directory if it doesn't exist
-    output_dir_path: str = (
-        os.path.dirname(output_path) if os.path.dirname(output_path) else "."
-    )
-    os.makedirs(output_dir_path, exist_ok=True)
-
-    with h5py.File(output_path, "w") as h5_file:
-        # Save all results with component prefix
-        for key, value in results.items():
-            dataset_name: str = f"{component}_{key}"
-            h5_file.create_dataset(dataset_name, data=value)
-
-        # Save metadata as attributes
-        if metadata:
-            for key, value in metadata.items():
-                if isinstance(value, (str, int, float, bool)):
-                    h5_file.attrs[key] = value
-
-
-def load_intermediate_results(file_path: str, component: str) -> Dict[str, np.ndarray]:
-    """
-    Load intermediate processing results from HDF5 file.
-
-    Args:
-        file_path: Path to saved results file
-        component: Velocity component name to load
-
-    Returns:
-        Dictionary containing intermediate results for the component
-
-    Raises:
-        FileNotFoundError: If the results file doesn't exist
-    """
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"Intermediate data file not found: {file_path}")
-
-    results: Dict = {}
-    with h5py.File(file_path, "r") as h5_file:
-        prefix = f"{component}_"
-        for key in h5_file.keys():
-            if key.startswith(prefix):
-                # Remove component prefix from key
-                clean_key = key[len(prefix) :]
-                results[clean_key] = h5_file[key][:]  # type: ignore
-
-    return results
-
-
-def save_final_results(
-    results: Dict[str, Any],
-    output_path: str,
-    metadata: Optional[Dict] = None,
-) -> None:
-    """
-    Save final processing results to HDF5 file.
-
-    Args:
-        results: Dictionary containing all final results
-        output_path: Path where results should be saved
-        metadata: Optional dictionary of metadata to store as attributes
-    """
-    output_dir_path: str = (
-        os.path.dirname(output_path) if os.path.dirname(output_path) else "."
-    )
-    os.makedirs(output_dir_path, exist_ok=True)
-
-    with h5py.File(output_path, "w") as h5_file:
-        # Save all results
-        for key, value in results.items():
-            if isinstance(value, np.ndarray):
-                h5_file.create_dataset(key, data=value)
-            elif isinstance(value, (int, float)):
-                h5_file.create_dataset(key, data=value)
-
-        # Save metadata as attributes
-        if metadata:
-            for key, value in metadata.items():
-                if isinstance(value, (str, int, float, bool)):
-                    h5_file.attrs[key] = value
-
-
-def load_final_results(file_path: str) -> Dict[str, Any]:
-    """
-    Load final processing results from HDF5 file.
-
-    Args:
-        file_path: Path to saved results file
-
-    Returns:
-        Dictionary containing all final results
-
-    Raises:
-        FileNotFoundError: If the results file doesn't exist
-    """
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"Final data file not found: {file_path}")
-
-    results = {}
-    with h5py.File(file_path, "r") as h5_file:
-        for key in h5_file.keys():
-            results[key] = h5_file[key][:] if h5_file[key].shape else h5_file[key][()]  # type: ignore
-
     return results
 
 
@@ -450,7 +295,9 @@ def process_single_component(
     accumulated_mean_velocity_squared: Optional[np.ndarray] = None
     processed_file_count: int = 0
 
-    data_files: List[str] = find_data_files("Data", min_file_index, max_file_index)
+    data_files: List[Path] = myio.list_parties_data_files(
+        parties_data_dir, "Data", min_file_index, max_file_index
+    )
 
     if not data_files:
         return (np.array([]), np.array([]))
@@ -534,7 +381,9 @@ def process_cross_components(
     accumulated_cross_mean_velocity: Optional[np.ndarray] = None
     processed_file_count: int = 0
 
-    data_files: List[str] = find_data_files("Data", min_file_index, max_file_index)
+    data_files: List[Path] = myio.list_parties_data_files(
+        parties_data_dir, "Data", min_file_index, max_file_index
+    )
 
     if not data_files:
         return np.array([])
@@ -618,7 +467,9 @@ def compute_all_reynolds_stresses_step_by_step(
     """
     print("Starting Reynolds stress computation...")
 
-    data_files = find_data_files("Data", min_file_index, max_file_index)
+    data_files: List[Path] = myio.list_parties_data_files(
+        parties_data_dir, "Data", min_file_index, max_file_index
+    )
     if not data_files:
         return {}
 
@@ -773,9 +624,9 @@ def compute_all_reynolds_stresses_step_by_step(
     print("Step 6 complete: All quantities converted to wall units")
 
     # Save final results
-    save_final_results(
-        final_results,
+    myio.save_to_h5(
         f"{output_dir}/reynolds_stresses.h5",
+        final_results,
         {
             "min_index": min_file_index,
             "max_index": max_file_index,
@@ -786,66 +637,6 @@ def compute_all_reynolds_stresses_step_by_step(
     print("Reynolds stress computation completed successfully!")
     return final_results
 
-
-# =============================================================================
-# THEORETICAL FUNCTIONS (LAW OF THE WALL)
-# =============================================================================
-
-
-def viscous_sublayer_velocity(y_plus: np.ndarray) -> np.ndarray:
-    return y_plus
-
-
-def log_law_velocity(
-    y_plus: np.ndarray,
-    von_karman_constant: float = 0.41,
-    log_law_constant: float = 5.0,
-) -> np.ndarray:
-    return 1.0 / von_karman_constant * np.log(y_plus) + log_law_constant
-
-
-def law_of_the_wall(
-    y_plus: np.ndarray,
-    von_karman_constant: float = 0.41,
-    log_law_constant: float = 5.0,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    viscous_buffer: float = 10.0
-    log_buffer: float = 24.0
-
-    viscous_region_mask: np.ndarray = y_plus < (5.0 + viscous_buffer)
-    log_region_mask: np.ndarray = y_plus > (30.0 - log_buffer)
-
-    viscous_y_plus: np.ndarray = y_plus[viscous_region_mask]
-    log_y_plus: np.ndarray = y_plus[log_region_mask]
-
-    viscous_u_plus: np.ndarray = viscous_sublayer_velocity(viscous_y_plus)
-    log_u_plus: np.ndarray = log_law_velocity(
-        log_y_plus, von_karman_constant, log_law_constant
-    )
-
-    return viscous_y_plus, viscous_u_plus, log_y_plus, log_u_plus
-
-
-def fit_law_of_the_wall_parameters(
-    experimental_yc_plus: np.ndarray, experimental_plus_velocity: np.ndarray
-) -> Tuple[float, float]:
-    from scipy.optimize import curve_fit  # type: ignore
-
-    log_region_mask: np.ndarray = experimental_yc_plus > 30
-    log_region_yc_plus: np.ndarray = experimental_yc_plus[log_region_mask]
-    log_region_velocity: np.ndarray = experimental_plus_velocity[log_region_mask]
-
-    initial_guess: Tuple[float, float] = (0.41, 5.0)
-
-    try:
-        fitted_parameters, _ = curve_fit(
-            log_law_velocity, log_region_yc_plus, log_region_velocity, p0=initial_guess
-        )
-        fitted_kappa, fitted_constant = fitted_parameters
-        return fitted_kappa, fitted_constant
-    except Exception as error:
-        print(f"Fitting of log law parameters failed: {error}")
-        return 0.41, 5.0
 
 
 # =============================================================================
@@ -922,7 +713,7 @@ def get_processed_data(
             use_threads=False,
         )
     elif processing_method == "saved":
-        parties_results = load_final_results(f"{output_dir}/reynolds_stresses.h5")
+        parties_results, _ = myio.load_from_h5(f"{output_dir}/reynolds_stresses.h5")
     else:
         raise ValueError(
             f'processing_method must be one of ["step_by_step", "saved"]. Got: {processing_method}'
@@ -943,10 +734,10 @@ def get_processed_data(
     print(f"u_tau: {u_tau}, tau_w: {tau_w}, Re_tau: {Re_tau}")
 
     # Fit law of the wall parameters to both datasets
-    utexas_kappa, utexas_constant = fit_law_of_the_wall_parameters(
+    utexas_kappa, utexas_constant = theory.law_of_the_wall.fit_law_of_the_wall_parameters(
         utexas_y_plus, utexas_u_plus
     )
-    parties_kappa, parties_constant = fit_law_of_the_wall_parameters(
+    parties_kappa, parties_constant = theory.law_of_the_wall.fit_law_of_the_wall_parameters(
         parties_yc_plus, parties_u_plus
     )
 
@@ -956,14 +747,14 @@ def get_processed_data(
         utexas_viscous_u_plus,
         utexas_log_y_plus,
         utexas_log_u_plus,
-    ) = law_of_the_wall(utexas_y_plus, utexas_kappa, utexas_constant)
+    ) = theory.law_of_the_wall.law_of_the_wall_profile(utexas_y_plus, utexas_kappa, utexas_constant)
 
     (
         parties_viscous_yc_plus,
         parties_viscous_u_plus,
         parties_log_yc_plus,
         parties_log_u_plus,
-    ) = law_of_the_wall(parties_yc_plus, parties_kappa, parties_constant)
+    ) = theory.law_of_the_wall.law_of_the_wall_profile(parties_yc_plus, parties_kappa, parties_constant)
 
     print(
         f"Law of the wall parameters (utexas):  κ={utexas_kappa:.3f}, C+={utexas_constant:.3f}\n"
@@ -1234,8 +1025,10 @@ def create_particle_slice_plot(
     min_file_index: Optional[int] = None,
     max_file_index: Optional[int] = None,
 ):
-    data_files: List[str] = find_data_files("Data", min_file_index, max_file_index)
-    data_file: str = data_files[-1]
+    data_files: List[Path] = myio.list_parties_data_files(
+        parties_data_dir, "Data", min_file_index, max_file_index
+    )
+    data_file: Path = data_files[-1]
     print(f"Showing slice of {data_file}")
 
     vfu: np.ndarray
@@ -1295,8 +1088,10 @@ def calc_tot_vol_frac(
     min_file_index: Optional[int] = None, max_file_index: Optional[int] = None
 ) -> float:
 
-    data_files: List[str] = find_data_files("Data", min_file_index, max_file_index)
-    data_file: str = data_files[-1]
+    data_files: List[Path] = myio.list_parties_data_files(
+        parties_data_dir, "Data", min_file_index, max_file_index
+    )
+    data_file: Path = data_files[-1]
     print(f"Calculating volume fraction using {data_file}")
 
     vfu: np.ndarray
@@ -1389,6 +1184,7 @@ def main() -> None:
     create_particle_slice_plot(Re, Re_tau)
 
     phi = calc_tot_vol_frac()
+
 
 if __name__ == "__main__":
     main()

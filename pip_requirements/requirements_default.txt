@@ -2,5 +2,6 @@ numpy
 scipy
 h5py
 matplotlib
+natsort
 PyQt5
 snakeviz
