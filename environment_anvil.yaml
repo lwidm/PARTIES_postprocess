@@ -8,6 +8,7 @@ dependencies:
   - h5py
   - matplotlib
   - natsort
+  - pip
   - pip:
       - torch
       - torchvision
