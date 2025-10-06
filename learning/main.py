@@ -8,8 +8,6 @@ import gc
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from typing import Optional, List, Tuple, Dict, Literal, Any
 
-from numpy._core.numeric import ndarray
-
 # =============================================================================
 # CONFIGURATION AND CONSTANTS
 # =============================================================================
@@ -40,12 +38,14 @@ Re: float = 2800.0
 output_dir: str = "output"
 DATA_DIRECTORY: str = "data"
 
-NUM_WORKERS: Optional[int] = 4
+NUM_WORKERS_SINGLE_COMPONENT: Optional[int] = 5
+NUM_WORKERS_CROSS_COMPONENT: Optional[int] = 2
 MIN_FILE_INDEX: Optional[int] = None
 
 if ON_ANVIL:
     DATA_DIRECTORY = "."
-    NUM_WORKERS = 8
+    NUM_WORKERS_SINGLE_COMPONENT = 8
+    NUM_WORKERS_CROSS_COMPONENT = 4
     MIN_FILE_INDEX = 180
 
 # =============================================================================
@@ -115,7 +115,7 @@ def find_data_files(
     return filtered_files
 
 
-def load_yc_coordinates(file_path: str) -> np.ndarray:
+def load_y_coordinates(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
     """
     Load and process y-coordinates from HDF5 file.
 
@@ -123,41 +123,42 @@ def load_yc_coordinates(file_path: str) -> np.ndarray:
         file_path: Path to HDF5 file containing grid data
 
     Returns:
-        Processed y-coordinate array (half-channel due to symmetry)
+        Processed y-coordinate (yc, yv) array (half-channel due to symmetry)
     """
     with h5py.File(file_path, "r") as h5_file:
-        y: np.ndarray = h5_file["grid"]["yc"][:-1]  # type: ignore
+        yc: np.ndarray = h5_file["grid"]["yc"][:-1]  # type: ignore
+        yv: np.ndarray = h5_file["grid"]["yv"][:]  # type: ignore
 
-    return y[: y.shape[0] // 2]
+    results = (yc[: yc.shape[0] // 2], yv[: yv.shape[0] // 2])
+    return results
 
 
-def save_processed_results(
-    results: Tuple[np.ndarray, np.ndarray, np.ndarray, float, float],
+def save_intermediate_results(
+    results: Dict[str, np.ndarray],
+    component: str,
     output_path: str,
     metadata: Optional[Dict] = None,
 ) -> None:
     """
-    Save processing results to HDF5 file with optional metadata.
+    Save intermediate processing results to HDF5 file.
 
     Args:
-        results: Tuple containing (y_plus, U_plus, upup, u_tau, tau_w)
+        results: Dictionary containing intermediate results
+        component: Velocity component name (e.g., "u", "v", "w")
         output_path: Path where results should be saved
         metadata: Optional dictionary of metadata to store as attributes
     """
-    y_plus, U_plus, upup, u_tau, tau_w = results
-
     # Create output directory if it doesn't exist
-    output_dir: str = (
+    output_dir_path: str = (
         os.path.dirname(output_path) if os.path.dirname(output_path) else "."
     )
-    os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(output_dir_path, exist_ok=True)
 
     with h5py.File(output_path, "w") as h5_file:
-        h5_file.create_dataset("y_plus", data=y_plus)
-        h5_file.create_dataset("U_plus", data=U_plus)
-        h5_file.create_dataset("upup", data=upup)
-        h5_file.create_dataset("u_tau", data=u_tau)
-        h5_file.create_dataset("tau_w", data=tau_w)
+        # Save all results with component prefix
+        for key, value in results.items():
+            dataset_name: str = f"{component}_{key}"
+            h5_file.create_dataset(dataset_name, data=value)
 
         # Save metadata as attributes
         if metadata:
@@ -166,37 +167,90 @@ def save_processed_results(
                     h5_file.attrs[key] = value
 
 
-def load_saved_results(
-    file_path: str,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
+def load_intermediate_results(file_path: str, component: str) -> Dict[str, np.ndarray]:
     """
-    Load previously saved processing results from HDF5 file.
+    Load intermediate processing results from HDF5 file.
 
     Args:
         file_path: Path to saved results file
+        component: Velocity component name to load
 
     Returns:
-        Tuple containing (y_plus, U_plus, upup, u_tau, tau_w)
+        Dictionary containing intermediate results for the component
 
     Raises:
         FileNotFoundError: If the results file doesn't exist
     """
     if not os.path.exists(file_path):
-        raise FileNotFoundError(f"Saved data file not found: {file_path}")
+        raise FileNotFoundError(f"Intermediate data file not found: {file_path}")
 
-    y_plus: np.ndarray
-    U_plus: np.ndarray
-    upup: np.ndarray
-    u_tau: float
-    tau_w: float
+    results: Dict = {}
     with h5py.File(file_path, "r") as h5_file:
-        y_plus = h5_file["y_plus"][:]  # type: ignore
-        U_plus = h5_file["U_plus"][:]  # type: ignore
-        upup = h5_file["upup"][:]  # type: ignore
-        u_tau = h5_file["u_tau"][()]  # type: ignore
-        tau_w = h5_file["tau_w"][()]  # type: ignore
+        prefix = f"{component}_"
+        for key in h5_file.keys():
+            if key.startswith(prefix):
+                # Remove component prefix from key
+                clean_key = key[len(prefix) :]
+                results[clean_key] = h5_file[key][:]  # type: ignore
 
-    return y_plus, U_plus, upup, u_tau, tau_w
+    return results
+
+
+def save_final_results(
+    results: Dict[str, Any],
+    output_path: str,
+    metadata: Optional[Dict] = None,
+) -> None:
+    """
+    Save final processing results to HDF5 file.
+
+    Args:
+        results: Dictionary containing all final results
+        output_path: Path where results should be saved
+        metadata: Optional dictionary of metadata to store as attributes
+    """
+    output_dir_path: str = (
+        os.path.dirname(output_path) if os.path.dirname(output_path) else "."
+    )
+    os.makedirs(output_dir_path, exist_ok=True)
+
+    with h5py.File(output_path, "w") as h5_file:
+        # Save all results
+        for key, value in results.items():
+            if isinstance(value, np.ndarray):
+                h5_file.create_dataset(key, data=value)
+            elif isinstance(value, (int, float)):
+                h5_file.create_dataset(key, data=value)
+
+        # Save metadata as attributes
+        if metadata:
+            for key, value in metadata.items():
+                if isinstance(value, (str, int, float, bool)):
+                    h5_file.attrs[key] = value
+
+
+def load_final_results(file_path: str) -> Dict[str, Any]:
+    """
+    Load final processing results from HDF5 file.
+
+    Args:
+        file_path: Path to saved results file
+
+    Returns:
+        Dictionary containing all final results
+
+    Raises:
+        FileNotFoundError: If the results file doesn't exist
+    """
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Final data file not found: {file_path}")
+
+    results = {}
+    with h5py.File(file_path, "r") as h5_file:
+        for key in h5_file.keys():
+            results[key] = h5_file[key][:] if h5_file[key].shape else h5_file[key][()]  # type: ignore
+
+    return results
 
 
 # =============================================================================
@@ -204,210 +258,231 @@ def load_saved_results(
 # =============================================================================
 
 
-def compute_flow_statistics_single_file(
-    file_path: str,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+def compute_single_component_statistics(
+    file_path: str, component: Literal["u", "v", "w"]
+) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Compute flow statistics for a single HDF5 data file.
+    Compute statistics for a single velocity component from HDF5 file.
 
-    MEMORY CRITICAL: This function is called in parallel workers and must be
-    extremely careful with memory usage. Large arrays are deleted immediately
-    after use and garbage collection is forced.
+    MEMORY CRITICAL: This function processes one component at a time to minimize memory usage.
 
     Args:
         file_path: Path to HDF5 file containing velocity data
+        component: Velocity component to process ("u", "v", or "w")
 
     Returns:
-        Tuple of (U_mean, UU_mean, upup) statistics arrays
+        Tuple of (component_mean, component_squared_mean)
     """
-    print(f"Processing {file_path} ...")
+    print(f"Processing {component} from {file_path} ...")
 
-    u: np.ndarray
-    vfu: np.ndarray
+    # Load only the required component and volume fraction
+    velocity_data: np.ndarray
+    volume_fraction_data: np.ndarray
     with h5py.File(file_path, "r") as h5_file:
-        u = h5_file["u"][:]  # type: ignore
-        vfu = h5_file["vfu"][:]  # type: ignore
+        velocity_data = h5_file[component][:]  # type: ignore
+        volume_fraction_data = h5_file["vf" + component][:]  # type: ignore
 
     # Remove boundary points and ensure even grid
-    u = u[:-1, :-1, :-1]
-    vfu = vfu[:-1, :-1, :-1]
+    if component != "v":
+        velocity_data = velocity_data[:-1, :-1, :-1]
+        volume_fraction_data = volume_fraction_data[:-1, :-1, :-1]
+    else:
+        velocity_data = velocity_data[:-1, :, :-1]
+        volume_fraction_data = volume_fraction_data[:-1, :, :-1]
 
-    Ny = u.shape[1]
+    Ny = velocity_data.shape[1]
     if Ny % 2 != 0:
         # Remove center point to make grid symmetric
-        u = np.delete(u, Ny // 2, axis=1)
-        vfu = np.delete(vfu, Ny // 2, axis=1)
+        velocity_data = np.delete(velocity_data, Ny // 2, axis=1)
+        volume_fraction_data = np.delete(volume_fraction_data, Ny // 2, axis=1)
         Ny -= 1
 
     half_grid_idx = Ny // 2
 
-    # Compute statistics using symmetry - process both halves simultaneously
-    # This avoids creating temporary arrays for the flipped data
-    u_front_half = u[:, :half_grid_idx, :]
-    u_back_half = np.flip(u[:, half_grid_idx:, :], axis=1)
-    del u
+    # Compute statistics using symmetry
+    velocity_front = velocity_data[:, :half_grid_idx, :]
+    velocity_back = np.flip(velocity_data[:, half_grid_idx:, :], axis=1)
+
+    volume_front = volume_fraction_data[:, :half_grid_idx, :]
+    volume_back = np.flip(volume_fraction_data[:, half_grid_idx:, :], axis=1)
+
+    # Free memory immediately
+    del velocity_data, volume_fraction_data
     gc.collect()
 
-    vfu_front_half = vfu[:, :half_grid_idx, :]
-    vfu_back_half = np.flip(vfu[:, half_grid_idx:, :], axis=1)
-    del vfu
-    gc.collect()
-
-    # Compute weighted sums (memory efficient operations)
-    sum_u = (u_front_half * vfu_front_half + u_back_half * vfu_back_half).sum(
+    # Compute weighted sums
+    sum_velocity = (velocity_front * volume_front + velocity_back * volume_back).sum(
         axis=(0, 2)
     )
-
-    sum_uu = (
-        u_front_half * u_front_half * vfu_front_half
-        + u_back_half * u_back_half * vfu_back_half
+    sum_velocity_squared = (
+        velocity_front * velocity_front * volume_front
+        + velocity_back * velocity_back * volume_back
     ).sum(axis=(0, 2))
+    sum_volume_fraction = (volume_front + volume_back).sum(axis=(0, 2))
 
-    # Explicitly free large arrays immediately
-    del u_front_half, u_back_half
+    # Free more memory
+    del velocity_front, velocity_back, volume_front, volume_back
     gc.collect()
 
-    sum_vfu = (vfu_front_half + vfu_back_half).sum(axis=(0, 2))
-
-    del vfu_front_half, vfu_back_half
-    gc.collect()
-
-    # Avoid division by zero with small epsilon
+    # Avoid division by zero
     epsilon = 1e-10
-    sum_vfu = np.where(sum_vfu > epsilon, sum_vfu, epsilon)
-
-    # Compute volume-weighted averages
-    U_mean = sum_u / sum_vfu
-    UU_mean = sum_uu / sum_vfu
-
-    # Free intermediate arrays
-    del sum_u, sum_uu, sum_vfu
-    gc.collect()
-
-    upup = UU_mean - U_mean * U_mean
-
-    return U_mean, UU_mean, upup
-
-
-def finalize_statistical_results(
-    accumulated_U_mean: np.ndarray,
-    accumulated_upup: np.ndarray,
-    yc: np.ndarray,
-    file_count: int,
-    save_output: bool,
-    min_file_index: Optional[int],
-    max_file_index: Optional[int],
-    processing_function_name: str,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
-    """
-    Finalize results by computing derived quantities and saving if requested.
-
-    Args:
-        accumulated_U_mean: Sum of mean velocities from all files
-        accumulated_upup: Sum of velocity fluctuations from all files
-        yx: y-coordinate (centerd) array
-        file_count: Number of files processed
-        save_output: Whether to save results to file
-        min_file_index: Minimum file index processed
-        max_file_index: Maximum file index processed
-        processing_function_name: Name of the processing function used
-
-    Returns:
-        Tuple of (y_plus, U_plus, upup, u_tau, tau_w)
-    """
-    # ensemble_U_mean: np.ndarray = np.concatenate(
-    #     ([0.0], np.squeeze(accumulated_U_mean) / float(file_count))
-    # )
-    ensemble_U_mean: np.ndarray = np.squeeze(accumulated_U_mean) / float(file_count)
-    del accumulated_U_mean
-    gc.collect()
-    # ensemble_upup = np.concatenate(
-    #     ([0.0], np.squeeze(accumulated_upup) / float(file_count))
-    # )
-    ensemble_upup: np.ndarray = np.squeeze(accumulated_upup) / float(file_count)
-    del accumulated_upup
-    gc.collect()
-
-    # du_dy: np.ndarray = (ensemble_U_mean[1:] - ensemble_U_mean[:-1]) / (
-    #     y[1:] - y[:-1]
-    # )
-    du_dy_0: float = (ensemble_U_mean[0] - (-ensemble_U_mean[0])) / (yc[0] * 2)
-
-    tau_w: float = 1.0 / Re * du_dy_0
-    u_tau: float = float(np.sqrt(tau_w))
-
-    y_plus: np.ndarray = Re * yc * u_tau
-    U_plus: np.ndarray = ensemble_U_mean / u_tau
-
-    results = (
-        y_plus,
-        U_plus,
-        ensemble_upup,
-        u_tau,
-        tau_w,
+    sum_volume_fraction = np.where(
+        sum_volume_fraction > epsilon, sum_volume_fraction, epsilon
     )
 
-    if save_output:
-        metadata = {
-            "min_index": min_file_index,
-            "max_index": max_file_index,
-            "num_files_processed": file_count,
-            "function": processing_function_name,
-        }
-        save_processed_results(results, f"{output_dir}/processed_data.h5", metadata)
+    # Compute volume-weighted averages
+    velocity_mean = sum_velocity / sum_volume_fraction
+    velocity_squared_mean = sum_velocity_squared / sum_volume_fraction
 
-    return results
+    # Free intermediate arrays
+    del sum_velocity, sum_velocity_squared, sum_volume_fraction
+    gc.collect()
 
-
-# =============================================================================
-# PARALLEL PROCESSING IMPLEMENTATIONS
-# =============================================================================
+    return velocity_mean, velocity_squared_mean
 
 
-def process_data_parallel(
+def compute_cross_component_statistics(
+    file_path: str,
+    component1: Literal["u", "v", "w"],
+    component2: Literal["u", "v", "w"],
+) -> np.ndarray:
+    """
+    Compute cross-component statistics from HDF5 file.
+
+    Args:
+        file_path: Path to HDF5 file containing velocity data
+        component1: First velocity component
+        component2: Second velocity component
+
+    Returns:
+        Cross-component mean (e.g., UV_mean for components "u" and "v")
+    """
+    print(f"Processing {component1}{component2} from {file_path} ...")
+
+    # Load both components and volume fraction
+    velocity1: np.ndarray
+    velocity2: np.ndarray
+    volume_fraction: np.ndarray
+    volume_fraction2: np.ndarray
+    with h5py.File(file_path, "r") as h5_file:
+
+        # interpolate components to center
+        def u_v_w_interp(
+            component: Literal["u", "v", "w"],
+        ) -> Tuple[np.ndarray, np.ndarray]:
+
+            velocity: np.ndarray = h5_file[component][:]  # type: ignore
+            volume_fraction: np.ndarray = h5_file["vf" + component1][:]  # type: ignore
+            match component:
+                case "u":
+                    velocity = (velocity[:-1, :-1, 1:] + velocity[:-1, :-1, :-1]) / 2
+                    volume_fraction = (
+                        volume_fraction[:-1, :-1, 1:] + volume_fraction[:-1, :-1, :-1]
+                    ) / 2
+                case "v":
+                    velocity = (velocity[:-1, 1:, :-1] + velocity[:-1, :-1, :-1]) / 2
+                    volume_fraction = (
+                        volume_fraction[:-1, 1:, :-1] + volume_fraction[:-1, :-1, :-1]
+                    ) / 2
+                case "w":
+                    velocity = (velocity[1:, :-1, :-1] + velocity[:-1, :-1, :-1]) / 2
+                    volume_fraction = (
+                        volume_fraction[1:, :-1, :-1] + volume_fraction[:-1, :-1, :-1]
+                    ) / 2
+            return velocity, volume_fraction
+
+        velocity1, volume_fraction = u_v_w_interp(component1)
+
+        velocity2, volume_fraction2 = u_v_w_interp(component2)
+
+    volume_fraction[volume_fraction2 != volume_fraction] = 0.0
+
+    Ny = velocity1.shape[1]
+    if Ny % 2 != 0:
+        velocity1 = np.delete(velocity1, Ny // 2, axis=1)
+        velocity2 = np.delete(velocity2, Ny // 2, axis=1)
+        volume_fraction = np.delete(volume_fraction, Ny // 2, axis=1)
+        Ny -= 1
+
+    half_grid_idx = Ny // 2
+
+    # Compute cross-component statistics using symmetry
+    vel1_front = velocity1[:, :half_grid_idx, :]
+    vel1_back = np.flip(velocity1[:, half_grid_idx:, :], axis=1)
+
+    vel2_front = velocity2[:, :half_grid_idx, :]
+    vel2_back = np.flip(velocity2[:, half_grid_idx:, :], axis=1)
+
+    volume_front = volume_fraction[:, :half_grid_idx, :]
+    volume_back = np.flip(volume_fraction[:, half_grid_idx:, :], axis=1)
+
+    # Free memory
+    del velocity1, velocity2, volume_fraction
+    gc.collect()
+
+    # Compute weighted cross sum
+    sum_cross = (
+        vel1_front * vel2_front * volume_front + vel1_back * vel2_back * volume_back
+    ).sum(axis=(0, 2))
+    sum_volume = (volume_front + volume_back).sum(axis=(0, 2))
+
+    # Free more memory
+    del vel1_front, vel1_back, vel2_front, vel2_back, volume_front, volume_back
+    gc.collect()
+
+    # Avoid division by zero
+    epsilon = 1e-10
+    sum_volume = np.where(sum_volume > epsilon, sum_volume, epsilon)
+
+    # Compute volume-weighted cross mean
+    cross_mean = sum_cross / sum_volume
+
+    # Free intermediate arrays
+    del sum_cross, sum_volume
+    gc.collect()
+
+    return cross_mean
+
+
+def process_single_component(
+    component: Literal["u", "v", "w"],
     min_file_index: Optional[int] = None,
     max_file_index: Optional[int] = None,
-    should_save_output: bool = True,
     num_workers: Optional[int] = None,
     use_threads: bool = False,
     set_blas_threads_to_one: bool = True,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
+) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Process data files in parallel using ProcessPoolExecutor or ThreadPoolExecutor.
-
-    MEMORY CRITICAL: This function manages multiple worker processes/threads.
-    Each worker loads its own copy of data, so total memory usage scales with
-    number of workers.
+    Process a single velocity component across all files and save intermediate results.
 
     Args:
+        component: Velocity component to process
         min_file_index: Minimum file index to process
         max_file_index: Maximum file index to process
-        should_save_output: Whether to save results to file
-        num_workers: Number of parallel workers (default: min(files, cpu_count))
-        use_threads: Use threads instead of processes (shared memory)
-        set_blas_threads_to_one: Limit BLAS threads to prevent oversubscription
+        num_workers: Number of parallel workers
+        use_threads: Use threads instead of processes
+        set_blas_threads_to_one: Limit BLAS threads
 
     Returns:
-        Tuple of (y_plus, U_plus, upup, u_tau, tau_w) or empty arrays on error
+        Dictionary containing component_mean and component_squared_mean
     """
     # Initialize accumulation arrays
-    accumulated_U_mean: Optional[np.ndarray] = None
-    accumulated_upup: Optional[np.ndarray] = None
+    accumulated_mean_velocity: Optional[np.ndarray] = None
+    accumulated_mean_velocity_squared: Optional[np.ndarray] = None
     processed_file_count: int = 0
 
     data_files: List[str] = find_data_files("Data", min_file_index, max_file_index)
 
     if not data_files:
-        return np.array([]), np.array([]), np.array([]), 0.0, 0.0
+        return (np.array([]), np.array([]))
 
-    yc: np.ndarray = load_yc_coordinates(data_files[0])
-
+    # Determine number of workers
     if num_workers is None:
         num_workers = min(len(data_files), (os.cpu_count() or 1))
     else:
         num_workers = min(len(data_files), (os.cpu_count() or 1), num_workers)
 
-    # Limit BLAS threads to prevent CPU oversubscription in parallel workers
+    # Limit BLAS threads if requested
     if set_blas_threads_to_one:
         for env_var in BLAS_THREAD_ENV_VARS:
             if os.environ.get(env_var) is None:
@@ -417,105 +492,316 @@ def process_data_parallel(
 
     # Process files in parallel
     with ExecutorClass(max_workers=num_workers) as executor:
-        U_mean: np.ndarray
-        # UU_mean: np.ndarray
-        upup: np.ndarray
-        for U_mean, _, upup in executor.map(
-            compute_flow_statistics_single_file, data_files
-        ):
-            if accumulated_U_mean is None:
-                accumulated_U_mean = np.zeros_like(U_mean, dtype=np.float64)
-                accumulated_upup = np.zeros_like(upup, dtype=np.float64)
+        # Create partial function for this component
+        from functools import partial
 
-            # Accumulate results
-            accumulated_U_mean += U_mean
-            accumulated_upup += upup
+        process_func = partial(compute_single_component_statistics, component=component)
+
+        mean_velocity: np.ndarray
+        mean_velocity_squared: np.ndarray
+        for mean_velocity, mean_velocity_squared in executor.map(
+            process_func, data_files
+        ):
+            if accumulated_mean_velocity is None:
+                accumulated_mean_velocity = np.zeros_like(
+                    mean_velocity, dtype=np.float64
+                )
+                accumulated_mean_velocity_squared = np.zeros_like(
+                    mean_velocity_squared, dtype=np.float64
+                )
+
+            accumulated_mean_velocity += mean_velocity
+            accumulated_mean_velocity_squared += mean_velocity_squared
             processed_file_count += 1
 
-    # Check for successful processing
-    if (
-        accumulated_U_mean is None
-        or accumulated_upup is None
-        or yc is None
-        or processed_file_count == 0
-    ):
-        return np.array([]), np.array([]), np.array([]), 0.0, 0.0
+    if accumulated_mean_velocity is None or accumulated_mean_velocity_squared is None:
+        return (np.array([]), np.array([]))
 
-    return finalize_statistical_results(
-        accumulated_U_mean,
-        accumulated_upup,
-        yc,
-        processed_file_count,
-        should_save_output,
-        min_file_index,
-        max_file_index,
-        "process_data_parallel",
+    ensemble_mean_velocity = accumulated_mean_velocity / float(processed_file_count)
+    ensemble_mean_velocity_squared = accumulated_mean_velocity_squared / float(
+        processed_file_count
     )
 
+    del accumulated_mean_velocity, accumulated_mean_velocity_squared
+    gc.collect()
 
-def process_data_serial(
+    return (ensemble_mean_velocity, ensemble_mean_velocity_squared)
+
+
+def process_cross_components(
+    component1: Literal["u", "v", "w"],
+    component2: Literal["u", "v", "w"],
     min_file_index: Optional[int] = None,
     max_file_index: Optional[int] = None,
-    should_save_output: bool = True,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
+    num_workers: Optional[int] = None,
+    use_threads: bool = False,
+    set_blas_threads_to_one: bool = True,
+) -> np.ndarray:
     """
-    Process data files serially (single-threaded).
-
-    MEMORY EFFICIENT: Only one file is processed at a time, minimizing peak memory usage.
-    Use this when memory is extremely constrained.
+    Process cross-component statistics across all files.
 
     Args:
+        component1: First velocity component
+        component2: Second velocity component
         min_file_index: Minimum file index to process
         max_file_index: Maximum file index to process
-        should_save_output: Whether to save results to file
+        num_workers: Number of parallel workers
+        use_threads: Use threads instead of processes
+        set_blas_threads_to_one: Limit BLAS threads
 
     Returns:
-        Tuple of (y_plus, U_plus, upup, u_tau, tau_w) or empty arrays on error
+        Cross-component mean array
     """
-    accumulated_U_mean: Optional[np.ndarray] = None
-    accumulated_upup: Optional[np.ndarray] = None
+    accumulated_cross_mean_velocity: Optional[np.ndarray] = None
     processed_file_count: int = 0
 
     data_files: List[str] = find_data_files("Data", min_file_index, max_file_index)
 
     if not data_files:
-        return np.array([]), np.array([]), np.array([]), 0.0, 0.0
+        return np.array([])
 
-    yc: np.ndarray = load_yc_coordinates(data_files[0])
+    # Determine number of workers
+    if num_workers is None:
+        num_workers = min(len(data_files), (os.cpu_count() or 1))
+    else:
+        num_workers = min(len(data_files), (os.cpu_count() or 1), num_workers)
 
-    # Process files one by one
-    for file_path in data_files:
-        U_mean: np.ndarray
-        # UU_mean: np.ndarray
-        upup: np.ndarray
-        U_mean, _, upup = compute_flow_statistics_single_file(file_path)
+    # Limit BLAS threads if requested
+    if set_blas_threads_to_one:
+        for env_var in BLAS_THREAD_ENV_VARS:
+            if os.environ.get(env_var) is None:
+                os.environ[env_var] = "1"
 
-        if accumulated_U_mean is None:
-            accumulated_U_mean = np.zeros_like(U_mean, dtype=np.float64)
-            accumulated_upup = np.zeros_like(upup, dtype=np.float64)
+    ExecutorClass = ThreadPoolExecutor if use_threads else ProcessPoolExecutor
 
-        accumulated_U_mean += U_mean
-        accumulated_upup += upup
-        processed_file_count += 1
+    # Process files in parallel
+    with ExecutorClass(max_workers=num_workers) as executor:
+        # Create partial function for these components
+        from functools import partial
 
-    if (
-        accumulated_U_mean is None
-        or accumulated_upup is None
-        or yc is None
-        or processed_file_count == 0
-    ):
-        return np.array([]), np.array([]), np.array([]), 0.0, 0.0
+        process_func = partial(
+            compute_cross_component_statistics,
+            component1=component1,
+            component2=component2,
+        )
 
-    return finalize_statistical_results(
-        accumulated_U_mean,
-        accumulated_upup,
-        yc,
-        processed_file_count,
-        should_save_output,
+        cross_mean_velocity: np.ndarray
+        for cross_mean_velocity in executor.map(process_func, data_files):
+            if accumulated_cross_mean_velocity is None:
+                accumulated_cross_mean_velocity = np.zeros_like(
+                    cross_mean_velocity, dtype=np.float64
+                )
+
+            accumulated_cross_mean_velocity += cross_mean_velocity
+            processed_file_count += 1
+
+    if accumulated_cross_mean_velocity is None:
+        return np.array([])
+
+    ensemble_cross_mean_velocity = accumulated_cross_mean_velocity / float(
+        processed_file_count
+    )
+
+    del accumulated_cross_mean_velocity
+    gc.collect()
+
+    return ensemble_cross_mean_velocity
+
+
+# =============================================================================
+# REYNOLDS STRESS COMPUTATION
+# =============================================================================
+
+
+def compute_all_reynolds_stresses_step_by_step(
+    min_file_index: Optional[int] = None,
+    max_file_index: Optional[int] = None,
+    num_workers_single_component: Optional[int] = None,
+    num_workers_cross_component: Optional[int] = None,
+    use_threads: bool = False,
+    save_intermediates: bool = True,
+) -> Dict[str, Any]:
+    """
+    Compute all Reynolds stresses in a memory-efficient step-by-step pipeline.
+
+    This function processes components one at a time, saves intermediate results,
+    and computes Reynolds stresses while minimizing memory usage.
+
+    Args:
+        min_file_index: Minimum file index to process
+        max_file_index: Maximum file index to process
+        num_workers: Number of parallel workers
+        use_threads: Use threads instead of processes
+        save_intermediates: Whether to save intermediate results
+
+    Returns:
+        Dictionary containing all final results including wall units
+    """
+    print("Starting Reynolds stress computation...")
+
+    data_files = find_data_files("Data", min_file_index, max_file_index)
+    if not data_files:
+        return {}
+
+    yc: np.ndarray
+    yv: np.ndarray
+    yc, yv = load_y_coordinates(data_files[0])
+    final_results: Dict[str, Any] = {"yc": yc, "yv": yv}
+
+    # STEP 1: Process u-component and compute upup
+    print("Step 1: Processing u-component...")
+    U_mean: np.ndarray
+    UU_mean: np.ndarray
+    U_mean, UU_mean = process_single_component(
+        "u", min_file_index, max_file_index, num_workers_single_component, use_threads
+    )
+
+    upup = UU_mean - U_mean * U_mean
+    final_results["U_mean"] = U_mean
+    final_results["UU_mean"] = UU_mean
+    final_results["upup"] = upup
+
+    # Free u-component memory
+    del UU_mean, upup
+    gc.collect()
+    print("Step 1 complete: upup computed")
+
+    # STEP 2: Process v-component and compute vpvp
+    print("Step 2: Processing v-component...")
+    V_mean: np.ndarray
+    VV_mean: np.ndarray
+    V_mean, VV_mean = process_single_component(
+        "v", min_file_index, max_file_index, num_workers_single_component, use_threads
+    )
+
+    vpvp = VV_mean - V_mean * V_mean
+    final_results["V_mean"] = V_mean
+    final_results["VV_mean"] = VV_mean
+    final_results["vpvp"] = vpvp
+
+    # Free v-component memory
+    del VV_mean, vpvp
+    gc.collect()
+    print("Step 2 complete: vpvp computed")
+
+    # STEP 3: Process uv cross-component and compute upvp
+    print("Step 3: Processing uv cross-component...")
+    UV_mean = process_cross_components(
+        "u",
+        "v",
         min_file_index,
         max_file_index,
-        "process_data_serial",
+        num_workers_cross_component,
+        use_threads,
     )
+
+    upvp = UV_mean - U_mean * V_mean
+    final_results["UV_mean"] = UV_mean
+    final_results["upvp"] = upvp
+
+    # Free UV memory and U_mean (no longer needed)
+    del UV_mean, U_mean
+    gc.collect()
+    print("Step 3 complete: upvp computed")
+
+    # STEP 4: Process w-component and compute wpwp
+    print("Step 4: Processing w-component...")
+    W_mean: np.ndarray
+    WW_mean: np.ndarray
+    W_mean, WW_mean = process_single_component(
+        "w", min_file_index, max_file_index, num_workers_single_component, use_threads
+    )
+
+    wpwp = WW_mean - W_mean * W_mean
+    final_results["W_mean"] = W_mean
+    final_results["WW_mean"] = WW_mean
+    final_results["wpwp"] = wpwp
+
+    # Free w-component memory
+    del WW_mean, wpwp
+    gc.collect()
+    print("Step 4 complete: wpwp computed")
+
+    # STEP 5: Process remaining cross-components
+    print("Step 5: Processing remaining cross-components...")
+
+    # Process uw
+    UW_mean = process_cross_components(
+        "u",
+        "w",
+        min_file_index,
+        max_file_index,
+        num_workers_cross_component,
+        use_threads,
+    )
+    if UW_mean.size > 0:
+        upwp = UW_mean - final_results["U_mean"] * W_mean
+        final_results["UW_mean"] = UW_mean
+        final_results["upwp"] = upwp
+        del UW_mean
+        gc.collect()
+        print("Step 5a complete: upwp computed")
+
+    # Process vw
+    VW_mean = process_cross_components(
+        "v",
+        "w",
+        min_file_index,
+        max_file_index,
+        num_workers_cross_component,
+        use_threads,
+    )
+    if VW_mean.size > 0:
+        vpwp = VW_mean - V_mean * W_mean
+        final_results["VW_mean"] = VW_mean
+        final_results["vpwp"] = vpwp
+        del VW_mean, V_mean, W_mean
+        gc.collect()
+        print("Step 5b complete: vpwp computed")
+
+    # STEP 6: Compute friction velocity and convert to wall units
+    print("Step 6: Computing wall units...")
+    du_dy_0: float = (final_results["U_mean"][0] - (-final_results["U_mean"][0])) / (
+        yc[0] * 2
+    )
+    tau_w: float = 1.0 / Re * du_dy_0
+    u_tau: float = float(np.sqrt(tau_w))
+
+    yc_plus: np.ndarray = Re * yc * u_tau
+    yv_plus: np.ndarray = Re * yv * u_tau
+    final_results["u_tau"] = u_tau
+    final_results["tau_w"] = tau_w
+    final_results["yc_plus"] = yc_plus
+    final_results["yv_plus"] = yv_plus
+    final_results["Re_tau"] = Re * u_tau
+
+    # Convert to wall units
+    final_results["U_plus"] = final_results["U_mean"] / u_tau
+    final_results["upup_plus"] = final_results["upup"] / (u_tau * u_tau)
+    final_results["vpvp_plus"] = final_results["vpvp"] / (u_tau * u_tau)
+    final_results["wpwp_plus"] = final_results["wpwp"] / (u_tau * u_tau)
+    final_results["upvp_plus"] = final_results["upvp"] / (u_tau * u_tau)
+
+    if "upwp" in final_results:
+        final_results["upwp_plus"] = final_results["upwp"] / (u_tau * u_tau)
+    if "vpwp" in final_results:
+        final_results["vpwp_plus"] = final_results["vpwp"] / (u_tau * u_tau)
+
+    print("Step 6 complete: All quantities converted to wall units")
+
+    # Save final results
+    save_final_results(
+        final_results,
+        f"{output_dir}/reynolds_stresses.h5",
+        {
+            "min_index": min_file_index,
+            "max_index": max_file_index,
+            "num_files_processed": len(data_files),
+        },
+    )
+
+    print("Reynolds stress computation completed successfully!")
+    return final_results
 
 
 # =============================================================================
@@ -524,15 +810,6 @@ def process_data_serial(
 
 
 def viscous_sublayer_velocity(y_plus: np.ndarray) -> np.ndarray:
-    """
-    Compute velocity in viscous sublayer (y+ < 5).
-
-    Args:
-        y_plus: y+ coordinates
-
-    Returns:
-        u+ velocity in viscous sublayer (u+ = y+)
-    """
     return y_plus
 
 
@@ -541,17 +818,6 @@ def log_law_velocity(
     von_karman_constant: float = 0.41,
     log_law_constant: float = 5.0,
 ) -> np.ndarray:
-    """
-    Compute velocity according to log law (y+ > 30).
-
-    Args:
-        y_plus: y+ coordinates
-        von_karman_constant: κ (typically 0.41)
-        log_law_constant: C+ (typically 5.0)
-
-    Returns:
-        u+ velocity according to log law (u+ = (1/κ) ln(y+) + C+)
-    """
     return 1.0 / von_karman_constant * np.log(y_plus) + log_law_constant
 
 
@@ -560,17 +826,6 @@ def law_of_the_wall(
     von_karman_constant: float = 0.41,
     log_law_constant: float = 5.0,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Compute law of the wall velocities for viscous sublayer and log law regions.
-
-    Args:
-        y_plus: y+ coordinates
-        von_karman_constant: κ constant for log law
-        log_law_constant: C+ constant for log law
-
-    Returns:
-        Tuple of (y+_viscous, u+_viscous, y+_log, u+_log)
-    """
     viscous_buffer: float = 10.0
     log_buffer: float = 24.0
 
@@ -589,39 +844,25 @@ def law_of_the_wall(
 
 
 def fit_law_of_the_wall_parameters(
-    experimental_plus_y: np.ndarray, experimental_plus_velocity: np.ndarray
+    experimental_yc_plus: np.ndarray, experimental_plus_velocity: np.ndarray
 ) -> Tuple[float, float]:
-    """
-    Fit von Karman constant and log law constant to experimental data.
-
-    Args:
-        experimental_plus_y: Experimental y+ values
-        experimental_plus_velocity: Experimental u+ values
-
-    Returns:
-        Tuple of (fitted_κ, fitted_C+)
-    """
     from scipy.optimize import curve_fit  # type: ignore
 
-    # Only use log law region (y+ > 30) for fitting
-    log_region_mask: np.ndarray = experimental_plus_y > 30
-    log_region_y_plus: np.ndarray = experimental_plus_y[log_region_mask]
+    log_region_mask: np.ndarray = experimental_yc_plus > 30
+    log_region_yc_plus: np.ndarray = experimental_yc_plus[log_region_mask]
     log_region_velocity: np.ndarray = experimental_plus_velocity[log_region_mask]
 
     initial_guess: Tuple[float, float] = (0.41, 5.0)
-    fitted_parameters: Tuple[float, float]
-    fitted_kappa: float
-    fitted_constant: float
 
     try:
         fitted_parameters, _ = curve_fit(
-            log_law_velocity, log_region_y_plus, log_region_velocity, p0=initial_guess
+            log_law_velocity, log_region_yc_plus, log_region_velocity, p0=initial_guess
         )
         fitted_kappa, fitted_constant = fitted_parameters
         return fitted_kappa, fitted_constant
     except Exception as error:
         print(f"Fitting of log law parameters failed: {error}")
-        return 0.41, 5.0  # Return default values on failure
+        return 0.41, 5.0
 
 
 # =============================================================================
@@ -630,7 +871,7 @@ def fit_law_of_the_wall_parameters(
 
 
 def get_processed_data(
-    processing_method: Literal["serial", "parallel", "saved"],
+    processing_method: Literal["step_by_step", "saved"],
 ) -> Tuple[
     np.ndarray,
     np.ndarray,
@@ -651,12 +892,12 @@ def get_processed_data(
     Main data retrieval function that coordinates data processing and theory.
 
     Args:
-        processing_method: One of "serial", "parallel", or "saved"
+        processing_method: One of "step_by_step" or "saved"
 
     Returns:
         Comprehensive tuple containing all processed data for plotting
     """
-    # Load reference data from UT Austin
+    # Load reference data from utexas
     utexas_data_file = "./data/LM_Channel_0180_mean_prof.dat"
     (
         utexas_y_delta,
@@ -667,43 +908,28 @@ def get_processed_data(
         utexas_p,
     ) = load_data_with_comments(utexas_data_file)
 
-    parties_y_plus: np.ndarray
-    parties_u_plus: np.ndarray
-    parties_upup: np.ndarray
-    u_tau: float
-    tau_w: float
-    if processing_method == "serial":
-        (
-            parties_y_plus,
-            parties_u_plus,
-            parties_upup,
-            u_tau,
-            tau_w,
-        ) = process_data_serial(min_file_index=MIN_FILE_INDEX)
-    elif processing_method == "parallel":
-        (
-            parties_y_plus,
-            parties_u_plus,
-            parties_upup,
-            u_tau,
-            tau_w,
-        ) = process_data_parallel(
-            num_workers=NUM_WORKERS, use_threads=False, min_file_index=MIN_FILE_INDEX
+    parties_results: Dict[str, Any]
+    if processing_method == "step_by_step":
+        parties_results = compute_all_reynolds_stresses_step_by_step(
+            min_file_index=MIN_FILE_INDEX,
+            num_workers_single_component=NUM_WORKERS_SINGLE_COMPONENT,
+            num_workers_cross_component=NUM_WORKERS_CROSS_COMPONENT,
+            use_threads=False,
         )
     elif processing_method == "saved":
-        (
-            parties_y_plus,
-            parties_u_plus,
-            parties_upup,
-            u_tau,
-            tau_w,
-        ) = load_saved_results(f"{output_dir}/processed_data.h5")
+        parties_results = load_final_results(f"{output_dir}/reynolds_stresses.h5")
     else:
         raise ValueError(
-            f'processing_method must be one of ["serial", "parallel", "saved"]. Got: {processing_method}'
+            f'processing_method must be one of ["step_by_step", "saved"]. Got: {processing_method}'
         )
 
-    Re_tau: float = Re * u_tau
+    # Extract required values from results dictionary
+    parties_yc_plus = parties_results["yc_plus"]
+    parties_u_plus = parties_results["U_plus"]
+    u_tau = parties_results["u_tau"]
+    tau_w = parties_results["tau_w"]
+    Re_tau = parties_results["Re_tau"]
+
     print(f"u_tau: {u_tau}, tau_w: {tau_w}, Re_tau: {Re_tau}")
 
     # Fit law of the wall parameters to both datasets
@@ -711,7 +937,7 @@ def get_processed_data(
         utexas_y_plus, utexas_u_plus
     )
     parties_kappa, parties_constant = fit_law_of_the_wall_parameters(
-        parties_y_plus, parties_u_plus
+        parties_yc_plus, parties_u_plus
     )
 
     # Compute law of the wall for both datasets
@@ -723,11 +949,11 @@ def get_processed_data(
     ) = law_of_the_wall(utexas_y_plus, utexas_kappa, utexas_constant)
 
     (
-        parties_viscous_y_plus,
+        parties_viscous_yc_plus,
         parties_viscous_u_plus,
-        parties_log_y_plus,
+        parties_log_yc_plus,
         parties_log_u_plus,
-    ) = law_of_the_wall(parties_y_plus, parties_kappa, parties_constant)
+    ) = law_of_the_wall(parties_yc_plus, parties_kappa, parties_constant)
 
     print(
         f"Law of the wall parameters (utexas):  κ={utexas_kappa:.3f}, C+={utexas_constant:.3f}\n"
@@ -741,11 +967,11 @@ def get_processed_data(
         utexas_viscous_u_plus,
         utexas_log_y_plus,
         utexas_log_u_plus,
-        parties_y_plus,
+        parties_yc_plus,
         parties_u_plus,
-        parties_viscous_y_plus,
+        parties_viscous_yc_plus,
         parties_viscous_u_plus,
-        parties_log_y_plus,
+        parties_log_yc_plus,
         parties_log_u_plus,
         Re,
         Re_tau,
@@ -753,27 +979,14 @@ def get_processed_data(
 
 
 def format_plot_axes(axes: Axes) -> Axes:
-    """
-    Apply consistent formatting to plot axes.
-
-    Args:
-        axes: Matplotlib axes object to format
-
-    Returns:
-        Formatted axes object
-    """
     axes.set_xlabel(r"$y^+$", fontsize=14)
     axes.set_ylabel(r"$u^+$", fontsize=14)
-
-    # Clean up axes appearance
     axes.spines["top"].set_visible(False)
     axes.spines["right"].set_visible(False)
     axes.spines["left"].set_linewidth(1.2)
     axes.spines["bottom"].set_linewidth(1.0)
-
     axes.tick_params(axis="both", which="both", direction="out", labelsize=12)
     axes.legend(frameon=False, fontsize=12)
-
     plt.tight_layout()
     return axes
 
@@ -785,48 +998,35 @@ def create_velocity_profile_plot(
     utexas_viscous_u_plus: np.ndarray,
     utexas_log_y_plus: np.ndarray,
     utexas_log_u_plus: np.ndarray,
-    parties_y_plus: np.ndarray,
+    parties_yc_plus: np.ndarray,
     parties_u_plus: np.ndarray,
-    parties_viscous_y_plus: np.ndarray,
+    parties_viscous_yc_plus: np.ndarray,
     parties_viscous_u_plus: np.ndarray,
-    parties_log_y_plus: np.ndarray,
+    parties_log_yc_plus: np.ndarray,
     parties_log_u_plus: np.ndarray,
     Re: float,
     Re_tau: float,
 ) -> None:
-    """
-    Create comprehensive velocity profile plot comparing data and theory.
-
-    Args:
-        All the data arrays returned by get_processed_data()
-        reynolds_number: Bulk Reynolds number
-        friction_reynolds_number: Friction Reynolds number
-    """
     figure, axes = plt.subplots(figsize=(6.5, 5.5))
 
-    # Plot experimental and computational data
-    axes.semilogx(utexas_y_plus, utexas_u_plus, "-k", label="UT Austin data")
-    axes.semilogx(parties_y_plus, parties_u_plus, "-.k", label="PARTIES data")
-
-    # Plot law of the wall approximations
+    axes.semilogx(utexas_y_plus, utexas_u_plus, "-k", label="utexas data")
+    axes.semilogx(parties_yc_plus, parties_u_plus, "-.k", label="PARTIES data")
     axes.semilogx(
         utexas_viscous_y_plus,
         utexas_viscous_u_plus,
         "--k",
         linewidth=0.9,
-        label="Law of the wall (UT Austin)",
+        label="Law of the wall (utexas)",
     )
     axes.semilogx(utexas_log_y_plus, utexas_log_u_plus, "--k", linewidth=0.8)
-
     axes.semilogx(
-        parties_log_y_plus,
+        parties_log_yc_plus,
         parties_log_u_plus,
         ":k",
         linewidth=0.9,
         label="Law of the wall (PARTIES)",
     )
 
-    # Add vertical lines marking region boundaries
     viscous_sublayer_boundary = 5.0
     buffer_layer_boundary = 30.0
 
@@ -840,12 +1040,10 @@ def create_velocity_profile_plot(
             zorder=0,
         )
 
-    # Add region labels
     x_max = axes.get_xlim()[1]
     y_max = axes.get_ylim()[1]
     label_y_position = 0.99 * y_max
 
-    # Calculate label positions (geometric means of regions)
     viscous_center = np.sqrt(1.0 * viscous_sublayer_boundary)
     buffer_center = np.sqrt(viscous_sublayer_boundary * buffer_layer_boundary)
     log_center = np.sqrt(buffer_layer_boundary * x_max)
@@ -865,13 +1063,72 @@ def create_velocity_profile_plot(
     )
     axes.text(log_center, label_y_position, "Log-law region\n$30<y^+$", **label_style)
 
-    # Finalize plot appearance
-    axes.set_xlim(1.0, max(np.max(utexas_y_plus), np.max(parties_y_plus)))
-    axes.set_ylim(0.0, 0.98*max(np.max(utexas_u_plus), np.max(parties_u_plus)))
+    axes.set_xlim(1.0, max(np.max(utexas_y_plus), np.max(parties_yc_plus)))
+    axes.set_ylim(0.0, 0.98 * max(np.max(utexas_u_plus), np.max(parties_u_plus)))
     axes = format_plot_axes(axes)
     axes.legend(loc="lower right", bbox_to_anchor=(1.0, 0.20))
 
     plot_filename = f"{output_dir}/Re={Re:.0f}_Re_tau={Re_tau:.0f}-y+_u+.png"
+    plt.savefig(plot_filename, dpi=300)
+
+    if not ON_ANVIL:
+        plt.show()
+
+    plt.close(figure)
+
+
+def create_normal_stress_plot(
+    utexas_y_plus: np.ndarray,
+    utexas_upup: np.ndarray,
+    utexas_vpvp: np.ndarray,
+    utexas_wpwp: np.ndarray,
+    PARTIES_yc_plus: np.ndarray,
+    PARTIES_yv_plus: np.ndarray,
+    PARTIES_upup: np.ndarray,
+    PARTIES_vpvp: np.ndarray,
+    PARTIES_wpwp: np.ndarray,
+    Re: float,
+    Re_tau: float,
+    u_tau: float,
+) -> None:
+    figure, axes = plt.subplots(figsize=(6.5, 5.5))
+
+    axes.plot(utexas_y_plus, utexas_upup, "ok", label=r"$<u^'u^'>/u_\tau$ (utexas)")
+    axes.plot(utexas_y_plus, utexas_vpvp, "dk", label=r"$<v^'v^'>/u_\tau$ (utexas)")
+    axes.plot(utexas_y_plus, utexas_wpwp, "^k", label=r"$<w^'w^'>/u_\tau$ (utexas)")
+    axes.plot(
+        PARTIES_yc_plus,
+        PARTIES_upup / u_tau,
+        "-k",
+        label=r"$<u^'u^'>/u_\tau$ (PARTIES)",
+    )
+    axes.plot(
+        PARTIES_yv_plus, PARTIES_vpvp, "-.k", label=r"$<v^'v^'>/u_\tau$ (PARTIES)"
+    )
+    axes.plot(
+        PARTIES_yc_plus, PARTIES_wpwp, "--k", label=r"$<w^'w^'>/u_\tau$ (PARTIES)"
+    )
+
+    axes.set_xlim(
+        0.0,
+        max(np.max(utexas_y_plus), np.max(PARTIES_yc_plus), np.max(PARTIES_yv_plus)),
+    )
+    axes.set_ylim(
+        0.0,
+        0.98
+        * max(
+            np.max(utexas_upup),
+            np.max(utexas_vpvp),
+            np.max(utexas_vpvp),
+            np.max(PARTIES_upup) / u_tau,
+            np.max(PARTIES_vpvp) / u_tau,
+            np.max(PARTIES_vpvp) / u_tau,
+        ),
+    )
+    axes = format_plot_axes(axes)
+    axes.legend(loc="lower right", bbox_to_anchor=(1.0, 0.20))
+
+    plot_filename = f"{output_dir}/Re={Re:.0f}_Re_tau={Re_tau:.0f}-u'u'.png"
     plt.savefig(plot_filename, dpi=300)
 
     if not ON_ANVIL:
@@ -886,6 +1143,8 @@ def create_velocity_profile_plot(
 
 
 def main() -> None:
+    # method: Literal["step_by_step", "saved"] = "step_by_step"
+    method: Literal["step_by_step", "saved"] = "saved"
     (
         utexas_y_plus,
         utexas_u_plus,
@@ -901,7 +1160,7 @@ def main() -> None:
         parties_log_u,
         reynolds_number,
         friction_reynolds_number,
-    ) = get_processed_data("saved")
+    ) = get_processed_data(method)
 
     create_velocity_profile_plot(
         utexas_y_plus,
@@ -919,6 +1178,21 @@ def main() -> None:
         reynolds_number,
         friction_reynolds_number,
     )
+
+    # create_normal_stress_plot(
+    #     utexas_y_plus,
+    #     utexas_upup,
+    #     utexas_vpvp,
+    #     utexas_wpwp,
+    #     PARTIES_yc_plus,
+    #     PARTIES_yv_plus,
+    #     PARTIES_upup,
+    #     PARTIES_vpvp,
+    #     PARTIES_wpwp,
+    #     Re,
+    #     Re_tau,
+    #     u_tau,
+    # )
 
 
 if __name__ == "__main__":
