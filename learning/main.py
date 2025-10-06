@@ -1020,8 +1020,6 @@ def get_processed_data(
 
 
 def format_plot_axes(axes: Axes) -> Axes:
-    axes.set_xlabel(r"$y^+$", fontsize=14)
-    axes.set_ylabel(r"$u^+$", fontsize=14)
     axes.spines["top"].set_visible(False)
     axes.spines["right"].set_visible(False)
     axes.spines["left"].set_linewidth(1.2)
@@ -1104,10 +1102,12 @@ def create_velocity_profile_plot(
     )
     axes.text(log_center, label_y_position, "Log-law region\n$30<y^+$", **label_style)
 
+    axes.set_xlabel(r"$y^+$", fontsize=14)
+    axes.set_ylabel(r"$u^+$", fontsize=14)
     axes.set_xlim(1.0, max(np.max(utexas_y_plus), np.max(parties_yc_plus)))
     axes.set_ylim(0.0, 1.1 * max(np.max(utexas_u_plus), np.max(parties_u_plus)))
-    axes = format_plot_axes(axes)
     axes.legend(loc="lower right", bbox_to_anchor=(1.0, 0.20))
+    axes = format_plot_axes(axes)
 
     plot_filename = f"{output_dir}/Re={Re:.0f}_Re_tau={Re_tau:.0f}-y+_u+.png"
     plt.savefig(plot_filename, dpi=300)
@@ -1136,28 +1136,46 @@ def create_normal_stress_plot(
 ) -> None:
     figure, axes = plt.subplots(figsize=(6.5, 5.5))
 
+    # downsample utexas points to 30
+    idx: np.ndarray = np.linspace(0, len(utexas_y_plus) - 1, 40, dtype=int)
+    idx_upup: np.ndarray = np.linspace(0, len(utexas_y_plus) - 1, 70, dtype=int)
+    ux_y: np.ndarray = utexas_y_plus[idx]
+    ux_y_upup: np.ndarray = utexas_y_plus[idx_upup]
+    ux_upup: np.ndarray = utexas_upup_plus[idx_upup]
+    ux_vpvp: np.ndarray = utexas_vpvp_plus[idx]
+    ux_wpwp: np.ndarray = utexas_wpwp_plus[idx]
+    ux_k: np.ndarray = utexas_k_plus[idx]
+
     axes.plot(
-        utexas_y_plus,
-        utexas_upup_plus,
-        "ok",
+        ux_y_upup,
+        ux_upup,
+        "o",
+        fillstyle="none",
+        color="k",
         label=r"$\langle u^{\prime}u^{\prime}\rangle / u_{\tau}$ (utexas)",
     )
     axes.plot(
-        utexas_y_plus,
-        utexas_vpvp_plus,
-        "dk",
+        ux_y,
+        ux_vpvp,
+        "d",
+        fillstyle="none",
+        color="k",
         label=r"$\langle v^{\prime}v^{\prime}\rangle / u_{\tau}$ (utexas)",
     )
     axes.plot(
-        utexas_y_plus,
-        utexas_wpwp_plus,
-        "^k",
+        ux_y,
+        ux_wpwp,
+        "^",
+        fillstyle="none",
+        color="k",
         label=r"$\langle w^{\prime}w^{\prime}\rangle / u_{\tau}$ (utexas)",
     )
     axes.plot(
-        utexas_y_plus,
-        utexas_k_plus,
-        "*k",
+        ux_y,
+        ux_k,
+        "x",
+        fillstyle="none",
+        color="k",
         label=r"$\langle k\rangle / u_{\tau}$ (utexas)",
     )
 
@@ -1186,6 +1204,8 @@ def create_normal_stress_plot(
         label=r"$\langle k\rangle / u_{\tau}$ (PARTIES)",
     )
 
+    axes.set_xlabel(r"$y^+$", fontsize=14)
+    axes.set_ylabel(r"$\left\{\langle u^\prime u^\prime \rangle, \langle v^\prime v^\prime \rangle, \langle w^\prime w^\prime \rangle, \langle k \rangle\right\} / u_\tau^2$", fontsize=14)
     axes.set_xlim(
         0.0,
         min(
@@ -1194,25 +1214,28 @@ def create_normal_stress_plot(
                 np.max(parties_yc_plus),
                 np.max(parties_yv_plus),
             ),
-            180,
+            80,
         ),
     )
     axes.set_ylim(
         0.0,
-        1.1
-        * max(
-            np.max(utexas_upup_plus),
-            np.max(utexas_vpvp_plus),
-            np.max(utexas_vpvp_plus),
-            np.max(utexas_k_plus),
-            np.max(parties_upup_plus),
-            np.max(parties_vpvp_plus),
-            np.max(parties_vpvp_plus),
-            np.max(parties_k_plus),
+        min(
+            1.1
+            * max(
+                np.max(utexas_upup_plus),
+                np.max(utexas_vpvp_plus),
+                np.max(utexas_wpwp_plus),
+                np.max(utexas_k_plus),
+                np.max(parties_upup_plus),
+                np.max(parties_vpvp_plus),
+                np.max(parties_wpwp_plus),
+                np.max(parties_k_plus),
+            ),
+            6.0,
         ),
     )
+    axes.legend(loc="lower right", bbox_to_anchor=(1.0, 0.70))
     axes = format_plot_axes(axes)
-    axes.legend(loc="lower right", bbox_to_anchor=(1.0, 0.20))
 
     plot_filename = f"{output_dir}/Re={Re:.0f}_Re_tau={Re_tau:.0f}-u'u'.png"
     plt.savefig(plot_filename, dpi=300)
