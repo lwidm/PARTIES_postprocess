@@ -17,4 +17,4 @@ eval "$(conda shell.bash hook)"
 conda activate PARTIES_postprocess_anvil
 
 cd /home/x-lwidmer/Documents/PARTIES_postprocess
-python -m ./main.py
+python ./main.py
