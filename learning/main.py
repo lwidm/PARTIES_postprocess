@@ -1344,8 +1344,8 @@ def calc_tot_vol_frac(
 
 
 def main() -> None:
-    # method: Literal["step_by_step", "saved"] = "step_by_step"
-    method: Literal["step_by_step", "saved"] = "saved"
+    method: Literal["step_by_step", "saved"] = "step_by_step"
+    # method: Literal["step_by_step", "saved"] = "saved"
     (
         utexas_y_plus,
         utexas_u_plus,
