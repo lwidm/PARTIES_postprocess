@@ -15,5 +15,5 @@ setup(
     ],
     author="Lukas Widmer",
     description="",
-    # python_requires=">3.8"
+    python_requires=">3.13.7"
 )

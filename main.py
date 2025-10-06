@@ -47,8 +47,8 @@ num_workers_cross_component: Optional[int] = 2
 min_file_index: Optional[int] = None
 
 if ON_ANVIL:
-    output_dir = "~/Documents/PARTIES_postprocess/learning/output"
-    utexas_data_dir = "~/Documents/PARTIES_postprocess/learning/data"
+    output_dir = "/home/x-lwidmer/Documents/PARTIES_postprocess/learning/output"
+    utexas_data_dir = "/home/x-lwidmer/Documents/PARTIES_postprocess/learning/data"
     parties_data_dir = "/anvil/scratch/x-lwidmer/RUN5"
     num_workers_single_component = 8
     num_workers_cross_component = 4
@@ -734,10 +734,10 @@ def get_processed_data(
     print(f"u_tau: {u_tau}, tau_w: {tau_w}, Re_tau: {Re_tau}")
 
     # Fit law of the wall parameters to both datasets
-    utexas_kappa, utexas_constant = theory.law_of_the_wall.fit_law_of_the_wall_parameters(
+    utexas_kappa, utexas_constant = theory.law_of_the_wall.fit_parameters(
         utexas_y_plus, utexas_u_plus
     )
-    parties_kappa, parties_constant = theory.law_of_the_wall.fit_law_of_the_wall_parameters(
+    parties_kappa, parties_constant = theory.law_of_the_wall.fit_parameters(
         parties_yc_plus, parties_u_plus
     )
 
@@ -747,14 +747,14 @@ def get_processed_data(
         utexas_viscous_u_plus,
         utexas_log_y_plus,
         utexas_log_u_plus,
-    ) = theory.law_of_the_wall.law_of_the_wall_profile(utexas_y_plus, utexas_kappa, utexas_constant)
+    ) = theory.law_of_the_wall.generate_profile(utexas_y_plus, utexas_kappa, utexas_constant)
 
     (
         parties_viscous_yc_plus,
         parties_viscous_u_plus,
         parties_log_yc_plus,
         parties_log_u_plus,
-    ) = theory.law_of_the_wall.law_of_the_wall_profile(parties_yc_plus, parties_kappa, parties_constant)
+    ) = theory.law_of_the_wall.generate_profile(parties_yc_plus, parties_kappa, parties_constant)
 
     print(
         f"Law of the wall parameters (utexas):  κ={utexas_kappa:.3f}, C+={utexas_constant:.3f}\n"
