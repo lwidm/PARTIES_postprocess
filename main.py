@@ -8,6 +8,8 @@ import gc
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from typing import Optional, List, Tuple, Dict, Literal, Any
 
+from myio import myio
+
 # =============================================================================
 # CONFIGURATION AND CONSTANTS
 # =============================================================================
@@ -35,49 +37,26 @@ BLAS_THREAD_ENV_VARS = (
 )
 
 Re: float = 2800.0
-output_dir: str = "output"
-data_dir: str = "data"
+output_dir: str = "./learning/output"
+parties_data_dir: str = "./learning/data"
+utexas_data_dir: str = "./learning/data"
 
 num_workers_single_component: Optional[int] = 5
 num_workers_cross_component: Optional[int] = 2
 min_file_index: Optional[int] = None
 
 if ON_ANVIL:
-    data_dir = "."
+    output_dir = "~/Documents/PARTIES_postprocess/learning/output"
+    utexas_data_dir = "~/Documents/PARTIES_postprocess/learning/data"
+    parties_data_dir = "/anvil/scratch/x-lwidmer/RUN5"
     num_workers_single_component = 8
     num_workers_cross_component = 4
-    min_file_index = 180
+    min_file_index = 250
 
 # =============================================================================
 # FILE I/O AND DATA LOADING UTILITIES
 # =============================================================================
 
-
-def load_data_with_comments(
-    filename: str, comment_chars: str = "#%"
-) -> List[np.ndarray]:
-    """
-    Load data from text file, skipping lines that start with comment characters.
-
-    Args:
-        filename: Path to the data file
-        comment_chars: Characters that indicate comment lines
-
-    Returns:
-        List of numpy arrays for each column in the data file
-    """
-    with open(filename, "r") as file:
-        lines = file.readlines()
-
-    data_lines = [
-        line.strip()
-        for line in lines
-        if line.strip()
-        and not any(line.strip().startswith(char) for char in comment_chars)
-    ]
-
-    data_array = np.genfromtxt(data_lines, dtype=np.float64)
-    return [data_array[:, i] for i in range(data_array.shape[1])]
 
 
 def find_data_files(
@@ -94,7 +73,7 @@ def find_data_files(
     Returns:
         Sorted list of file paths matching the criteria
     """
-    file_pattern = f"./{data_dir}/{base_name}_*.h5"
+    file_pattern = f"{parties_data_dir}/{base_name}_*.h5"
     all_files = sorted(glob.glob(file_pattern))
 
     if min_index is None and max_index is None:
@@ -912,8 +891,8 @@ def get_processed_data(
         Comprehensive tuple containing all processed data for plotting
     """
     # Load reference data from utexas
-    utexas_mean_data_file: str = f"./{data_dir}/LM_Channel_0180_mean_prof.dat"
-    utexas_fluc_data_file: str = f"./{data_dir}/LM_Channel_0180_vel_fluc_prof.dat"
+    utexas_mean_data_file: str = f"{utexas_data_dir}/LM_Channel_0180_mean_prof.dat"
+    utexas_fluc_data_file: str = f"{utexas_data_dir}/LM_Channel_0180_vel_fluc_prof.dat"
     (
         utexas_y_delta,
         utexas_y_plus,
@@ -921,7 +900,7 @@ def get_processed_data(
         utexas_velocity_gradient,
         utexas_w,
         utexas_p,
-    ) = load_data_with_comments(utexas_mean_data_file)
+    ) = myio.load_columns_from_txt_numpy(utexas_mean_data_file)
     (
         _,
         _,
@@ -932,7 +911,7 @@ def get_processed_data(
         utexas_upwp_plus,
         utexas_vpwp_plus,
         utexas_k_plus,
-    ) = load_data_with_comments(utexas_fluc_data_file)
+    ) = myio.load_columns_from_txt_numpy(utexas_fluc_data_file)
 
     parties_results: Dict[str, Any]
     if processing_method == "step_by_step":
