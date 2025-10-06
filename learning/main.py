@@ -36,17 +36,17 @@ BLAS_THREAD_ENV_VARS = (
 
 Re: float = 2800.0
 output_dir: str = "output"
-DATA_DIRECTORY: str = "data"
+data_dir: str = "data"
 
-NUM_WORKERS_SINGLE_COMPONENT: Optional[int] = 5
-NUM_WORKERS_CROSS_COMPONENT: Optional[int] = 2
-MIN_FILE_INDEX: Optional[int] = None
+num_workers_single_component: Optional[int] = 5
+num_workers_cross_component: Optional[int] = 2
+min_file_index: Optional[int] = None
 
 if ON_ANVIL:
-    DATA_DIRECTORY = "."
-    NUM_WORKERS_SINGLE_COMPONENT = 8
-    NUM_WORKERS_CROSS_COMPONENT = 4
-    MIN_FILE_INDEX = 180
+    data_dir = "."
+    num_workers_single_component = 8
+    num_workers_cross_component = 4
+    min_file_index = 180
 
 # =============================================================================
 # FILE I/O AND DATA LOADING UTILITIES
@@ -94,7 +94,7 @@ def find_data_files(
     Returns:
         Sorted list of file paths matching the criteria
     """
-    file_pattern = f"./{DATA_DIRECTORY}/{base_name}_*.h5"
+    file_pattern = f"./{data_dir}/{base_name}_*.h5"
     all_files = sorted(glob.glob(file_pattern))
 
     if min_index is None and max_index is None:
@@ -774,6 +774,9 @@ def compute_all_reynolds_stresses_step_by_step(
     final_results["yc_plus"] = yc_plus
     final_results["yv_plus"] = yv_plus
     final_results["Re_tau"] = Re * u_tau
+    final_results["k"] = 0.5 * (
+        final_results["upup"] + final_results["vpvp"] + final_results["wpwp"]
+    )
 
     # Convert to wall units
     final_results["U_plus"] = final_results["U_mean"] / u_tau
@@ -781,6 +784,7 @@ def compute_all_reynolds_stresses_step_by_step(
     final_results["vpvp_plus"] = final_results["vpvp"] / (u_tau * u_tau)
     final_results["wpwp_plus"] = final_results["wpwp"] / (u_tau * u_tau)
     final_results["upvp_plus"] = final_results["upvp"] / (u_tau * u_tau)
+    final_results["k_plus"] = final_results["k"] / (u_tau * u_tau)
 
     if "upwp" in final_results:
         final_results["upwp_plus"] = final_results["upwp"] / (u_tau * u_tau)
@@ -885,6 +889,16 @@ def get_processed_data(
     np.ndarray,
     np.ndarray,
     np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    float,
     float,
     float,
 ]:
@@ -898,7 +912,8 @@ def get_processed_data(
         Comprehensive tuple containing all processed data for plotting
     """
     # Load reference data from utexas
-    utexas_data_file = "./data/LM_Channel_0180_mean_prof.dat"
+    utexas_mean_data_file: str = f"./{data_dir}/LM_Channel_0180_mean_prof.dat"
+    utexas_fluc_data_file: str = f"./{data_dir}/LM_Channel_0180_vel_fluc_prof.dat"
     (
         utexas_y_delta,
         utexas_y_plus,
@@ -906,14 +921,25 @@ def get_processed_data(
         utexas_velocity_gradient,
         utexas_w,
         utexas_p,
-    ) = load_data_with_comments(utexas_data_file)
+    ) = load_data_with_comments(utexas_mean_data_file)
+    (
+        _,
+        _,
+        utexas_upup_plus,
+        utexas_vpvp_plus,
+        utexas_wpwp_plus,
+        utexas_upvp_plus,
+        utexas_upwp_plus,
+        utexas_vpwp_plus,
+        utexas_k_plus,
+    ) = load_data_with_comments(utexas_fluc_data_file)
 
     parties_results: Dict[str, Any]
     if processing_method == "step_by_step":
         parties_results = compute_all_reynolds_stresses_step_by_step(
-            min_file_index=MIN_FILE_INDEX,
-            num_workers_single_component=NUM_WORKERS_SINGLE_COMPONENT,
-            num_workers_cross_component=NUM_WORKERS_CROSS_COMPONENT,
+            min_file_index=min_file_index,
+            num_workers_single_component=num_workers_single_component,
+            num_workers_cross_component=num_workers_cross_component,
             use_threads=False,
         )
     elif processing_method == "saved":
@@ -925,7 +951,12 @@ def get_processed_data(
 
     # Extract required values from results dictionary
     parties_yc_plus = parties_results["yc_plus"]
+    parties_yv_plus = parties_results["yv_plus"]
     parties_u_plus = parties_results["U_plus"]
+    parties_upup_plus = parties_results["upup_plus"]
+    parties_vpvp_plus = parties_results["vpvp_plus"]
+    parties_wpwp_plus = parties_results["wpwp_plus"]
+    parties_k_plus = parties_results["k_plus"]
     u_tau = parties_results["u_tau"]
     tau_w = parties_results["tau_w"]
     Re_tau = parties_results["Re_tau"]
@@ -967,14 +998,24 @@ def get_processed_data(
         utexas_viscous_u_plus,
         utexas_log_y_plus,
         utexas_log_u_plus,
+        utexas_upup_plus,
+        utexas_vpvp_plus,
+        utexas_wpwp_plus,
+        utexas_k_plus,
         parties_yc_plus,
+        parties_yv_plus,
         parties_u_plus,
         parties_viscous_yc_plus,
         parties_viscous_u_plus,
         parties_log_yc_plus,
         parties_log_u_plus,
+        parties_upup_plus,
+        parties_vpvp_plus,
+        parties_wpwp_plus,
+        parties_k_plus,
         Re,
         Re_tau,
+        u_tau,
     )
 
 
@@ -1064,7 +1105,7 @@ def create_velocity_profile_plot(
     axes.text(log_center, label_y_position, "Log-law region\n$30<y^+$", **label_style)
 
     axes.set_xlim(1.0, max(np.max(utexas_y_plus), np.max(parties_yc_plus)))
-    axes.set_ylim(0.0, 0.98 * max(np.max(utexas_u_plus), np.max(parties_u_plus)))
+    axes.set_ylim(0.0, 1.1 * max(np.max(utexas_u_plus), np.max(parties_u_plus)))
     axes = format_plot_axes(axes)
     axes.legend(loc="lower right", bbox_to_anchor=(1.0, 0.20))
 
@@ -1079,50 +1120,95 @@ def create_velocity_profile_plot(
 
 def create_normal_stress_plot(
     utexas_y_plus: np.ndarray,
-    utexas_upup: np.ndarray,
-    utexas_vpvp: np.ndarray,
-    utexas_wpwp: np.ndarray,
-    PARTIES_yc_plus: np.ndarray,
-    PARTIES_yv_plus: np.ndarray,
-    PARTIES_upup: np.ndarray,
-    PARTIES_vpvp: np.ndarray,
-    PARTIES_wpwp: np.ndarray,
+    utexas_upup_plus: np.ndarray,
+    utexas_vpvp_plus: np.ndarray,
+    utexas_wpwp_plus: np.ndarray,
+    utexas_k_plus: np.ndarray,
+    parties_yc_plus: np.ndarray,
+    parties_yv_plus: np.ndarray,
+    parties_upup_plus: np.ndarray,
+    parties_vpvp_plus: np.ndarray,
+    parties_wpwp_plus: np.ndarray,
+    parties_k_plus: np.ndarray,
     Re: float,
     Re_tau: float,
     u_tau: float,
 ) -> None:
     figure, axes = plt.subplots(figsize=(6.5, 5.5))
 
-    axes.plot(utexas_y_plus, utexas_upup, "ok", label=r"$<u^'u^'>/u_\tau$ (utexas)")
-    axes.plot(utexas_y_plus, utexas_vpvp, "dk", label=r"$<v^'v^'>/u_\tau$ (utexas)")
-    axes.plot(utexas_y_plus, utexas_wpwp, "^k", label=r"$<w^'w^'>/u_\tau$ (utexas)")
     axes.plot(
-        PARTIES_yc_plus,
-        PARTIES_upup / u_tau,
+        utexas_y_plus,
+        utexas_upup_plus,
+        "ok",
+        label=r"$\langle u^{\prime}u^{\prime}\rangle / u_{\tau}$ (utexas)",
+    )
+    axes.plot(
+        utexas_y_plus,
+        utexas_vpvp_plus,
+        "dk",
+        label=r"$\langle v^{\prime}v^{\prime}\rangle / u_{\tau}$ (utexas)",
+    )
+    axes.plot(
+        utexas_y_plus,
+        utexas_wpwp_plus,
+        "^k",
+        label=r"$\langle w^{\prime}w^{\prime}\rangle / u_{\tau}$ (utexas)",
+    )
+    axes.plot(
+        utexas_y_plus,
+        utexas_k_plus,
+        "*k",
+        label=r"$\langle k\rangle / u_{\tau}$ (utexas)",
+    )
+
+    axes.plot(
+        parties_yv_plus,
+        parties_upup_plus,
         "-k",
-        label=r"$<u^'u^'>/u_\tau$ (PARTIES)",
+        label=r"$\langle u^{\prime}u^{\prime}\rangle / u_{\tau}$ (PARTIES)",
     )
     axes.plot(
-        PARTIES_yv_plus, PARTIES_vpvp, "-.k", label=r"$<v^'v^'>/u_\tau$ (PARTIES)"
+        parties_yv_plus,
+        parties_vpvp_plus,
+        "-.k",
+        label=r"$\langle v^{\prime}v^{\prime}\rangle / u_{\tau}$ (PARTIES)",
     )
     axes.plot(
-        PARTIES_yc_plus, PARTIES_wpwp, "--k", label=r"$<w^'w^'>/u_\tau$ (PARTIES)"
+        parties_yc_plus,
+        parties_wpwp_plus,
+        "--k",
+        label=r"$\langle w^{\prime}w^{\prime}\rangle / u_{\tau}$ (PARTIES)",
+    )
+    axes.plot(
+        parties_yc_plus,
+        parties_k_plus,
+        ":k",
+        label=r"$\langle k\rangle / u_{\tau}$ (PARTIES)",
     )
 
     axes.set_xlim(
         0.0,
-        max(np.max(utexas_y_plus), np.max(PARTIES_yc_plus), np.max(PARTIES_yv_plus)),
+        min(
+            max(
+                np.max(utexas_y_plus),
+                np.max(parties_yc_plus),
+                np.max(parties_yv_plus),
+            ),
+            180,
+        ),
     )
     axes.set_ylim(
         0.0,
-        0.98
+        1.1
         * max(
-            np.max(utexas_upup),
-            np.max(utexas_vpvp),
-            np.max(utexas_vpvp),
-            np.max(PARTIES_upup) / u_tau,
-            np.max(PARTIES_vpvp) / u_tau,
-            np.max(PARTIES_vpvp) / u_tau,
+            np.max(utexas_upup_plus),
+            np.max(utexas_vpvp_plus),
+            np.max(utexas_vpvp_plus),
+            np.max(utexas_k_plus),
+            np.max(parties_upup_plus),
+            np.max(parties_vpvp_plus),
+            np.max(parties_vpvp_plus),
+            np.max(parties_k_plus),
         ),
     )
     axes = format_plot_axes(axes)
@@ -1148,51 +1234,63 @@ def main() -> None:
     (
         utexas_y_plus,
         utexas_u_plus,
-        utexas_viscous_y,
-        utexas_viscous_u,
-        utexas_log_y,
-        utexas_log_u,
-        parties_y_plus,
+        utexas_viscous_y_plus,
+        utexas_viscous_u_plus,
+        utexas_log_y_plus,
+        utexas_log_u_plus,
+        utexas_upup_plus,
+        utexas_vpvp_plus,
+        utexas_wpwp_plus,
+        utexas_k_plus,
+        parties_yc_plus,
+        parties_yv_plus,
         parties_u_plus,
-        parties_viscous_y,
-        parties_viscous_u,
-        parties_log_y,
-        parties_log_u,
-        reynolds_number,
-        friction_reynolds_number,
+        parties_viscous_yc_plus,
+        parties_viscous_u_plus,
+        parties_log_yc_plus,
+        parties_log_u_plus,
+        parties_upup_plus,
+        parties_vpvp_plus,
+        parties_wpwp_plus,
+        parties_k_plus,
+        Re,
+        Re_tau,
+        u_tau,
     ) = get_processed_data(method)
 
     create_velocity_profile_plot(
         utexas_y_plus,
         utexas_u_plus,
-        utexas_viscous_y,
-        utexas_viscous_u,
-        utexas_log_y,
-        utexas_log_u,
-        parties_y_plus,
+        utexas_viscous_y_plus,
+        utexas_viscous_u_plus,
+        utexas_log_y_plus,
+        utexas_log_u_plus,
+        parties_yc_plus,
         parties_u_plus,
-        parties_viscous_y,
-        parties_viscous_u,
-        parties_log_y,
-        parties_log_u,
-        reynolds_number,
-        friction_reynolds_number,
+        parties_viscous_yc_plus,
+        parties_viscous_u_plus,
+        parties_log_yc_plus,
+        parties_log_u_plus,
+        Re,
+        Re_tau,
     )
 
-    # create_normal_stress_plot(
-    #     utexas_y_plus,
-    #     utexas_upup,
-    #     utexas_vpvp,
-    #     utexas_wpwp,
-    #     PARTIES_yc_plus,
-    #     PARTIES_yv_plus,
-    #     PARTIES_upup,
-    #     PARTIES_vpvp,
-    #     PARTIES_wpwp,
-    #     Re,
-    #     Re_tau,
-    #     u_tau,
-    # )
+    create_normal_stress_plot(
+        utexas_y_plus,
+        utexas_upup_plus,
+        utexas_vpvp_plus,
+        utexas_wpwp_plus,
+        utexas_k_plus,
+        parties_yc_plus,
+        parties_yv_plus,
+        parties_upup_plus,
+        parties_vpvp_plus,
+        parties_wpwp_plus,
+        parties_k_plus,
+        Re,
+        Re_tau,
+        u_tau,
+    )
 
 
 if __name__ == "__main__":
