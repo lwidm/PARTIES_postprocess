@@ -1,4 +1,4 @@
-# -- scripts/run_floc_analysis.py
+# -- src/scripts/run_floc_analysis.py
 
 import h5py  # type: ignore
 import numpy as np
@@ -7,11 +7,11 @@ from pathlib import Path
 import tqdm  # type: ignore
 from matplotlib import pyplot as plt
 
-from myio import myio
-from flocs.find_flocs import find_flocs
-from flocs import floc_statistics
-import globals
-import plotting
+from src.myio import myio
+from src.flocs.find_flocs import find_flocs
+from src.flocs import floc_statistics as floc_stat
+from src import globals
+from src import plotting
 
 
 def analyze_floc(
@@ -34,16 +34,16 @@ def analyze_floc(
         (particle_data["u"], particle_data["v"], particle_data["w"])
     )
 
-    shifts, X_com = floc_statistics.calc_CoM(X_p, particle_data["r"], domain)
-    # U_com = floc_statistics.calc_velocity(U_p)
+    shifts, X_com = floc_stat.calc_CoM(X_p, particle_data["r"], domain)
+    U_com: np.ndarray = floc_stat.calc_velocity(U_p)
 
-    # feret_diam = floc_statistics.calc_feret_diam(particle_diameter, X_p, X_com, shifts)
-    # gyration_diam = floc_statistics.calc_gyration_diam(particle_diameter, X_p, X_com, shifts)
-    # fractal_dim = floc_statistics.calc_fractal_dim(particle_diameter, feret_diam, N_particles)
-    # orientation = floc_statistics.calc_orientation(X_p, X_com, shifts)
-    # theta = floc_statistics.calc_theta(orientation, 3)
-    # pitch = floc_statistics.calc_pitch(orientation, N_particles)
-    # rotational_vel = floc_statistics.calc_rotational_velocity(x, u, shifts, floc_com, n_par)
+    feret_diam: float = floc_stat.calc_feret_diam(particle_diameter, X_p, X_com, shifts)
+    gyration_diam: float = floc_stat.calc_gyration_diam(particle_diameter, X_p, X_com, shifts)
+    fractal_dim: float = floc_stat.calc_fractal_dim(particle_diameter, feret_diam, N_particles)
+    orientation: np.ndarray = floc_stat.calc_orientation(X_p, X_com, shifts)
+    theta: np.ndarray = floc_stat.calc_theta(orientation, 3)
+    pitch: float = floc_stat.calc_pitch(orientation, N_particles)
+    # rotational_vel: np.ndarray = floc_stat.calc_rotational_velocity(x, u, shifts, floc_com, n_par)
 
     floc_results = {
         "floc_id": particle_data["floc_id"][0],
@@ -51,22 +51,22 @@ def analyze_floc(
         "x": X_com[0],
         "y": X_com[1],
         "z": X_com[2],
-        # "u": U_com[0],
-        # "v": U_com[1],
-        # "w": U_com[2],
-        # "D_f": feret_diam,
-        # "D_g": gyration_diam,
-        # "n_f": fractal_dim,
-        # "l_x": orientation[0],
-        # "l_y": orientation[1],
-        # "l_z": orientation[2],
+        "u": U_com[0],
+        "v": U_com[1],
+        "w": U_com[2],
+        "D_f": feret_diam,
+        "D_g": gyration_diam,
+        "n_f": fractal_dim,
+        "l_x": orientation[0],
+        "l_y": orientation[1],
+        "l_z": orientation[2],
         # "omega_x": rotational_vel[0],
         # "omega_y": rotational_vel[1],
         # "omega_z": rotational_vel[2],
-        # "theta_x": theta[0],
-        # "theta_y": theta[1],
-        # "theta_z": theta[2],
-        # "pitch": pitch,
+        "theta_x": theta[0],
+        "theta_y": theta[1],
+        "theta_z": theta[2],
+        "pitch": pitch,
     }
     particle_data.update(
         {"x_shift": shifts[:, 0], "y_shift": shifts[:, 1], "z_shift": shifts[:, 2]}
