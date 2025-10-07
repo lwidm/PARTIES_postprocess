@@ -110,3 +110,71 @@ def calc_mass(r: np.ndarray) -> float:
         multiple densities.
     """
     return 4 / 3 * np.pi * np.sum(r**3)
+
+def calc_velocity(U: np.ndarray) -> np.ndarray:
+    """Calculate the floc felocity. """
+    return U.mean(axis=0)
+
+def calc_feret_diam(
+        particle_diam: float,
+        X_p: np.ndarray,
+        X_CoM: np.ndarray,
+        shift: np.ndarray,
+) -> float:
+    """ Calcualte the floc Feret diameter."""
+    dist: float = np.linalg.norm(X_p - X_CoM + shift, axis=1)
+    return 2 * np.max(dist) + particle_diam
+
+def calc_gyration_diam(
+        particle_diam: float,
+        X_p: np.ndarray,
+        X_CoM: np.ndarray,
+        shift: np.ndarray,
+) -> float:
+    """Calculates the floc diameter of gyration."""
+    N_particles: int = len(X_p)
+    if N_particles == 1:
+        return particle_diam
+    if N_particles == 2:
+        return np.sqrt(1.6) * particle_diam
+    dist: np.ndarray = X_p - X_CoM + shift
+    return 2 * np.sqrt((dist*dist).sum() / N_particles)
+    
+
+# BUG: Does not handle polydispersity
+def calc_fractal_dim(particle_diam: float, feret_diam: float, N_particles: int) -> float:
+    """Calculates the floc fractal dimension."""
+    if N_particles < 2:
+        return 1
+    return np.log(N_particles) / np.log(feret_diam / particle_diam)
+
+def calc_orientation(
+        X_p: np.ndarray, X_CoM: np.ndarray, shift: np.ndarray
+) -> np.ndarray:
+    """Calculates the floc orientation
+
+    The orientation is the vector from the center of mass to the furthest particle.
+    """
+    dist: np.ndarray = X_p - X_CoM + shift
+    dist2: np.ndarray = (dist * dist).sum(axis=1)
+    return dist[np.argmax(dist2)]
+
+
+def calc_pitch(orientation: np.ndarray, N_partices: int) -> float:
+    """Calcualtes the floc pitch.
+
+    The pitch is the angle the floc makes with the x-axis in the y-direction.
+    """
+    if N_partices < 2:
+        return 0
+    return np.arctan(orientation[1] / orientation[0])
+
+def calc_theta(orientation: np.ndarray, N_particles: int) -> np.ndarray:
+    """Calculates the floc angle.
+
+    Theta is the angle the floc makes with the x-axis in the z-direction.
+    """
+    if N_particles < 2:
+        return np.zeros(3)
+    return np.arccos(orientation / np.linalg.norm(orientation))
+
