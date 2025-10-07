@@ -171,7 +171,7 @@ def main():
     Re: float = 2800.0
 
     output_dir: Path = Path("./output/flocs")
-    parties_data_dir: Path = Path("./learning/data")
+    parties_data_dir: Path = Path("./data")
 
     num_workers_single_component: Optional[int] = 5
     num_workers_cross_component: Optional[int] = 2

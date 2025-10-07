@@ -222,8 +222,8 @@ def main():
     Re: float = 2800.0
 
     output_dir: Path = Path("./output/fluid")
-    parties_data_dir: Path = Path("./learning/data")
-    utexas_data_dir: Path = Path("./learning/data")
+    parties_data_dir: Path = Path("./data")
+    utexas_data_dir: Path = Path("./data")
 
     num_workers_single_component: Optional[int] = 5
     num_workers_cross_component: Optional[int] = 2
@@ -232,7 +232,7 @@ def main():
 
     if globals.on_anvil:
         output_dir = Path("/home/x-lwidmer/Documents/PARTIES_postprocess/output/fluid")
-        utexas_data_dir = Path("/home/x-lwidmer/Documents/PARTIES_postprocess/learning/data")
+        utexas_data_dir = Path("/home/x-lwidmer/Documents/PARTIES_postprocess/data")
         parties_data_dir = Path("/anvil/scratch/x-lwidmer/RUN5")
         num_workers_single_component = 8
         num_workers_cross_component = 4
