@@ -1,15 +1,15 @@
-# -- scripts/run_fuild_wall_analysis.py
+# -- src/scripts/run_fuild_wall_analysis.py
 
-import plotting
 from typing import Optional, List, Dict, Union, Literal
 from pathlib import Path
 import numpy as np
 
-import globals
-from myio import myio
-from fluid import flow_statistics as fstat
-import theory
-from plotting.templates import (
+from src import globals
+from src.myio import myio
+from src.fluid import flow_statistics as fstat
+from src import theory
+from src import plotting
+from src.plotting.templates import (
     create_velocity_profile_wall_plot,
     create_normal_stress_wall_plot,
     create_particle_slice_plot,

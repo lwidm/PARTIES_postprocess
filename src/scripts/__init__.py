@@ -1,4 +1,5 @@
-# -- myio/__init__.py
+# -- src/scripts/__init__.py
+
 """
 Subpackage all scripts
 """

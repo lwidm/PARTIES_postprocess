@@ -1,4 +1,4 @@
-# -- plotting/tools.py
+# -- src/plotting/tools.py
 
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes

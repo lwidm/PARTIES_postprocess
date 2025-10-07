@@ -1,4 +1,4 @@
-# -- myio/myio_torch.py
+# -- src/myio/myio_torch.py
 
 import torch
 import numpy as np

@@ -1,4 +1,5 @@
-# -- myio/__init__.py
+# -- src/myio/__init__.py
+
 """
 MyIO subpackage for data input/output operations.
 
@@ -8,9 +9,7 @@ This package provides:
 - utexas: reading of UT Austin data files
 """
 
-from . import myio
-from . import myio_torch
-from . import utexas
+from . import myio, myio_torch, utexas
 
 from .myio import (
     load_columns_from_txt_numpy,

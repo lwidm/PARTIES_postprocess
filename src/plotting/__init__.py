@@ -1,4 +1,5 @@
-# -- plotting/__init__.py
+# -- src/plotting/__init__.py
+
 """
 Subpackage for plotting
 """

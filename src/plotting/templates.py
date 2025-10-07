@@ -1,4 +1,5 @@
-# -- /plotting/templates.py
+# -- src/plotting/templates.py
+
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
@@ -8,8 +9,8 @@ from pathlib import Path
 import h5py  # type: ignore
 
 from .tools import format_plot_axes
-import globals
-from myio import myio
+from src import globals
+from src.myio import myio
 
 
 def create_velocity_profile_wall_plot(

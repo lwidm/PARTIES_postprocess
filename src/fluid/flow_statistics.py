@@ -1,3 +1,5 @@
+# -- src/fluid/flow_statistics.py
+
 import numpy as np
 import h5py  # type: ignore
 from pathlib import Path

@@ -1,4 +1,5 @@
-# -- fluid/__init__.py
+# -- src/fluid/__init__.py
+
 """
 Subpackage for obtaining and processing floc data from PARTIES output files.
 

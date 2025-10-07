@@ -1,3 +1,5 @@
+# -- src/globals.py
+
 import os
 
 on_anvil = os.getenv("MY_MACHINE", "") == "anvil"

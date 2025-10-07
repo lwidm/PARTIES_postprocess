@@ -1,4 +1,4 @@
-# -- flocs/floc_statistics.py
+# -- src/flocs/floc_statistics.py
 
 import numpy as np
 from typing import Dict, Union, Tuple

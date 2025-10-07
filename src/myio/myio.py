@@ -1,4 +1,4 @@
-# -- myio/myio.py
+# -- src/myio/myio.py
 
 import numpy as np
 from typing import Optional, List, Dict, Union, Any, Tuple
@@ -286,12 +286,11 @@ def read_particle_data(path: Union[str, Path]) -> Dict[str, np.ndarray]:
             "w": w,
         }
 
-    # TODO :
-    # particle_data_fields: List[str] = ["F_IBM", "F_rigid", "F_coll"]
-    particle_data_fields: List[str] = []
-    field: str
-    for field in particle_data_fields:
-        particle_data = _load_3_component_field(particle_data, mobile_data, field)
+        particle_data_fields: List[str] = ["F_IBM", "F_rigid", "F_coll"]
+        particle_data_fields: List[str] = []
+        field: str
+        for field in particle_data_fields:
+            particle_data = _load_3_component_field(particle_data, mobile_data, field)
     return particle_data
 
 

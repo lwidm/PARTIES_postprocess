@@ -1,4 +1,5 @@
-# theory/law_of_the_wall.py
+# -- src/theory/law_of_the_wall.py
+
 import numpy as np
 from typing import Tuple
 from scipy.optimize import curve_fit  # type: ignore
