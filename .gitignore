@@ -1,5 +1,5 @@
 venv*
 **/__pycache__/
 **/.null-ls
-
+**/.mypy_cache
 log_ana.*
