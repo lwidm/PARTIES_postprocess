@@ -1,8 +1,8 @@
 import numpy as np
 import h5py  # type: ignore
 from pathlib import Path
-from typing import Optional, Union, Dict, Literal, List, Tuple, Any
-import tqdm
+from typing import Union, Dict, Literal, List, Tuple, Any
+import tqdm  # type: ignore
 import gc
 
 
@@ -51,7 +51,7 @@ def E_ij(data_i: np.ndarray, data_j: np.ndarray, axis: Literal[0, 1, 2]):
 
 def process_mean_flow(
     fluid_files: Union[List[str], List[Path]], grid: Dict[str, np.ndarray]
-):
+) -> Dict[str, np.ndarray]:
     n_snapshots: int = len(fluid_files)
     results: Dict[str, np.ndarray] = {
         "U": np.zeros_like(grid["yc"]),
@@ -82,14 +82,14 @@ def process_fluctuations(
     fluid_files: Union[List[str], List[Path]],
     mean_results: Dict[str, np.ndarray],
     grid: Dict[str, np.ndarray],
-):
+) -> Dict[str, np.ndarray]:
     n_snapshots = len(fluid_files)
     ny_c = len(grid["yc"])
     ny_v = len(grid["yv"])
     nx = len(grid["xc"]) // 2 + 1
     nz = len(grid["zc"]) // 2 + 1
 
-    results = {
+    results: Dict[str, np.ndarray] = {
         "phip": np.zeros_like(grid["yc"]),
         "upup": np.zeros_like(grid["yc"]),
         "upvp": np.zeros_like(grid["yc"]),
@@ -214,9 +214,9 @@ def get_wall_units(
     Re: float,
     tau_w: float,
     u_tau: float,
-) -> Dict[str, Any]:
+) -> Dict[str, Union[np.ndarray, float]]:
 
-    wall_results: Dict[str, Any] = {}
+    wall_results: Dict[str, Union[np.ndarray, float]] = {}
     yc_plus: np.ndarray = Re * grid["yc"] * u_tau
     yv_plus: np.ndarray = Re * grid["yv"] * u_tau
     wall_results["u_tau"] = u_tau

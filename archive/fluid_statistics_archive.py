@@ -378,6 +378,8 @@ def process_cross_components(
     gc.collect()
 
     return ensemble_cross_mean_velocity
+
+
 def compute_all_reynolds_stresses_step_by_step(
     min_file_index: Optional[int] = None,
     max_file_index: Optional[int] = None,

@@ -9,5 +9,5 @@ This package provides:
 from . import law_of_the_wall
 
 __all__ = [
-    'law_of_the_wall',
+    "law_of_the_wall",
 ]

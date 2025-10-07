@@ -1,7 +1,7 @@
 # -- flocs/floc_statistics.py
 
 import numpy as np
-from typing import Dict, Optional, Union, Tuple
+from typing import Dict, Union, Tuple
 
 
 def calc_CoM(
@@ -39,7 +39,10 @@ def calc_CoM(
         shifts[:, i] = shift
     return shifts, X_CoM
 
-def _calc_CoM_1d_periodic( x_p: np.ndarray, r: np.ndarray, L: float) -> Tuple[np.floating, np.ndarray]:
+
+def _calc_CoM_1d_periodic(
+    x_p: np.ndarray, r: np.ndarray, L: float
+) -> Tuple[np.floating, np.ndarray]:
     """Calculate the center of mass for a periodic, one dimensional system of particles.
 
     Args:
@@ -97,6 +100,7 @@ def _calc_CoM_1d(x_p: np.ndarray, r: np.ndarray) -> np.floating:
     """
     # return np.average(x, weights=r**3)
     return np.mean(x_p)
+
 
 def calc_mass(r: np.ndarray) -> float:
     """Calculate the total mass of a system of particles with radii `r`.

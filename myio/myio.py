@@ -234,12 +234,12 @@ def read_coh_range(data_dir: Path, particle_path: Path) -> float:
             data_dir / "parties.inp"
         )
         dy: float = float(params["ymax"] - params["ymin"]) / float(params["NYM"])
-        coh_range: float = params["coh_range"] # type: ignore
+        coh_range: float = params["coh_range"]  # type: ignore
         return coh_range * dy
     except KeyError:
         warnings.warn(r"parties.inp not found, using coh_range = 0.05 * D_p.")
         with h5py.File(particle_path, "r") as f:
-            return 0.1 * f["mobile/R"][0] # type: ignore
+            return 0.1 * f["mobile/R"][0]  # type: ignore
 
 
 def read_domain_info(path: Path) -> Dict[str, Union[int, float]]:
@@ -319,15 +319,23 @@ def combine_dicts(dict_list: List[Dict], scalar: bool = False) -> Dict:
 def _read_inp(inp_file: Union[Path, str]) -> Dict[str, Union[np.ndarray, int, float]]:
     """Return a dict of all parameters in a config file."""
     config_parser = configparser.ConfigParser(inline_comment_prefixes="#")
+
     def _optionxform(option: str) -> str:
         return option
-    config_parser.optionxform = _optionxform # type: ignore
+
+    config_parser.optionxform = _optionxform  # type: ignore
     config_parser.read(inp_file)
     config_dicts: List[Dict[str, Union[np.ndarray, int, float]]] = [dict(config_parser[s]) for s in config_parser.sections()]  # type: ignore
     config_raw: Dict[str, str] = _merge_dicts(config_dicts)
-    config_raw = {k: v.replace("{", "[").replace("}", "]") for k, v in config_raw.items()}
-    config_list:  Dict[str, Union[List, int, float]] = {k: ast.literal_eval(v) for k, v in config_raw.items()}
-    config_np: Dict[str, Union[np.ndarray, int, float]] = {k: np.array(v) if isinstance(v, list) else v for k, v in config_list.items()}
+    config_raw = {
+        k: v.replace("{", "[").replace("}", "]") for k, v in config_raw.items()
+    }
+    config_list: Dict[str, Union[List, int, float]] = {
+        k: ast.literal_eval(v) for k, v in config_raw.items()
+    }
+    config_np: Dict[str, Union[np.ndarray, int, float]] = {
+        k: np.array(v) if isinstance(v, list) else v for k, v in config_list.items()
+    }
     return config_np
 
 

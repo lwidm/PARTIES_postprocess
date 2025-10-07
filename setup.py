@@ -1,5 +1,5 @@
 # -- setup.py
-from setuptools import setup, find_packages # type: ignore
+from setuptools import setup, find_packages  # type: ignore
 
 setup(
     name="parties_postprocess",
@@ -15,5 +15,5 @@ setup(
     ],
     author="Lukas Widmer",
     description="",
-    python_requires=">3.13.7"
+    python_requires=">3.13.7",
 )

@@ -4,6 +4,7 @@ from typing import Tuple
 from scipy.optimize import curve_fit  # type: ignore
 import warnings
 
+
 def _viscous_sublayer_velocity(y_plus: np.ndarray) -> np.ndarray:
     return y_plus
 
@@ -30,19 +31,21 @@ def generate_profile(
     viscous_y_plus: np.ndarray = y_plus[viscous_region_mask]
     log_y_plus: np.ndarray = y_plus[log_region_mask]
 
-    viscous_u_plus: np.ndarray = _viscous_sublayer_velocity(viscous_y_plus)
-    log_u_plus: np.ndarray = _log_law_velocity(
+    viscous_U_plus: np.ndarray = _viscous_sublayer_velocity(viscous_y_plus)
+    log_U_plus: np.ndarray = _log_law_velocity(
         log_y_plus, von_karman_constant, log_law_constant
     )
 
-    return viscous_y_plus, viscous_u_plus, log_y_plus, log_u_plus
+    return viscous_y_plus, viscous_U_plus, log_y_plus, log_U_plus
 
 
 def fit_parameters(
     experimental_yc_plus: np.ndarray, experimental_plus_velocity: np.ndarray
 ) -> Tuple[float, float]:
 
-    log_region_mask: np.ndarray = (experimental_yc_plus > 30) & (experimental_yc_plus < 1e2)
+    log_region_mask: np.ndarray = (experimental_yc_plus > 30) & (
+        experimental_yc_plus < 1e2
+    )
     log_region_yc_plus: np.ndarray = experimental_yc_plus[log_region_mask]
     log_region_velocity: np.ndarray = experimental_plus_velocity[log_region_mask]
 
@@ -56,5 +59,7 @@ def fit_parameters(
         fitted_kappa, fitted_constant = fitted_parameters
         return fitted_kappa, fitted_constant
     except Exception as error:
-        warnings.warn(f"Fitting of log law parameters failed: {error}", category=UserWarning)
+        warnings.warn(
+            f"Fitting of log law parameters failed: {error}", category=UserWarning
+        )
         return 0.41, 5.0

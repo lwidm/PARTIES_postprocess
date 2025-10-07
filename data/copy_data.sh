@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+rsync -avh --info=progress2 --partial "x-lwidmer@anvil.rcac.purdue.edu:/anvil/scratch/x-lwidmer/RUN5/Particle_300.h5" "./"
+rsync -avh --info=progress2 --partial "x-lwidmer@anvil.rcac.purdue.edu:/anvil/scratch/x-lwidmer/RUN5/Particle_301.h5" "./"
+rsync -avh --info=progress2 --partial "x-lwidmer@anvil.rcac.purdue.edu:/anvil/scratch/x-lwidmer/RUN5/Particle_302.h5" "./"
+rsync -avh --info=progress2 --partial "x-lwidmer@anvil.rcac.purdue.edu:/anvil/scratch/x-lwidmer/RUN5/Particle_303.h5" "./"
+rsync -avh --info=progress2 --partial "x-lwidmer@anvil.rcac.purdue.edu:/anvil/scratch/x-lwidmer/RUN5/Particle_304.h5" "./"
+rsync -avh --info=progress2 --partial "x-lwidmer@anvil.rcac.purdue.edu:/anvil/scratch/x-lwidmer/RUN5/Particle_305.h5" "./"
+rsync -avh --info=progress2 --partial "x-lwidmer@anvil.rcac.purdue.edu:/anvil/scratch/x-lwidmer/RUN5/Particle_306.h5" "./"
+rsync -avh --info=progress2 --partial "x-lwidmer@anvil.rcac.purdue.edu:/anvil/scratch/x-lwidmer/RUN5/Particle_307.h5" "./"
+rsync -avh --info=progress2 --partial "x-lwidmer@anvil.rcac.purdue.edu:/anvil/scratch/x-lwidmer/RUN5/Particle_308.h5" "./"
+rsync -avh --info=progress2 --partial "x-lwidmer@anvil.rcac.purdue.edu:/anvil/scratch/x-lwidmer/RUN5/Particle_309.h5" "./"
+rsync -avh --info=progress2 --partial "x-lwidmer@anvil.rcac.purdue.edu:/anvil/scratch/x-lwidmer/RUN5/Particle_310.h5" "./"
+
+rsync -avh --info=progress2 --partial "x-lwidmer@anvil.rcac.purdue.edu:/anvil/scratch/x-lwidmer/RUN5/Data_300.h5" "./"
+rsync -avh --info=progress2 --partial "x-lwidmer@anvil.rcac.purdue.edu:/anvil/scratch/x-lwidmer/RUN5/Data_301.h5" "./"
+rsync -avh --info=progress2 --partial "x-lwidmer@anvil.rcac.purdue.edu:/anvil/scratch/x-lwidmer/RUN5/Data_302.h5" "./"
+rsync -avh --info=progress2 --partial "x-lwidmer@anvil.rcac.purdue.edu:/anvil/scratch/x-lwidmer/RUN5/Data_303.h5" "./"
+rsync -avh --info=progress2 --partial "x-lwidmer@anvil.rcac.purdue.edu:/anvil/scratch/x-lwidmer/RUN5/Data_304.h5" "./"
+rsync -avh --info=progress2 --partial "x-lwidmer@anvil.rcac.purdue.edu:/anvil/scratch/x-lwidmer/RUN5/Data_305.h5" "./"
+rsync -avh --info=progress2 --partial "x-lwidmer@anvil.rcac.purdue.edu:/anvil/scratch/x-lwidmer/RUN5/Data_306.h5" "./"
+rsync -avh --info=progress2 --partial "x-lwidmer@anvil.rcac.purdue.edu:/anvil/scratch/x-lwidmer/RUN5/Data_307.h5" "./"
+rsync -avh --info=progress2 --partial "x-lwidmer@anvil.rcac.purdue.edu:/anvil/scratch/x-lwidmer/RUN5/Data_308.h5" "./"
+rsync -avh --info=progress2 --partial "x-lwidmer@anvil.rcac.purdue.edu:/anvil/scratch/x-lwidmer/RUN5/Data_309.h5" "./"
+rsync -avh --info=progress2 --partial "x-lwidmer@anvil.rcac.purdue.edu:/anvil/scratch/x-lwidmer/RUN5/Data_310.h5" "./"
+

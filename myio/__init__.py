@@ -18,6 +18,7 @@ from .myio import (
     read_domain_info,
     read_particle_data,
     combine_dicts,
+    read_coh_range,
 )
 from .myio_torch import load_columns_from_txt_torch
 
@@ -31,5 +32,5 @@ __all__ = [
     "read_coh_range",
     "list_parties_data_files",
     "read_particle_data",
-    "combine_dicts"
+    "combine_dicts",
 ]

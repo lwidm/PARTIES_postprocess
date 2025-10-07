@@ -1,11 +1,14 @@
 # -- flocs/find_flocs.py
 
 import numpy as np
-from scipy.spatial import cKDTree # type: ignore
+from scipy.spatial import cKDTree  # type: ignore
 from typing import Dict, Union, List, Set
 
+
 def find_flocs(
-    particle_data: Dict[str, np.ndarray], cutoff_distance: float, domain: Dict[str, Union[int, float]]
+    particle_data: Dict[str, np.ndarray],
+    cutoff_distance: float,
+    domain: Dict[str, Union[int, float]],
 ) -> Dict[str, np.ndarray]:
     """Find all flocs for a particle output file.
 
@@ -24,6 +27,7 @@ def find_flocs(
     flocs = _find_connected_groups(adjacency)
     particle_data = _assign_floc_ids(particle_data, flocs)
     return particle_data
+
 
 def _assign_floc_ids(
     particle_data: Dict[str, np.ndarray], flocs: List[List[int]]
@@ -44,6 +48,7 @@ def _assign_floc_ids(
         floc_ids[floc] = floc_id
     particle_data["floc_id"] = floc_ids
     return particle_data
+
 
 def _make_adj_list(
     particle_data: dict[str, np.ndarray],
@@ -66,7 +71,9 @@ def _make_adj_list(
         Adjacency "list" (dict) where the key is the particle-id and entries are lists
         of particle-ids of the neighboring particles.
     """
-    X_p: np.ndarray = np.column_stack((particle_data["x"], particle_data["y"], particle_data["z"]))
+    X_p: np.ndarray = np.column_stack(
+        (particle_data["x"], particle_data["y"], particle_data["z"])
+    )
     n_p: int = len(particle_data["r"])
     adj: Dict[int, np.ndarray] = {i: np.array([]) for i in range(n_p)}
 
@@ -78,19 +85,22 @@ def _make_adj_list(
         offsets = np.vstack([offsets, [0, domain["Ly"], 0], [0, -domain["Ly"], 0]])
     if domain["z_periodic"]:
         offsets = np.vstack([offsets, [0, 0, domain["Lz"]], [0, 0, -domain["Lz"]]])
-    X_p_extended: np.ndarray = np.vstack([X_p + offset for offset in offsets])    
-    
+    X_p_extended: np.ndarray = np.vstack([X_p + offset for offset in offsets])
+
     tree = cKDTree(X_p_extended)
     i: int
     particle: np.ndarray
     for i, particle in enumerate(X_p):
-        neighbors: List[int] = tree.query_ball_point(particle, 2 * particle_data["r"][i] + cutoff_distance)
+        neighbors: List[int] = tree.query_ball_point(
+            particle, 2 * particle_data["r"][i] + cutoff_distance
+        )
         neighbors.remove(i)
         # Re-collapse the adjacency data to only include indices from the original dataset
         neighbors = [n % n_p for n in neighbors]
         adj[i] = np.array(neighbors)
 
     return adj
+
 
 def _find_connected_groups(adj: Dict[int, np.ndarray]) -> List[List[int]]:
     """Find the flocs within an adjacency "list" (dict).

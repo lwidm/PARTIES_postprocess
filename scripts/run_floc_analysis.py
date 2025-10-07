@@ -2,15 +2,16 @@
 
 import h5py  # type: ignore
 import numpy as np
-from typing import Dict, Union, Optional, Tuple, List
+from typing import Dict, Union, Optional, Tuple, List, Literal
 from pathlib import Path
-import sys
 import tqdm  # type: ignore
 from matplotlib import pyplot as plt
 
 from myio import myio
 from flocs.find_flocs import find_flocs
 from flocs import floc_statistics
+import globals
+import plotting
 
 
 def analyze_floc(
@@ -161,38 +162,64 @@ def simple_floc_plot(floc_dir: Path) -> None:
 
 
 def main():
-    data_dir: Path = Path(sys.argv[1])
+    # =============================================================================
+    # CONFIGURATION AND CONSTANTS
+    # =============================================================================
 
-    analysis_dir: Path = data_dir / "analysis"
-    analysis_dir.mkdir(exist_ok=True)
-    floc_dir: Path = analysis_dir / "flocs"
-    floc_dir.mkdir(exist_ok=True)
+    plotting.tools.update_rcParams()
 
-    particle_files: List[Path] = myio.list_parties_data_files(data_dir, "Particle")
+    Re: float = 2800.0
 
-    def floc_filename(fp: Path) -> str:
-        return "Flocs_" + fp.stem.split("_")[-1] + ".h5"
+    output_dir: Path = Path("./output/flocs")
+    parties_data_dir: Path = Path("./learning/data")
 
-    out_files: List[Path] = [floc_dir / floc_filename(fp) for fp in particle_files]
+    num_workers_single_component: Optional[int] = 5
+    num_workers_cross_component: Optional[int] = 2
 
-    init_file_path: Path = particle_files[0]
-    domain: Dict[str, Union[int, float]] = myio.read_domain_info(init_file_path)
-    coh_range: float = myio.read_coh_range(data_dir, init_file_path)
+    if globals.on_anvil:
+        output_dir = Path("/home/x-lwidmer/Documents/PARTIES_postprocess/output/flocs")
+        parties_data_dir = Path("/anvil/scratch/x-lwidmer/RUN5")
+        num_workers_single_component = 8
+        num_workers_cross_component = 4
+        min_file_index = 250
 
-    prev_results = None
-    for in_file, out_file in tqdm.tqdm(
-        zip(particle_files, out_files), total=len(particle_files)
-    ):
-        prev_results = process_flocs(in_file, out_file, domain, coh_range, prev_results)
+    output_dir.mkdir(exist_ok=True)
 
-    # TODO :
-    # family_tree = fam_tree.FamilyTree(floc_dir)
-    # family_tree.build()
-    #
-    # tree_file = analysis_dir / "family_tree.pkl"
-    # myio.save_to_pickle(tree_file, family_tree.family_tree)
+    # processing_method: Literal["load", "compute"] = "load"
+    processing_method: Literal["load", "compute"] = "compute"
 
-    simple_floc_plot(floc_dir)
+    # =============================================================================
+    # Computation and plotting
+    # =============================================================================
+
+    if processing_method == "compute":
+        particle_files: List[Path] = myio.list_parties_data_files(parties_data_dir, "Particle")
+    
+        def floc_filename(fp: Path) -> str:
+            return "Flocs_" + fp.stem.split("_")[-1] + ".h5"
+    
+        out_files: List[Path] = [output_dir / floc_filename(fp) for fp in particle_files]
+    
+        init_file_path: Path = particle_files[0]
+        domain: Dict[str, Union[int, float]] = myio.read_domain_info(init_file_path)
+        coh_range: float = myio.read_coh_range(parties_data_dir, init_file_path)
+    
+        prev_results = None
+        for in_file, out_file in tqdm.tqdm(
+            zip(particle_files, out_files), total=len(particle_files)
+        ):
+            prev_results = process_flocs(in_file, out_file, domain, coh_range, prev_results)
+    
+        # TODO :
+        # family_tree = fam_tree.FamilyTree(floc_dir)
+        # family_tree.build()
+        #
+        # tree_file = analysis_dir / "family_tree.pkl"
+        # myio.save_to_pickle(tree_file, family_tree.family_tree)
+    elif processing_method == "load":
+        pass
+
+    simple_floc_plot(output_dir)
 
 
 if __name__ == "__main__":
