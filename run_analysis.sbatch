@@ -16,4 +16,4 @@ module load conda texlive
 eval "$(conda shell.bash hook)"
 conda activate PARTIES_postprocess_anvil
 
-PYTHONPATH=. python ./main.py /anvil/scratch/x-lwidmer/RUN6
+PYTHONPATH=. python ./main.py
