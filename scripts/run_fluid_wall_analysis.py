@@ -236,7 +236,7 @@ def main():
         parties_data_dir = Path("/anvil/scratch/x-lwidmer/RUN5")
         num_workers_single_component = 8
         num_workers_cross_component = 4
-        min_file_index = 250
+        min_file_index = 280
 
     output_dir.mkdir(exist_ok=True)
 
