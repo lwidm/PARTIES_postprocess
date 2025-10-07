@@ -8,7 +8,12 @@ import io
 import re
 import glob
 import warnings
-import h5py # type: ignore
+import h5py  # type: ignore
+import configparser
+import ast
+import sys
+
+sys.setrecursionlimit(int(1e9))
 
 
 def save_to_h5(
@@ -56,11 +61,17 @@ def save_to_h5(
                         key, data=array_value, compression="gzip", compression_opts=6
                     )
                 except (ValueError, TypeError):
-                    warnings.warn('when saving to h5 failed to convert tuple or list "{value}" with key "{key}" to numpy array. Converting to np.str_ instead', category=UserWarning)
+                    warnings.warn(
+                        'when saving to h5 failed to convert tuple or list "{value}" with key "{key}" to numpy array. Converting to np.str_ instead',
+                        category=UserWarning,
+                    )
                     # If conversion fails, save as string representation
                     h5_group.create_dataset(key, data=np.str_(str(value)))
             else:
-                warnings.warn(f'Failed to recognise type of value with key "{key}". Converting to np.str_ instead. (Value is "{value}")', category=UserWarning)
+                warnings.warn(
+                    f'Failed to recognise type of value with key "{key}". Converting to np.str_ instead. (Value is "{value}")',
+                    category=UserWarning,
+                )
                 # Fallback: convert to string
                 h5_group.create_dataset(key, data=np.str_(str(value)))
 
@@ -123,6 +134,7 @@ def load_from_h5(
 
     return data_dict, metadata
 
+
 def load_columns_from_txt_numpy(
     path: str, split_chars: str = ",;", comment_chars: str = "#%"
 ) -> List[np.ndarray]:
@@ -164,7 +176,9 @@ def load_columns_from_txt_numpy(
     if len(lines) == 0:
         raise ValueError("no data found")
 
-    data: np.ndarray = np.genfromtxt(io.StringIO("\n".join(lines)), dtype=np.float64, delimiter=None)
+    data: np.ndarray = np.genfromtxt(
+        io.StringIO("\n".join(lines)), dtype=np.float64, delimiter=None
+    )
     if data.size == 0:
         raise ValueError("no numeric data parsed")
     if data.ndim == 1:
@@ -173,7 +187,7 @@ def load_columns_from_txt_numpy(
 
 
 def list_parties_data_files(
-    path: str,
+    path: Union[str, Path],
     base_name: str,
     min_index: Optional[int] = None,
     max_index: Optional[int] = None,
@@ -211,3 +225,115 @@ def list_parties_data_files(
             continue
 
     return filtered_files
+
+
+def read_coh_range(data_dir: Path, particle_path: Path) -> float:
+    """Read the cohesive range from 'parties.inp' if not, return 0.05 * D_p."""
+    try:
+        params: Dict[str, Union[np.ndarray, int, float]] = _read_inp(
+            data_dir / "parties.inp"
+        )
+        dy: float = float(params["ymax"] - params["ymin"]) / float(params["NYM"])
+        coh_range: float = params["coh_range"] # type: ignore
+        return coh_range * dy
+    except KeyError:
+        warnings.warn(r"parties.inp not found, using coh_range = 0.05 * D_p.")
+        with h5py.File(particle_path, "r") as f:
+            return 0.1 * f["mobile/R"][0] # type: ignore
+
+
+def read_domain_info(path: Path) -> Dict[str, Union[int, float]]:
+    """Returns a dict containing the domain size and periodicity in each direction."""
+    with h5py.File(path, "r") as f:
+        domain_data: h5py.Group = f["domain"]  # type: ignore
+        Lx: int = domain_data["xmax"][0]  # type: ignore
+        Ly: int = domain_data["ymax"][0]  # type: ignore
+        Lz: int = domain_data["zmax"][0]  # type: ignore
+        x_periodic: int = domain_data["periodic"][0]  # type: ignore
+        y_periodic: int = domain_data["periodic"][1]  # type: ignore
+        z_periodic: int = domain_data["periodic"][2]  # type: ignore
+        domain: Dict[str, Union[int, float]] = {
+            "Lx": Lx,
+            "Ly": Ly,
+            "Lz": Lz,
+            "x_periodic": x_periodic,
+            "y_periodic": y_periodic,
+            "z_periodic": z_periodic,
+        }
+    return domain
+
+
+def read_particle_data(path: Union[str, Path]) -> Dict[str, np.ndarray]:
+    with h5py.File(path, "r") as f:
+        mobile_data: h5py.Group = f["mobile"]  # type: ignore
+        id: np.ndarray = np.arange(mobile_data["R"].shape[0])  # type: ignore
+        x: np.ndarray = mobile_data["X"][:, 0]  # type: ignore
+        y: np.ndarray = mobile_data["X"][:, 1]  # type: ignore
+        z: np.ndarray = mobile_data["X"][:, 1]  # type: ignore
+        r: np.ndarray = mobile_data["R"][:, 0]  # type: ignore
+        u: np.ndarray = mobile_data["U"][:, 0]  # type: ignore
+        v: np.ndarray = mobile_data["U"][:, 1]  # type: ignore
+        w: np.ndarray = mobile_data["U"][:, 2]  # type: ignore
+
+        particle_data: Dict[str, np.ndarray] = {
+            "id": id,
+            "x": x,
+            "y": y,
+            "z": z,
+            "r": r,
+            "u": u,
+            "v": v,
+            "w": w,
+        }
+
+    # TODO :
+    # particle_data_fields: List[str] = ["F_IBM", "F_rigid", "F_coll"]
+    particle_data_fields: List[str] = []
+    field: str
+    for field in particle_data_fields:
+        particle_data = _load_3_component_field(particle_data, mobile_data, field)
+    return particle_data
+
+
+def _load_3_component_field(
+    particle_data: Dict[str, np.ndarray], mobile_data: h5py.Group, fieldname: str
+):
+    """Load a data field with 3 components (x, y, z)."""
+    i: int
+    dir: str
+    for i, dir in enumerate(["x", "y", "z"]):
+        particle_data[fieldname + f"_{dir}"] = mobile_data[fieldname][:, i]  # type: ignore
+    return particle_data
+
+
+def combine_dicts(dict_list: List[Dict], scalar: bool = False) -> Dict:
+    """Combine a list of dictionaries with the same keys along their columns."""
+    if not dict_list:
+        return {}
+
+    if scalar:
+        return {k: np.array([d[k] for d in dict_list]) for k in dict_list[0]}
+    return {k: np.concatenate([d[k] for d in dict_list]) for k in dict_list[0]}
+
+
+def _read_inp(inp_file: Union[Path, str]) -> Dict[str, Union[np.ndarray, int, float]]:
+    """Return a dict of all parameters in a config file."""
+    config_parser = configparser.ConfigParser(inline_comment_prefixes="#")
+    def _optionxform(option: str) -> str:
+        return option
+    config_parser.optionxform = _optionxform # type: ignore
+    config_parser.read(inp_file)
+    config_dicts: List[Dict[str, Union[np.ndarray, int, float]]] = [dict(config_parser[s]) for s in config_parser.sections()]  # type: ignore
+    config_raw: Dict[str, str] = _merge_dicts(config_dicts)
+    config_raw = {k: v.replace("{", "[").replace("}", "]") for k, v in config_raw.items()}
+    config_list:  Dict[str, Union[List, int, float]] = {k: ast.literal_eval(v) for k, v in config_raw.items()}
+    config_np: Dict[str, Union[np.ndarray, int, float]] = {k: np.array(v) if isinstance(v, list) else v for k, v in config_list.items()}
+    return config_np
+
+
+def _merge_dicts(dict_list: list[dict]) -> dict:
+    """Merge a list of dicts into a single dict."""
+    merged: dict = {}
+    for d in dict_list:
+        merged |= d
+    return merged

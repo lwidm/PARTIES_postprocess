@@ -6,10 +6,12 @@ Lukas Widmer's (lwidm / lukwidmer / x-lwidmer) python package for postprocessing
 
 from . import myio
 from . import theory
+from . import fluid
+from . import flocs
 
 __version__ = "1.0.0"
 __author__ = "Lukas Widmer"
-__all__ = ["myio", "theory"]
+__all__ = ["myio", "theory", "fluid", "flocs"]
 
 if __name__ == "__main__":
     print(f"MyIO package {__version__}")

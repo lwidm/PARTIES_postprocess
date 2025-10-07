@@ -6,3 +6,4 @@ natsort
 PyQt5
 snakeviz
 tqdm
+configparser

@@ -9,6 +9,7 @@ dependencies:
   - matplotlib
   - natsort
   - tqdm
+  - configparser
   - pip
   - pip:
       - torch
