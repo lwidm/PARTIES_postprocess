@@ -44,7 +44,7 @@ def compute_all_reynolds_stresses(
         Dictionary containing all final results including wall units
     """
     print("Starting Reynolds stress computation...")
-
+    print(f'Looking for datafile in directory: "{parties_data_dir}"')
     data_files: List[Path] = myio.list_parties_data_files(
         parties_data_dir, "Data", min_file_index, max_file_index
     )
