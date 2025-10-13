@@ -48,7 +48,7 @@ def compute_all_reynolds_stresses(
     data_files: List[Path] = myio.list_parties_data_files(
         parties_data_dir, "Data", min_file_index, max_file_index
     )
-    print(f"Processing len(data_files) for fuild analysis ...")
+    print(f"Processing {len(data_files)} for fuild analysis ...")
     if not data_files:
         return {}
 
@@ -125,7 +125,6 @@ def collect_flow_statistics(
     parties_results: Dict[str, Union[np.ndarray, float]]
     if processing_method == "compute":
         if parties_data_dir is None:
-            print("LOg message 1")
             raise ValueError(
                 "Specify parties_data_dir in collect_flow_statistics() if reynolds_stresses are to be computed"
             )
@@ -140,7 +139,6 @@ def collect_flow_statistics(
             use_threads,
         )
     elif processing_method == "load":
-        print("LOg message 2")
         parties_results, _ = myio.load_from_h5(f"{output_dir}/reynolds_stresses.h5")
     else:
         raise ValueError(
