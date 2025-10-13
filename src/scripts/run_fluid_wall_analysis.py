@@ -44,7 +44,7 @@ def compute_all_reynolds_stresses(
         Dictionary containing all final results including wall units
     """
     print("Starting Reynolds stress computation...")
-    print(f'Looking for datafile in directory: "{parties_data_dir}"')
+    print(f'Looking for datafile in directory: "{parties_data_dir}" with min_file_index: {min_file_index} and max_file_index: {max_file_index}')
     data_files: List[Path] = myio.list_parties_data_files(
         parties_data_dir, "Data", min_file_index, max_file_index
     )
@@ -236,7 +236,6 @@ def main(
     if globals.on_anvil:
         num_workers_single_component = 8
         num_workers_cross_component = 4
-        min_file_index = 280
 
     Path(output_dir).mkdir(parents=True, exist_ok=True)
 
