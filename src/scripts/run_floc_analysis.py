@@ -161,29 +161,26 @@ def simple_floc_plot(floc_dir: Path) -> None:
     plt.close()
 
 
-def main():
+def main(parties_data_dir: Union[str, Path], output_dir: Union[str, Path]):
     # =============================================================================
     # CONFIGURATION AND CONSTANTS
     # =============================================================================
+
+    output_dir = Path(output_dir) / "flocs"
 
     plotting.tools.update_rcParams()
 
     Re: float = 2800.0
 
-    output_dir: Path = Path("./output/flocs")
-    parties_data_dir: Path = Path("./data")
-
     num_workers_single_component: Optional[int] = 5
     num_workers_cross_component: Optional[int] = 2
 
     if globals.on_anvil:
-        output_dir = Path("/home/x-lwidmer/Documents/PARTIES_postprocess/output/flocs")
-        parties_data_dir = Path("/anvil/scratch/x-lwidmer/RUN5")
         num_workers_single_component = 8
         num_workers_cross_component = 4
         min_file_index = 250
 
-    output_dir.mkdir(exist_ok=True)
+    Path(output_dir).mkdir(exist_ok=True)
 
     # processing_method: Literal["load", "compute"] = "load"
     processing_method: Literal["load", "compute"] = "compute"

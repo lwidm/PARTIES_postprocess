@@ -211,7 +211,7 @@ def collect_flow_statistics(
     return parties_results
 
 
-def main():
+def main(parties_data_dir: Union[str, Path], utexas_data_dir: Union[str, Path], output_dir: Union[str, Path]):
 
     # =============================================================================
     # CONFIGURATION AND CONSTANTS
@@ -221,9 +221,7 @@ def main():
 
     Re: float = 2800.0
 
-    output_dir: Path = Path("./output/fluid")
-    parties_data_dir: Path = Path("./data")
-    utexas_data_dir: Path = Path("./data")
+    output_dir = Path(output_dir) / "fluid"
 
     num_workers_single_component: Optional[int] = 5
     num_workers_cross_component: Optional[int] = 2
@@ -231,14 +229,11 @@ def main():
     max_file_index: Optional[int] = None
 
     if globals.on_anvil:
-        output_dir = Path("/home/x-lwidmer/Documents/PARTIES_postprocess/output/fluid")
-        utexas_data_dir = Path("/home/x-lwidmer/Documents/PARTIES_postprocess/data")
-        parties_data_dir = Path("/anvil/scratch/x-lwidmer/RUN5")
         num_workers_single_component = 8
         num_workers_cross_component = 4
         min_file_index = 280
 
-    output_dir.mkdir(exist_ok=True)
+    Path(output_dir).mkdir(exist_ok=True)
 
     # processing_method: Literal["load", "compute"] = "load"
     processing_method: Literal["load", "compute"] = "compute"

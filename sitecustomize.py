@@ -1,9 +1,9 @@
 # sitecustomize.py — project-local bootstrap for matplotlib backend
-import globals
+import os
 
-print("sitecustomize ... \n")
+on_anvil = os.getenv("MY_MACHINE", "") == "anvil"
 
-if not globals.on_anvil:
+if not on_anvil:
     try:
         import matplotlib
 
