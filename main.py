@@ -1,5 +1,5 @@
 import argparse
-from typing import Union
+from typing import Union, Optional
 from pathlib import Path
 
 from src import scripts
@@ -45,9 +45,29 @@ if __name__ == "__main__":
         default=output_dir,
         help="directory in which output_data should be stored",
     )
+    parser.add_argument(
+        "-min",
+        "--min_file_index",
+        nargs="?",
+        type=int,
+        default=None,
+        help="minimal particle/fluid datafile index to be read",
+    )
+    parser.add_argument(
+        "-max",
+        "--max_file_index",
+        nargs="?",
+        type=int,
+        default=None,
+        help="maximal particle/fluid datafile index to be read",
+    )
     args = parser.parse_args()
 
     scripts.run_fluid_wall_analysis.main(
-        args.parties_data_dir, args.utexas_data_dir, args.output_dir
+        args.parties_data_dir,
+        args.utexas_data_dir,
+        args.output_dir,
+        args.min_file_index,
+        args.max_file_index,
     )
     scripts.run_floc_analysis.main(args.parties_data_dir, args.output_dir)

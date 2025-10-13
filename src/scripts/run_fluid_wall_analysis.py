@@ -211,7 +211,13 @@ def collect_flow_statistics(
     return parties_results
 
 
-def main(parties_data_dir: Union[str, Path], utexas_data_dir: Union[str, Path], output_dir: Union[str, Path]):
+def main(
+    parties_data_dir: Union[str, Path],
+    utexas_data_dir: Union[str, Path],
+    output_dir: Union[str, Path],
+    min_file_index: Optional[int] = None,
+    max_file_index: Optional[int] = None,
+):
 
     # =============================================================================
     # CONFIGURATION AND CONSTANTS
@@ -225,8 +231,6 @@ def main(parties_data_dir: Union[str, Path], utexas_data_dir: Union[str, Path], 
 
     num_workers_single_component: Optional[int] = 5
     num_workers_cross_component: Optional[int] = 2
-    min_file_index: Optional[int] = None
-    max_file_index: Optional[int] = None
 
     if globals.on_anvil:
         num_workers_single_component = 8

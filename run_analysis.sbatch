@@ -18,4 +18,6 @@ conda activate PARTIES_postprocess_anvil
 PYTHONPATH=. python ./main.py \
 	--output_dir="/home/x-lwidmer/Documents/PARTIES_postprocess/output" \
 	--utexas_data_dir="/home/x-lwidmer/Documents/PARTIES_postprocess/data" \
-	--parties_data_dir="/anvil/scratch/x-lwidmer/RUN6"
+	--parties_data_dir="/anvil/scratch/x-lwidmer/RUN6" \
+	--min_file_index=100 \
+	--max_file_index=106
