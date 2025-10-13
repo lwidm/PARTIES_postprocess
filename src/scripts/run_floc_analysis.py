@@ -38,8 +38,12 @@ def analyze_floc(
     U_com: np.ndarray = floc_stat.calc_velocity(U_p)
 
     feret_diam: float = floc_stat.calc_feret_diam(particle_diameter, X_p, X_com, shifts)
-    gyration_diam: float = floc_stat.calc_gyration_diam(particle_diameter, X_p, X_com, shifts)
-    fractal_dim: float = floc_stat.calc_fractal_dim(particle_diameter, feret_diam, N_particles)
+    gyration_diam: float = floc_stat.calc_gyration_diam(
+        particle_diameter, X_p, X_com, shifts
+    )
+    fractal_dim: float = floc_stat.calc_fractal_dim(
+        particle_diameter, feret_diam, N_particles
+    )
     orientation: np.ndarray = floc_stat.calc_orientation(X_p, X_com, shifts)
     theta: np.ndarray = floc_stat.calc_theta(orientation, 3)
     pitch: float = floc_stat.calc_pitch(orientation, N_particles)
@@ -168,6 +172,8 @@ def main(parties_data_dir: Union[str, Path], output_dir: Union[str, Path]):
 
     output_dir = Path(output_dir) / "flocs"
 
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+
     plotting.tools.update_rcParams()
 
     Re: float = 2800.0
@@ -180,8 +186,6 @@ def main(parties_data_dir: Union[str, Path], output_dir: Union[str, Path]):
         num_workers_cross_component = 4
         min_file_index = 250
 
-    Path(output_dir).mkdir(exist_ok=True)
-
     # processing_method: Literal["load", "compute"] = "load"
     processing_method: Literal["load", "compute"] = "compute"
 
@@ -190,23 +194,29 @@ def main(parties_data_dir: Union[str, Path], output_dir: Union[str, Path]):
     # =============================================================================
 
     if processing_method == "compute":
-        particle_files: List[Path] = myio.list_parties_data_files(parties_data_dir, "Particle")
-    
+        particle_files: List[Path] = myio.list_parties_data_files(
+            parties_data_dir, "Particle"
+        )
+
         def floc_filename(fp: Path) -> str:
             return "Flocs_" + fp.stem.split("_")[-1] + ".h5"
-    
-        out_files: List[Path] = [output_dir / floc_filename(fp) for fp in particle_files]
-    
+
+        out_files: List[Path] = [
+            output_dir / floc_filename(fp) for fp in particle_files
+        ]
+
         init_file_path: Path = particle_files[0]
         domain: Dict[str, Union[int, float]] = myio.read_domain_info(init_file_path)
         coh_range: float = myio.read_coh_range(parties_data_dir, init_file_path)
-    
+
         prev_results = None
         for in_file, out_file in tqdm.tqdm(
             zip(particle_files, out_files), total=len(particle_files)
         ):
-            prev_results = process_flocs(in_file, out_file, domain, coh_range, prev_results)
-    
+            prev_results = process_flocs(
+                in_file, out_file, domain, coh_range, prev_results
+            )
+
         # TODO :
         # family_tree = fam_tree.FamilyTree(floc_dir)
         # family_tree.build()

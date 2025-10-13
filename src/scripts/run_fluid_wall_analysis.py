@@ -237,7 +237,7 @@ def main(
         num_workers_cross_component = 4
         min_file_index = 280
 
-    Path(output_dir).mkdir(exist_ok=True)
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
 
     # processing_method: Literal["load", "compute"] = "load"
     processing_method: Literal["load", "compute"] = "compute"

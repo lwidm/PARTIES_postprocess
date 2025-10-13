@@ -7,7 +7,7 @@ from src import globals
 
 if __name__ == "__main__":
 
-    output_dir: Path = Path("./output/fluid")
+    output_dir: Path = Path("./output")
     parties_data_dir: Path = Path("./data")
     utexas_data_dir: Path = Path("./data")
 
