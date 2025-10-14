@@ -94,7 +94,7 @@ def _make_adj_list(
         neighbors: List[int] = tree.query_ball_point(
             particle, 2 * particle_data["r"][i] + cutoff_distance
         )
-        neighbors.remove(i)
+        neighbors = [n for n in neighbors if n % n_p != i]
         # Re-collapse the adjacency data to only include indices from the original dataset
         neighbors = [n % n_p for n in neighbors]
         adj[i] = np.array(neighbors)

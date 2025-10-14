@@ -140,7 +140,7 @@ def process_flocs(
     return particle_results
 
 
-def simple_floc_plot(floc_dir: Path) -> None:
+def plot_floc_count_evolution(floc_dir: Path) -> None:
     """Minimal floc count plot."""
     floc_files: List[Path] = myio.list_parties_data_files(floc_dir, "Flocs")
     timesteps: List[int] = []
@@ -154,14 +154,18 @@ def simple_floc_plot(floc_dir: Path) -> None:
                 timesteps.append(timestep)
                 counts.append(floc_count)
 
-    plt.figure(figsize=(8, 5))
-    plt.plot(timesteps, counts, "bo-")
-    plt.xlabel("Timestep")
-    plt.ylabel("Number of Flocs")
-    plt.title("Floc Count Over Time")
-    plt.grid(True)
-    plt.savefig(floc_dir / "simple_floc_count.png", dpi=150, bbox_inches="tight")
-    plt.show()
+    figure, axes = plt.subplots(figsize=(6.5, 5.5))
+    axes.plot(timesteps, counts, "bx-")
+    axes.set_xlabel("Timestep")
+    axes.set_ylabel("# Flocs")
+    axes.grid(True)
+
+    axes.legend(loc="lower right", bbox_to_anchor=(1.0, 0.80))
+    axes = plotting.tools.format_plot_axes(axes)
+
+    figure.savefig(floc_dir / "floc_count_evolution.png", dpi=150, bbox_inches="tight")
+    if not globals.on_anvil:
+        plt.show()
     plt.close()
 
 
@@ -226,8 +230,5 @@ def main(parties_data_dir: Union[str, Path], output_dir: Union[str, Path]):
     elif processing_method == "load":
         pass
 
-    simple_floc_plot(output_dir)
+    plot_floc_count_evolution(output_dir)
 
-
-if __name__ == "__main__":
-    main()

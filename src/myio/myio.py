@@ -227,8 +227,10 @@ def list_parties_data_files(
     return filtered_files
 
 
-def read_coh_range(data_dir: Path, particle_path: Path) -> float:
+def read_coh_range(data_dir: Union[str, Path], particle_path: Union[str, Path]) -> float:
     """Read the cohesive range from 'parties.inp' if not, return 0.05 * D_p."""
+    data_dir = Path(data_dir)
+    particle_path = Path(particle_path)
     try:
         params: Dict[str, Union[np.ndarray, int, float]] = _read_inp(
             data_dir / "parties.inp"
@@ -269,7 +271,7 @@ def read_particle_data(path: Union[str, Path]) -> Dict[str, np.ndarray]:
         id: np.ndarray = np.arange(mobile_data["R"].shape[0])  # type: ignore
         x: np.ndarray = mobile_data["X"][:, 0]  # type: ignore
         y: np.ndarray = mobile_data["X"][:, 1]  # type: ignore
-        z: np.ndarray = mobile_data["X"][:, 1]  # type: ignore
+        z: np.ndarray = mobile_data["X"][:, 2]  # type: ignore
         r: np.ndarray = mobile_data["R"][:, 0]  # type: ignore
         u: np.ndarray = mobile_data["U"][:, 0]  # type: ignore
         v: np.ndarray = mobile_data["U"][:, 1]  # type: ignore

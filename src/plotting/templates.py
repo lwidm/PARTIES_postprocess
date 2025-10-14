@@ -112,12 +112,12 @@ def create_velocity_profile_wall_plot(
     out_path = Path(output_dir)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     plot_filename = out_path / f"Re={Re:.0f}_Re_tau={Re_tau:.0f}-y+_u+.png"
-    plt.savefig(str(plot_filename), dpi=300)
+    figure.savefig(str(plot_filename), dpi=300)
 
     if not globals.on_anvil:
         plt.show()
 
-    plt.close(figure)
+    plt.close()
 
 
 def create_normal_stress_wall_plot(
