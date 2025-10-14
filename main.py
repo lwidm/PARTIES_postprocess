@@ -61,9 +61,14 @@ if __name__ == "__main__":
         default=None,
         help="maximal particle/fluid datafile index to be read",
     )
+    parser.add_argument(
+        "-trn",
+        action="store_true",
+        help="Wether to use Particle_XXX.h5 files in the trn subdirectory",
+    )
     args = parser.parse_args()
 
-    scripts.run_floc_analysis.main(args.parties_data_dir, args.output_dir)
+    scripts.run_floc_analysis.main(args.parties_data_dir, args.output_dir, args.trn)
     scripts.run_statist_steady_analysis.main(
         args.parties_data_dir,
         args.output_dir,

@@ -173,7 +173,7 @@ def plot_floc_count_evolution(floc_dir: Path) -> None:
     plt.close()
 
 
-def main(parties_data_dir: Union[str, Path], output_dir: Union[str, Path]):
+def main(parties_data_dir: Union[str, Path], output_dir: Union[str, Path], trn: bool):
     # =============================================================================
     # CONFIGURATION AND CONSTANTS
     # =============================================================================
@@ -202,9 +202,14 @@ def main(parties_data_dir: Union[str, Path], output_dir: Union[str, Path]):
     # =============================================================================
 
     if processing_method == "compute":
-        particle_files: List[Path] = myio.list_parties_data_files(
-            parties_data_dir, "Particle"
-        )
+        if trn:
+            particle_files: List[Path] = myio.list_parties_data_files(
+                Path(parties_data_dir) / "trn", "Particle"
+            )
+        else:
+            particle_files: List[Path] = myio.list_parties_data_files(
+                parties_data_dir, "Particle"
+            )
 
         def floc_filename(fp: Path) -> str:
             return "Flocs_" + fp.stem.split("_")[-1] + ".h5"
@@ -225,7 +230,6 @@ def main(parties_data_dir: Union[str, Path], output_dir: Union[str, Path]):
                 in_file, out_file, domain, coh_range, prev_results
             )
 
-
         time: np.ndarray = myio.get_time_array("Particle", parties_data_dir, None, None)
         np.savetxt(f"{output_dir}/time.csv", time, delimiter=",")
 
@@ -239,4 +243,3 @@ def main(parties_data_dir: Union[str, Path], output_dir: Union[str, Path]):
         pass
 
     plot_floc_count_evolution(output_dir)
-
