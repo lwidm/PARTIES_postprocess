@@ -131,6 +131,7 @@ def process_flocs(
     particle_results: Dict[str, np.ndarray]
     floc_results: Dict[str, np.ndarray]
     particle_results, floc_results = compute_floc_stats(flocs, domain)
+
     # compute_floc_stats_obj(flocs, domain)
 
     # if prev_particle_results is not None:
@@ -143,20 +144,23 @@ def process_flocs(
 def plot_floc_count_evolution(floc_dir: Path) -> None:
     """Minimal floc count plot."""
     floc_files: List[Path] = myio.list_parties_data_files(floc_dir, "Flocs")
-    timesteps: List[int] = []
+    # timesteps: List[int] = []
     counts: List[int] = []
 
     for floc_file in floc_files:
         with h5py.File(floc_file, "r") as f:
             if "flocs" in f and "floc_id" in f["flocs"]:  # type: ignore
-                timestep = int(floc_file.stem.split("_")[-1])
+                # timestep = int(floc_file.stem.split("_")[-1])
                 floc_count = len(np.unique(f["flocs"]["floc_id"][:]))  # type: ignore
-                timesteps.append(timestep)
+                # timesteps.append(timestep)
                 counts.append(floc_count)
 
+    time: np.ndarray = np.loadtxt(f"{floc_dir}/time.csv", delimiter=",")
+
     figure, axes = plt.subplots(figsize=(6.5, 5.5))
-    axes.plot(timesteps, counts, "bx-")
-    axes.set_xlabel("Timestep")
+    # axes.plot(timesteps, counts, "bx-")
+    axes.plot(time, counts, "k-")
+    axes.set_xlabel("time [-]")
     axes.set_ylabel(r"\# Flocs")
     axes.grid(True)
 
@@ -220,6 +224,10 @@ def main(parties_data_dir: Union[str, Path], output_dir: Union[str, Path]):
             prev_results = process_flocs(
                 in_file, out_file, domain, coh_range, prev_results
             )
+
+
+        time: np.ndarray = myio.get_time_array("Particle", parties_data_dir, None, None)
+        np.savetxt(f"{output_dir}/time.csv", time, delimiter=",")
 
         # TODO :
         # family_tree = fam_tree.FamilyTree(floc_dir)

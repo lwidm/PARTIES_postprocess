@@ -3,9 +3,11 @@
 import numpy as np
 import h5py  # type: ignore
 from pathlib import Path
-from typing import Union, Dict, Literal, List, Tuple, Any
+from typing import Union, Dict, Literal, List, Tuple, Any, Optional
 import tqdm  # type: ignore
 import gc
+
+from src.myio import myio
 
 
 def get_grid(fluid_file: Union[str, Path]) -> Dict[str, np.ndarray]:
@@ -261,3 +263,29 @@ def calc_tot_vol_frac(path: Union[str, Path]) -> float:
     phi: float = np.sum(vfu, axis=None) / (Nx * Ny * Nz)
 
     return phi
+
+
+def calc_tot_fluid_Ekin(fluid_file_path: Union[str, Path], Re: float) -> float:
+
+    grid: Dict[str, np.ndarray] = get_grid(fluid_file_path)
+    mean_u_squared: np.floating
+    phi: float
+    with h5py.File(fluid_file_path, "r") as h5_file:
+        uc: np.ndarray = h5_file["u"][:-1, :-1, :-1]  # type: ignore
+        vc: np.ndarray = interp_y(h5_file["v"][:-1, :, :-1])  # type: ignore
+        wc: np.ndarray = h5_file["w"][:-1, :-1, :-1]  # type: ignore
+
+        u_squared: np.ndarray = uc * uc + vc * vc + wc * wc
+        del (uc, vc, wc)
+        gc.collect()
+
+        vfu: np.ndarray = h5_file["vfu"][:-1, :-1, :-1]  # type: ignore
+        Nz, Ny, Nx = vfu.shape
+        phi = np.sum(vfu, axis=None) / (Nx * Ny * Nz)
+
+        mean_u_squared = np.average(u_squared, weights=(1 - vfu))
+
+    V_fluid: float = grid["xu"][-1] * grid["yv"][-1] * grid["zw"][-1] * (1 - phi)
+    E_kin = Re / 2 * V_fluid * float(mean_u_squared)
+    return E_kin
+

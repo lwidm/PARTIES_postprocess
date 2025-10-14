@@ -1,7 +1,7 @@
 # -- src/myio/myio.py
 
 import numpy as np
-from typing import Optional, List, Dict, Union, Any, Tuple
+from typing import Optional, List, Dict, Union, Any, Tuple, Literal
 from natsort import natsorted
 from pathlib import Path
 import io
@@ -346,3 +346,27 @@ def _merge_dicts(dict_list: list[dict]) -> dict:
     for d in dict_list:
         merged |= d
     return merged
+
+
+def get_time_array(
+    type: Literal["Data", "Particle"],
+    parties_data_dir: Union[str, Path],
+    min_file_index: Optional[int],
+    max_file_index: Optional[int],
+) -> np.ndarray:
+
+    print("Obtaining time array of data hdf5 files")
+    print(
+        f'Looking for datafile in directory: "{parties_data_dir}" with min_file_index: {min_file_index} and max_file_index: {max_file_index}'
+    )
+    data_files: List[Path] = list_parties_data_files(
+        parties_data_dir, type, min_file_index, max_file_index
+    )
+
+    t_arr: np.ndarray = np.zeros(len(data_files))
+
+    for i, data_file in enumerate(data_files):
+        with h5py.File(data_file, "r") as h5_file:
+            t_arr[i] = h5_file["time"][()] # type: ignore
+
+    return t_arr
