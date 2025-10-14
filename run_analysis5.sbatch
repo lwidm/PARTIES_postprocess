@@ -16,7 +16,7 @@ eval "$(conda shell.bash hook)"
 conda activate PARTIES_postprocess_anvil
 
 PYTHONPATH=. python ./main.py \
-	--output_dir="/home/x-lwidmer/Documents/PARTIES_postprocess/outputRUN5" \
+	--output_dir="/home/x-lwidmer/Documents/PARTIES_postprocess/output/RUN5" \
 	--utexas_data_dir="/home/x-lwidmer/Documents/PARTIES_postprocess/data" \
 	--parties_data_dir="/anvil/scratch/x-lwidmer/RUN5" \
 	--min_file_index=101
