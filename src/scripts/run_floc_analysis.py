@@ -157,7 +157,7 @@ def plot_floc_count_evolution(floc_dir: Path) -> None:
     figure, axes = plt.subplots(figsize=(6.5, 5.5))
     axes.plot(timesteps, counts, "bx-")
     axes.set_xlabel("Timestep")
-    axes.set_ylabel("# Flocs")
+    axes.set_ylabel(r"\# Flocs")
     axes.grid(True)
 
     axes.legend(loc="lower right", bbox_to_anchor=(1.0, 0.80))
