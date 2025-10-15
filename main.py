@@ -68,7 +68,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    scripts.run_floc_analysis.main(args.parties_data_dir, args.output_dir, args.trn)
+    scripts.run_floc_analysis.main(args.parties_data_dir, args.output_dir, args.trn, args.min_file_index, args.max_file_index)
     scripts.run_statist_steady_analysis.main(
         args.parties_data_dir,
         args.output_dir,
