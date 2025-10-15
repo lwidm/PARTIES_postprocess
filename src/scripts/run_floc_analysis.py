@@ -203,13 +203,11 @@ def main(parties_data_dir: Union[str, Path], output_dir: Union[str, Path], trn: 
 
     if processing_method == "compute":
         if trn:
-            particle_files: List[Path] = myio.list_parties_data_files(
-                Path(parties_data_dir) / "trn", "Particle"
-            )
-        else:
-            particle_files: List[Path] = myio.list_parties_data_files(
-                parties_data_dir, "Particle"
-            )
+            parties_data_dir = Path(parties_data_dir) / "trn"
+
+        particle_files: List[Path] = myio.list_parties_data_files(
+            parties_data_dir, "Particle"
+        )
 
         def floc_filename(fp: Path) -> str:
             return "Flocs_" + fp.stem.split("_")[-1] + ".h5"
