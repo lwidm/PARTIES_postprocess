@@ -13,7 +13,7 @@ from . import myio, myio_torch, utexas
 
 from .myio import (
     load_columns_from_txt_numpy,
-    list_parties_data_files,
+    list_data_files,
     read_domain_info,
     read_particle_data,
     combine_dicts,
@@ -29,7 +29,7 @@ __all__ = [
     "load_columns_from_txt_torch",
     "read_domain_info",
     "read_coh_range",
-    "list_parties_data_files",
+    "list_data_files",
     "read_particle_data",
     "combine_dicts",
 ]

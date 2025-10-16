@@ -1,7 +1,14 @@
 # -- src/flocs/floc_statistics.py
 
+from pathlib import Path
+import h5py  # type: ignore
 import numpy as np
-from typing import Dict, Union, Tuple
+from typing import Dict, Union, Tuple, Optional, List
+from tqdm import tqdm  # type: ignore
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
+
+
+from src.myio import myio
 
 
 def calc_CoM(
@@ -184,3 +191,179 @@ def calc_theta(orientation: np.ndarray, N_particles: int) -> np.ndarray:
     if N_particles < 2:
         return np.zeros(3)
     return np.arccos(orientation / np.linalg.norm(orientation))
+
+def _count_floc_PDF_occurences(
+    h5_file: Union[str, Path],
+) -> Tuple[List[int], List[float], List[float], int]:
+    floc_ids: np.ndarray
+    n_p: np.ndarray
+    D_f: np.ndarray
+    D_g: np.ndarray
+    with h5py.File(h5_file, "r") as f:
+        floc_ids = f["flocs/floc_id"][:]  # type: ignore
+        n_p = f["flocs/n_p"][:]  # type: ignore
+        D_f = f["flocs/D_f"][:]  # type: ignore
+        D_g = f["flocs/D_g"][:]  # type: ignore
+    unique_vals, first_indices = np.unique(floc_ids, return_index=True)
+    N_flocs_local: int = len(unique_vals)
+    n_p_list: List[int] = n_p[first_indices].tolist()
+    D_f_list: List[float] = D_f[first_indices].tolist()
+    D_g_list: List[float] = D_g[first_indices].tolist()
+
+    return n_p_list, D_f_list, D_g_list, N_flocs_local
+
+def _fd_nbins(data: np.ndarray) -> int:
+    """Freedman-Diaconis rule to compute number of bins. Returns at least 1."""
+    if data.size < 2:
+        return 1
+    q75, q25 = np.percentile(data, [75, 25])
+    iqr = q75 - q25
+    if iqr == 0:
+        # degenerate IQR: fallback to Sturges
+        return int(np.ceil(np.log2(data.size) + 1))
+    bin_width = 2.0 * iqr / (data.size ** (1 / 3))
+    if bin_width <= 0:
+        return int(np.ceil(np.log2(data.size) + 1))
+    nbins = int(np.ceil((data.max() - data.min()) / bin_width))
+    return max(1, nbins)
+
+def _unique_value_edges(values: np.ndarray) -> np.ndarray:
+    """
+    Create bin edges so that each unique value falls into its own bin.
+    Edges are midpoints between sorted unique values, with half-width on extremes.
+    """
+    uq = np.unique(values)
+    if uq.size == 1:
+        v = float(uq[0])
+        # single value: make a narrow bin around it
+        return np.array([v - 0.5, v + 0.5])
+    # midpoints between adjacent unique values
+    diffs = np.diff(uq)
+    mids = uq[:-1] + diffs / 2.0
+    # first edge and last edge: extend by half the first/last diff
+    first_edge = uq[0] - diffs[0] / 2.0
+    last_edge = uq[-1] + diffs[-1] / 2.0
+    return np.concatenate([[first_edge], mids, [last_edge]])
+
+def calc_PDF(
+    output_dir: Union[str, Path],
+    floc_dir: Union[str, Path],
+    min_file_index: Optional[int],
+    max_file_index: Optional[int],
+    num_workers: Optional[int],
+    use_threading: bool,
+):
+
+    floc_files: List[Path] = myio.list_data_files(
+        floc_dir,
+        "Flocs",
+        min_file_index,
+        max_file_index,
+    )
+
+    N_flocs: int = 0
+    n_p_list: List[int] = []
+    D_f_list: List[float] = []
+    D_g_list: List[float] = []
+    if num_workers is not None:
+        if use_threading:
+            executor = ThreadPoolExecutor
+        else:
+            executor = ProcessPoolExecutor
+        with executor(max_workers=num_workers) as ex:
+            futures = [ex.submit(_count_floc_PDF_occurences, h5_file) for h5_file in floc_files]
+
+            for f in tqdm(
+                as_completed(futures),
+                total=len(futures),
+                desc="Processing flocs for PDF generation",
+            ):
+                _n_p_list, _D_f_list, _D_g_list, _N_flocs = f.result()
+                N_flocs += _N_flocs
+                n_p_list += _n_p_list
+                D_f_list += _D_f_list
+                D_g_list += _D_g_list
+
+    else:
+        N_flocs: int = 0
+        n_p_list: List[int] = []
+        D_f_list: List[float] = []
+        D_g_list: List[float] = []
+        for h5_file in tqdm(
+            floc_files,
+            total=len(floc_files),
+            desc="Processing flocs for PDF generation",
+        ):
+            _n_p_list, _D_f_list, _D_g_list, _N_flocs = count_occurences(h5_file)
+            N_flocs += _N_flocs
+            n_p_list += _n_p_list
+            D_f_list += _D_f_list
+            D_g_list += _D_g_list
+
+    if N_flocs == 0:
+        raise ValueError("No flocs found (N_flocs == 0)")
+
+    edges_n_p: np.ndarray
+    if len(n_p_list) == 0:
+        edges_n_p = np.array([0.0, 1.0])
+    else:
+        nmin: int = min(n_p_list)
+        nmax: int = max(n_p_list)
+        edges_n_p = np.arange(nmin-0.5, nmax + 0.5 + 1e-8, 1.0)
+
+    edges_D_f: np.ndarray
+    if len(D_f_list) == 0:
+        edges_D_f = np.array([0.0, 1.0])
+    else:
+        unique_D_f: np.ndarray = np.unique(D_f_list)
+        if unique_D_f.size <= 20:
+            # small number of distinct values -> one bin per distinct value
+            edges_D_f = _unique_value_edges(np.array(D_f_list))
+        else:
+            nbins: int = _fd_nbins(np.array(D_f_list))
+            nbins = min(max(nbins, 10), 200)
+            edges_D_f = np.histogram_bin_edges(D_f_list, bins=nbins)
+
+    edges_D_g: np.ndarray
+    if len(D_g_list) == 0:
+        edges_D_g = np.array([0.0, 1.0])
+    else:
+        unique_D_g: np.ndarray = np.unique(D_g_list)
+        if unique_D_g.size <= 20:
+            # small number of distinct values -> one bin per distinct value
+            edges_D_g = _unique_value_edges(np.array(D_g_list))
+        else:
+            nbins: int = _fd_nbins(np.array(D_g_list))
+            nbins = min(max(nbins, 10), 200)
+            edges_D_g = np.histogram_bin_edges(D_g_list, bins=nbins)
+
+
+
+    counts_n_p, edges_n_p = np.histogram(n_p_list, bins=edges_n_p)
+    counts_D_f, edges_D_f = np.histogram(D_f_list, bins=edges_D_f)
+    counts_D_g, edges_D_g = np.histogram(D_g_list, bins=edges_D_g)
+
+    centers_n_p: np.ndarray = (edges_n_p[:-1] + edges_n_p[1:]) / 2.0
+    centers_D_f: np.ndarray = (edges_D_f[:-1] + edges_D_f[1:]) / 2.0
+    centers_D_g: np.ndarray = (edges_D_g[:-1] + edges_D_g[1:]) / 2.0
+
+    probab_n_p: np.ndarray = counts_n_p.astype(float) / float(N_flocs)
+    probab_D_f: np.ndarray = counts_D_f.astype(float) / float(N_flocs)
+    probab_D_g: np.ndarray = counts_D_g.astype(float) / float(N_flocs)
+
+    results: Dict[str, Union[float, np.ndarray]] = {
+        "N_flocs": N_flocs,
+        "counts_n_p": counts_n_p,
+        "counts_D_f": counts_D_f,
+        "counts_D_g": counts_D_g,
+        "centers_n_p": centers_n_p,
+        "centers_D_f": centers_D_f,
+        "centers_D_g": centers_D_g,
+        "probab_n_p": probab_n_p,
+        "probab_D_f": probab_D_f,
+        "probab_D_g": probab_D_g,
+    }
+
+    myio.save_to_h5(Path(output_dir) / "floc_PDF.h5", results)
+
+    return results

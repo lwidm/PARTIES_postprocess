@@ -15,8 +15,6 @@ from src.plotting.tools import (
 from src import globals
 
 
-# ------------------------- specialised plots -------------------------
-
 
 def velocity_profile_wall(
     output_dir: Union[str, Path],
@@ -179,8 +177,6 @@ def floc_count_evolution(output_dir: Path, series_list: Sequence[PlotSeries]) ->
     )
 
 
-# -------------------- Steady state --------------------
-
 def fluid_Ekin_evolution(
     output_dir: Union[str, Path], series_list
 ) -> None:
@@ -195,3 +191,33 @@ def fluid_Ekin_evolution(
         legend_bbox=(1.0, 0.80),
         dpi=150,
     )
+
+def _pdf(
+    output_dir: Union[str, Path], series_list, name: str, xlabel:str, ylabel: str
+) -> None:
+    out_path = Path(output_dir) / f"{name}.png"
+    generic_line_plot(
+        out_path,
+        list(series_list),
+        xlabel=xlabel,
+        ylabel=ylabel,
+        figsize=(6.5, 5.5),
+        legend_loc="lower right",
+        legend_bbox=(1.0, 0.80),
+        dpi=150,
+    )
+
+def n_p_pdf(
+    output_dir: Union[str, Path], series_list
+):
+    _pdf(output_dir, series_list, "PDF_n_p", r"$PDF$", r"$n_p$")
+
+def D_f_pdf(
+    output_dir: Union[str, Path], series_list
+):
+    _pdf(output_dir, series_list, "PDF_D_f", r"$PDF$", r"$D_f$")
+
+def D_g_pdf(
+    output_dir: Union[str, Path], series_list
+):
+    _pdf(output_dir, series_list, "PDF_D_g", r"$PDF$", r"$D_g$")

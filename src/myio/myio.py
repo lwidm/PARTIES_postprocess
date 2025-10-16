@@ -160,11 +160,11 @@ def load_columns_from_txt_numpy(
     return [data[:, i] for i in range(data.shape[1])]
 
 
-def list_parties_data_files(
+def list_data_files(
     path: Union[str, Path],
     base_name: str,
-    min_index: Optional[int] = None,
-    max_index: Optional[int] = None,
+    min_file_index: Optional[int] = None,
+    max_file_index: Optional[int] = None,
 ) -> List[Path]:
     """
     Find HDF5 data files matching the pattern and filter by index range.
@@ -181,7 +181,7 @@ def list_parties_data_files(
     all_files: List[Path] = [Path(f) for f in glob.glob(file_pattern)]
     all_files = natsorted(all_files, key=lambda f: f.stem)
 
-    if min_index is None and max_index is None:
+    if min_file_index is None and max_file_index is None:
         return all_files
 
     filtered_files: List[Path] = []
@@ -191,8 +191,8 @@ def list_parties_data_files(
             # Extract index from filename (assumes pattern: base_index.h5)
             file_name: str = file_path.stem
             file_index = int(file_name.split("_")[-1].split(".")[0])
-            if (min_index is None or file_index >= min_index) and (
-                max_index is None or file_index <= max_index
+            if (min_file_index is None or file_index >= min_file_index) and (
+                max_file_index is None or file_index <= max_file_index
             ):
                 filtered_files.append(file_path)
         except (ValueError, IndexError):
@@ -380,7 +380,7 @@ def get_time_array(
     )
     if key == None:
         key = "time"
-    data_files: List[Path] = list_parties_data_files(
+    data_files: List[Path] = list_data_files(
         parties_data_dir, file_prefix, min_file_index, max_file_index
     )
 

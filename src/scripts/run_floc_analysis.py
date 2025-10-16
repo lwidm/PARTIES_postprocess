@@ -166,11 +166,11 @@ def process_all_flocs(
     min_file_index: Optional[int],
     max_file_index: Optional[int],
     num_workers: Optional[int],
-    use_threading: bool
+    use_threading: bool,
 ):
     output_dir = Path(output_dir)
 
-    particle_files: List[Path] = myio.list_parties_data_files(
+    particle_files: List[Path] = myio.list_data_files(
         parties_data_dir, "Particle", min_file_index, max_file_index
     )
 
@@ -182,7 +182,6 @@ def process_all_flocs(
     init_file_path: Path = particle_files[0]
     domain: Dict[str, Union[int, float]] = myio.read_domain_info(init_file_path)
     coh_range: float = myio.read_coh_range(parties_data_dir, init_file_path)
-
 
     if num_workers is not None:
         if use_threading:
@@ -198,7 +197,9 @@ def process_all_flocs(
                 for in_f, out_f in zip(particle_files, out_files)
             }
 
-            for _ in tqdm.tqdm(as_completed(futures), total=len(futures), desc="Processing flocs"):
+            for _ in tqdm.tqdm(
+                as_completed(futures), total=len(futures), desc="Processing flocs"
+            ):
                 pass
     else:
         prev_results = None
@@ -252,14 +253,37 @@ def main(
             use_threading,
         )
 
-        # TODO :
-        # family_tree = fam_tree.FamilyTree(floc_dir)
-        # family_tree.build()
-        #
-        # tree_file = analysis_dir / "family_tree.pkl"
-        # myio.save_to_pickle(tree_file, family_tree.family_tree)
+    floc_stat.calc_PDF(
+        output_dir=output_dir,
+        floc_dir=output_dir,
+        min_file_index=min_file_index,
+        max_file_index=max_file_index,
+        num_workers=num_workers,
+        use_threading=False,
+    )
+
+    # TODO :
+    # family_tree = fam_tree.FamilyTree(floc_dir)
+    # family_tree.build()
+    #
+    # tree_file = analysis_dir / "family_tree.pkl"
+    # myio.save_to_pickle(tree_file, family_tree.family_tree)
 
     s: PlotSeries = plotting.series.floc_count_evolution(
         output_dir, "k", None, min_file_index, max_file_index
     )
-    plotting.templates.floc_count_evolution(Path(output_dir) / "plots", [s])
+    plot_dir = Path(output_dir) / "plots"
+    plotting.templates.floc_count_evolution(plot_dir, [s])
+
+    s_n_p, s_D_f, s_D_g = plotting.series.floc_pdf(
+        floc_dir=output_dir,
+        labels=["None", "None", "None"],
+        colours=["k", "k", "k"],
+        linestyles=["-", "-", "-"],
+    )
+
+    print(s_n_p.data)
+
+    plotting.templates.n_p_pdf(plot_dir, [s_n_p]) 
+    plotting.templates.D_f_pdf(plot_dir, [s_D_f]) 
+    plotting.templates.D_g_pdf(plot_dir, [s_D_g]) 

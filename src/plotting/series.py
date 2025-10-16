@@ -22,7 +22,7 @@ def floc_count_evolution(
     max_file_index: Optional[int],
 ) -> PlotSeries:
 
-    floc_files: List[Path] = myio.list_parties_data_files(
+    floc_files: List[Path] = myio.list_data_files(
         floc_dir, "Flocs", min_file_index, max_file_index
     )
     time: np.ndarray = myio.get_time_array(
@@ -50,6 +50,58 @@ def floc_count_evolution(
     )
 
     return s
+
+
+def floc_pdf(
+    floc_dir: Union[str, Path],
+    labels: List[str],
+    colours: List[str],
+    linestyles: List[str],
+) -> Tuple[PlotSeries, PlotSeries, PlotSeries]:
+
+    centers_n_p: np.ndarray
+    centers_D_f: np.ndarray
+    centers_D_g: np.ndarray
+    probab_n_p: np.ndarray
+    probab_D_f: np.ndarray
+    probab_D_g: np.ndarray
+    with h5py.File(Path(floc_dir) / "floc_PDF.h5", "r") as f:
+        centers_n_p = f["centers_n_p"][:]  # type: ignore
+        centers_D_f = f["centers_D_f"][:]  # type: ignore
+        centers_D_g = f["centers_D_g"][:]  # type: ignore
+        probab_n_p = f["probab_n_p"][:]  # type: ignore
+        probab_D_f = f["probab_D_f"][:]  # type: ignore
+        probab_D_g = f["probab_D_g"][:]  # type: ignore
+
+    s_n_p: PlotSeries = PlotSeries(
+        data={"x": centers_n_p, "y": probab_n_p},
+        x_key="x",
+        y_key="y",
+        label=labels[0],
+        linestyle=linestyles[0],
+        plot_method="plot",
+        color=colours[0],
+    )
+    s_D_f: PlotSeries = PlotSeries(
+        data={"x": centers_D_f, "y": probab_D_f},
+        x_key="x",
+        y_key="y",
+        label=labels[1],
+        linestyle=linestyles[1],
+        plot_method="plot",
+        color=colours[1],
+    )
+    s_D_g: PlotSeries = PlotSeries(
+        data={"x": centers_D_g, "y": probab_D_g},
+        x_key="x",
+        y_key="y",
+        label=labels[2],
+        linestyle=linestyles[2],
+        plot_method="plot",
+        color=colours[2],
+    )
+
+    return s_n_p, s_D_f, s_D_g
 
 
 # ------------------------- u_plus_mean_wall series -------------------------

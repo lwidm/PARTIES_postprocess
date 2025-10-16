@@ -90,16 +90,16 @@ if __name__ == "__main__":
         args.max_file_index,
         args.num_workers,
     )
-    scripts.run_statist_steady_analysis.main(
-        args.parties_data_dir,
-        args.output_dir,
-        args.min_file_index,
-        args.max_file_index,
-    )
-    scripts.run_fluid_wall_analysis.main(
-        args.parties_data_dir,
-        args.utexas_data_dir,
-        args.output_dir,
-        args.min_file_index,
-        args.max_file_index,
-    )
+    # scripts.run_statist_steady_analysis.main(
+    #     args.parties_data_dir,
+    #     args.output_dir,
+    #     args.min_file_index,
+    #     args.max_file_index,
+    # )
+    # scripts.run_fluid_wall_analysis.main(
+    #     args.parties_data_dir,
+    #     args.utexas_data_dir,
+    #     args.output_dir,
+    #     args.min_file_index,
+    #     args.max_file_index,
+    # )
