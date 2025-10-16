@@ -44,31 +44,6 @@ def compute_fluid_Ekin_evolution(
     return results
 
 
-def plot_fluid_Ekin_evolution(
-    output_dir: Union[str, Path], Ekin_results: Dict[str, np.ndarray]
-) -> None:
-    output_dir = Path(output_dir)
-
-    E_kin: np.ndarray = Ekin_results["E_kin"]
-    time: np.ndarray = Ekin_results["time"]
-
-    figure, axes = plt.subplots(figsize=(6.5, 5.5))
-    # axes.plot(timesteps, counts, "bx-")
-    axes.plot(time, E_kin, "k-")
-    axes.set_xlabel("time [-]")
-    axes.set_ylabel(r"Fluid kinetic energy [-]")
-    axes.grid(True)
-
-    axes.legend(loc="lower right", bbox_to_anchor=(1.0, 0.80))
-    axes = plotting.tools.format_plot_axes(axes)
-
-    figure.savefig(
-        output_dir / "fluid_Ekin_evolution.png", dpi=150, bbox_inches="tight"
-    )
-    if not globals.on_anvil:
-        plt.show()
-    plt.close()
-
 
 def main(
     parties_data_dir: Union[str, Path],
@@ -81,11 +56,10 @@ def main(
     # CONFIGURATION AND CONSTANTS
     # =============================================================================
 
-    plotting.tools.update_rcParams()
 
     Re: float = 2800.0
-
     output_dir = Path(output_dir) / "fluid"
+    plot_dir = output_dir / "plots"
 
     num_workers_single_component: Optional[int] = 5
     num_workers_cross_component: Optional[int] = 2
@@ -113,4 +87,6 @@ def main(
             parties_data_dir, output_dir, Re, min_file_index, max_file_index
         )
 
-    plot_fluid_Ekin_evolution(output_dir, Ekin_results)
+    s = plotting.series.Ekin_evolution(output_dir / "E_kin.h5", 'k', '-', 'None', 'None')
+
+    plotting.templates.fluid_Ekin_evolution(plot_dir, [s])

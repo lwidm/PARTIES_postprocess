@@ -6,10 +6,10 @@ from typing import Dict, Union, List, Set
 
 
 def find_flocs(
-    particle_data: Dict[str, np.ndarray],
+    particle_data: Dict[str, Union[np.ndarray, float]],
     cutoff_distance: float,
     domain: Dict[str, Union[int, float]],
-) -> Dict[str, np.ndarray]:
+) -> Dict[str, Union[np.ndarray, float]]:
     """Find all flocs for a particle output file.
 
     See `adjacency_list` for the definition of a floc.
@@ -23,15 +23,15 @@ def find_flocs(
         Particle data with an additional column, `floc_id`, indicating which floc the
         particle is a part of.
     """
-    adjacency = _make_adj_list(particle_data, cutoff_distance, domain)
+    adjacency: Dict[int, np.ndarray] = _make_adj_list(particle_data, cutoff_distance, domain)
     flocs = _find_connected_groups(adjacency)
     particle_data = _assign_floc_ids(particle_data, flocs)
     return particle_data
 
 
 def _assign_floc_ids(
-    particle_data: Dict[str, np.ndarray], flocs: List[List[int]]
-) -> dict[str, np.ndarray]:
+    particle_data: Dict[str, Union[np.ndarray, float]], flocs: List[List[int]]
+) -> Dict[str, Union[np.ndarray, float]]:
     """Covert floc data from indexed by floc-id to indexed by particle-id.
 
     Args:
@@ -51,10 +51,10 @@ def _assign_floc_ids(
 
 
 def _make_adj_list(
-    particle_data: dict[str, np.ndarray],
+    particle_data: Dict[str, Union[np.ndarray, float]],
     cutoff_distance: float,
     domain: Dict[str, Union[int, float]],
-) -> dict[int, np.ndarray]:
+) -> Dict[int, np.ndarray]:
     """Compute the adjacency "list" (dict), accounting for periodic boundaries.
 
     Compute the adjacency list given the following condition is true:
@@ -74,7 +74,7 @@ def _make_adj_list(
     X_p: np.ndarray = np.column_stack(
         (particle_data["x"], particle_data["y"], particle_data["z"])
     )
-    n_p: int = len(particle_data["r"])
+    n_p: int = len(np.asarray(particle_data["r"]))
     adj: Dict[int, np.ndarray] = {i: np.array([]) for i in range(n_p)}
 
     # Handle periodic boundary conditions
@@ -92,7 +92,7 @@ def _make_adj_list(
     particle: np.ndarray
     for i, particle in enumerate(X_p):
         neighbors: List[int] = tree.query_ball_point(
-            particle, 2 * particle_data["r"][i] + cutoff_distance
+            particle, 2 * np.asarray(particle_data["r"])[i] + cutoff_distance
         )
         neighbors = [n for n in neighbors if n % n_p != i]
         # Re-collapse the adjacency data to only include indices from the original dataset

@@ -21,20 +21,10 @@ def save_to_h5(
     data_dict: Dict[str, Any],
     metadata: Optional[Dict[str, Any]] = None,
 ) -> None:
-    """
-    Save a nested dictionary to HDF5 file with proper path handling and recursive structure.
-
-    Args:
-        data_dict: Dictionary containing data to save. Can have nested dictionaries.
-        output_path: Path where the HDF5 file should be saved.
-        metadata: Optional dictionary of metadata to store as attributes at root level.
-    """
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     def _save_nested_dict(h5_group: h5py.Group, data: Dict[str, Any]) -> None:
-        key: str
-        value: Any
         for key, value in data.items():
             if isinstance(value, dict):
                 subgroup = h5_group.create_group(key)
@@ -45,14 +35,15 @@ def save_to_h5(
                     key, data=value, compression="gzip", compression_opts=6
                 )
             # Handle scalar values
-            elif isinstance(value, (int, float, complex)):
+            elif isinstance(value, (int, float, complex, np.floating, np.integer)):
                 h5_group.create_dataset(key, data=value)
             # Handle strings
             elif isinstance(value, str):
-                h5_group.create_dataset(key, data=np.str_(value))
+                str_dtype = h5py.string_dtype(encoding="utf-8")
+                h5_group.create_dataset(key, data=value, dtype=str_dtype)
             # Handle booleans
-            elif isinstance(value, bool):
-                h5_group.create_dataset(key, data=int(value))
+            elif isinstance(value, (bool, np.bool_)):
+                h5_group.create_dataset(key, data=np.bool_(value))
             # Handle lists and tuples (convert to numpy arrays)
             elif isinstance(value, (list, tuple)):
                 try:
@@ -62,64 +53,50 @@ def save_to_h5(
                     )
                 except (ValueError, TypeError):
                     warnings.warn(
-                        'when saving to h5 failed to convert tuple or list "{value}" with key "{key}" to numpy array. Converting to np.str_ instead',
+                        f'when saving to h5 failed to convert tuple or list "{value}" with key "{key}" to numpy array. Converting to string instead',
                         category=UserWarning,
                     )
-                    # If conversion fails, save as string representation
-                    h5_group.create_dataset(key, data=np.str_(str(value)))
+                    str_dtype = h5py.string_dtype(encoding="utf-8")
+                    h5_group.create_dataset(key, data=str(value), dtype=str_dtype)
+
             else:
                 warnings.warn(
-                    f'Failed to recognise type of value with key "{key}". Converting to np.str_ instead. (Value is "{value}")',
+                    f'Failed to recognise type of value with key "{key}". Converting to string. (Value is "{value}")',
                     category=UserWarning,
                 )
-                # Fallback: convert to string
-                h5_group.create_dataset(key, data=np.str_(str(value)))
+                str_dtype = h5py.string_dtype(encoding="utf-8")
+                h5_group.create_dataset(key, data=str(value), dtype=str_dtype)
 
     with h5py.File(output_path, "w") as h5_file:
         _save_nested_dict(h5_file, data_dict)
-
         if metadata:
-            key: str
-            value: Any
-            for key, value in metadata.items():
-                if isinstance(value, (str, int, float, bool)):
-                    h5_file.attrs[key] = value
-                elif isinstance(value, (list, tuple)) and all(
-                    isinstance(x, (str, int, float, bool)) for x in value
-                ):
-                    h5_file.attrs[key] = value
-                else:
-                    h5_file.attrs[key] = str(value)
+            for mkey, mval in metadata.items():
+                try:
+                    h5_file.attrs[mkey] = mval
+                except Exception:
+                    h5_file.attrs[mkey] = str(mval)
 
 
 def load_from_h5(
     input_path: Union[str, Path],
 ) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
-    """
-    Load a nested dictionary from HDF5 file.
-
-    Args:
-        input_path: Path to the HDF5 file to load.
-
-    Returns:
-        Nested dictionary containing all data and structure from the HDF5 file.
-    """
     input_path = Path(input_path)
 
     def _load_nested_dict(h5_group: h5py.Group) -> Dict[str, Any]:
         result: Dict[str, Any] = {}
-        key: str
-        item: Any
         for key, item in h5_group.items():
             if isinstance(item, h5py.Group):
                 result[key] = _load_nested_dict(item)
             elif isinstance(item, h5py.Dataset):
                 data: Any = item[()]
-                if isinstance(data, bytes):
-                    # Convert bytes back to string
-                    result[key] = data.decode("utf-8")
-                elif data.shape == ():  # Scalar
-                    result[key] = data.item()
+                if isinstance(data, (bytes, bytearray)):
+                    try:
+                        result[key] = data.decode("utf-8")
+                    except Exception:
+                        result[key] = data
+                # numpy scalar (0-d) -> convert to Python scalar
+                elif np.asarray(data).shape == ():
+                    result[key] = np.asarray(data).item()
                 else:
                     result[key] = data
         return result
@@ -127,10 +104,7 @@ def load_from_h5(
     metadata: Optional[Dict[str, Any]] = None
     with h5py.File(input_path, "r") as h5_file:
         data_dict = _load_nested_dict(h5_file)
-
-        # Load metadata from attributes
-        if h5_file.attrs:
-            data_dict["_metadata"] = dict(h5_file.attrs)
+        metadata = dict(h5_file.attrs) if h5_file.attrs else None
 
     return data_dict, metadata
 
@@ -227,7 +201,9 @@ def list_parties_data_files(
     return filtered_files
 
 
-def read_coh_range(data_dir: Union[str, Path], particle_path: Union[str, Path]) -> float:
+def read_coh_range(
+    data_dir: Union[str, Path], particle_path: Union[str, Path]
+) -> float:
     """Read the cohesive range from 'parties.inp' if not, return 0.05 * D_p."""
     data_dir = Path(data_dir)
     particle_path = Path(particle_path)
@@ -242,6 +218,19 @@ def read_coh_range(data_dir: Union[str, Path], particle_path: Union[str, Path]) 
         warnings.warn(r"parties.inp not found, using coh_range = 0.05 * D_p.")
         with h5py.File(particle_path, "r") as f:
             return 0.1 * f["mobile/R"][0]  # type: ignore
+
+
+def read_Re(data_dir: Union[str, Path]) -> float:
+    """Read the cohesive range from 'parties.inp' if not, return 0.05 * D_p."""
+    data_dir = Path(data_dir)
+    try:
+        params: Dict[str, Union[np.ndarray, int, float]] = _read_inp(
+            data_dir / "parties.inp"
+        )
+        Re: float = params["Re"]  # type: ignore
+        return Re
+    except KeyError:
+        raise KeyError(r"Either parties.inp not found, or Re not found in parties.inp")
 
 
 def read_domain_info(path: Path) -> Dict[str, Union[int, float]]:
@@ -265,7 +254,7 @@ def read_domain_info(path: Path) -> Dict[str, Union[int, float]]:
     return domain
 
 
-def read_particle_data(path: Union[str, Path]) -> Dict[str, np.ndarray]:
+def read_particle_data(path: Union[str, Path]) -> Dict[str, Union[np.ndarray, float]]:
     with h5py.File(path, "r") as f:
         mobile_data: h5py.Group = f["mobile"]  # type: ignore
         id: np.ndarray = np.arange(mobile_data["R"].shape[0])  # type: ignore
@@ -276,8 +265,9 @@ def read_particle_data(path: Union[str, Path]) -> Dict[str, np.ndarray]:
         u: np.ndarray = mobile_data["U"][:, 0]  # type: ignore
         v: np.ndarray = mobile_data["U"][:, 1]  # type: ignore
         w: np.ndarray = mobile_data["U"][:, 2]  # type: ignore
+        time: float = f["time"][()]  # type: ignore
 
-        particle_data: Dict[str, np.ndarray] = {
+        particle_data: Dict[str, Union[np.ndarray, float]] = {
             "id": id,
             "x": x,
             "y": y,
@@ -286,9 +276,11 @@ def read_particle_data(path: Union[str, Path]) -> Dict[str, np.ndarray]:
             "u": u,
             "v": v,
             "w": w,
+            "time": time,
         }
 
         particle_data_fields: List[str] = ["F_IBM", "F_rigid", "F_coll"]
+        # BUG :
         particle_data_fields: List[str] = []
         field: str
         for field in particle_data_fields:
@@ -297,7 +289,9 @@ def read_particle_data(path: Union[str, Path]) -> Dict[str, np.ndarray]:
 
 
 def _load_3_component_field(
-    particle_data: Dict[str, np.ndarray], mobile_data: h5py.Group, fieldname: str
+    particle_data: Dict[str, Union[np.ndarray, float]],
+    mobile_data: h5py.Group,
+    fieldname: str,
 ):
     """Load a data field with 3 components (x, y, z)."""
     i: int
@@ -307,14 +301,38 @@ def _load_3_component_field(
     return particle_data
 
 
-def combine_dicts(dict_list: List[Dict], scalar: bool = False) -> Dict:
-    """Combine a list of dictionaries with the same keys along their columns."""
+def combine_dicts(dict_list: List[Dict[str, Any]]) -> Dict[str, np.ndarray]:
     if not dict_list:
         return {}
 
-    if scalar:
-        return {k: np.array([d[k] for d in dict_list]) for k in dict_list[0]}
-    return {k: np.concatenate([d[k] for d in dict_list]) for k in dict_list[0]}
+    keys = dict_list[0].keys()
+    out: Dict[str, np.ndarray] = {}
+
+    for k in keys:
+        vals = [d[k] for d in dict_list]
+
+        is_scalar_list = [
+            np.isscalar(v) or (isinstance(v, np.ndarray) and v.ndim == 0) for v in vals
+        ]
+
+        if all(is_scalar_list):
+            out[k] = np.array(
+                [np.asarray(v).item() if isinstance(v, np.ndarray) else v for v in vals]
+            )
+        else:
+            arrs = [
+                (
+                    np.atleast_1d(v)
+                    if not (
+                        np.isscalar(v) or (isinstance(v, np.ndarray) and v.ndim == 0)
+                    )
+                    else np.atleast_1d(np.asarray(v))
+                )
+                for v in vals
+            ]
+            out[k] = np.concatenate(arrs, axis=0)
+
+    return out
 
 
 def _read_inp(inp_file: Union[Path, str]) -> Dict[str, Union[np.ndarray, int, float]]:
@@ -349,24 +367,27 @@ def _merge_dicts(dict_list: list[dict]) -> dict:
 
 
 def get_time_array(
-    type: Literal["Data", "Particle"],
+    file_prefix: str,
     parties_data_dir: Union[str, Path],
     min_file_index: Optional[int],
     max_file_index: Optional[int],
+    key: Optional[str] = None,
 ) -> np.ndarray:
 
     print("Obtaining time array of data hdf5 files")
     print(
         f'Looking for datafile in directory: "{parties_data_dir}" with min_file_index: {min_file_index} and max_file_index: {max_file_index}'
     )
+    if key == None:
+        key = "time"
     data_files: List[Path] = list_parties_data_files(
-        parties_data_dir, type, min_file_index, max_file_index
+        parties_data_dir, file_prefix, min_file_index, max_file_index
     )
 
     t_arr: np.ndarray = np.zeros(len(data_files))
 
     for i, data_file in enumerate(data_files):
         with h5py.File(data_file, "r") as h5_file:
-            t_arr[i] = h5_file["time"][()] # type: ignore
+            t_arr[i] = h5_file[key][()]  # type: ignore
 
     return t_arr

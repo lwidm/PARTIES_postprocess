@@ -66,19 +66,40 @@ if __name__ == "__main__":
         action="store_true",
         help="Wether to use Particle_XXX.h5 files in the trn subdirectory",
     )
+    parser.add_argument(
+        "-n",
+        "--num_workers",
+        nargs="?",
+        type=int,
+        default=None,
+        help="Number of workers to use when multithreading / mutiprocessing (None for concurrent operation)",
+    )
+    parser.add_argument(
+        "-thr",
+        "--use_threading",
+        action="store_true",
+        help="Wether to use ThreadPoolExecutor instead of ProcessPoolExecutor",
+    )
     args = parser.parse_args()
 
-    scripts.run_floc_analysis.main(args.parties_data_dir, args.output_dir, args.trn, args.min_file_index, args.max_file_index)
+    scripts.run_floc_analysis.main(
+        args.parties_data_dir,
+        args.output_dir,
+        args.trn,
+        args.min_file_index,
+        args.max_file_index,
+        args.num_workers,
+    )
     scripts.run_statist_steady_analysis.main(
         args.parties_data_dir,
         args.output_dir,
         args.min_file_index,
         args.max_file_index,
     )
-    # scripts.run_fluid_wall_analysis.main(
-    #     args.parties_data_dir,
-    #     args.utexas_data_dir,
-    #     args.output_dir,
-    #     args.min_file_index,
-    #     args.max_file_index,
-    # )
+    scripts.run_fluid_wall_analysis.main(
+        args.parties_data_dir,
+        args.utexas_data_dir,
+        args.output_dir,
+        args.min_file_index,
+        args.max_file_index,
+    )

@@ -20,5 +20,7 @@ PYTHONPATH=. python ./main.py \
 	--utexas_data_dir="/home/x-lwidmer/Documents/PARTIES_postprocess/data" \
 	--parties_data_dir="/anvil/scratch/x-lwidmer/RUN7" \
 	-trn \
+	--num_workers=8 \
 	--min_file_index=99351 \
 	--max_file_index=125152
+	# --use_threading

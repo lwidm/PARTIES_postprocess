@@ -5,19 +5,32 @@ Subpackage for plotting
 """
 
 
-from . import templates, tools
+from . import templates, tools, series
 
 from .templates import (
-    create_normal_stress_wall_plot,
-    create_velocity_profile_wall_plot,
-    create_particle_slice_plot,
+    normal_stress_wall,
+    velocity_profile_wall,
+    floc_count_evolution,
+)
+
+from .series import (
+    u_plus_mean_wall_parties,
+    u_plus_mean_wall_utexas,
+    normal_stress_wall_parties,
+    normal_stress_wall_utexas,
+    Ekin_evolution,
 )
 
 
 __all__ = [
     # "templates",
     # "tools",
-    "create_normal_stress_wall_plot",
-    "create_velocity_profile_wall_plot",
-    "create_particle_slice_plot",
+    "normal_stress_wall",
+    "velocity_profile_wall",
+    "floc_count_evolution",
+    "u_plus_mean_wall_parties",
+    "u_plus_mean_wall_utexas",
+    "normal_stress_wall_parties",
+    "normal_stress_wall_utexas",
+    "Ekin_evolution",
 ]

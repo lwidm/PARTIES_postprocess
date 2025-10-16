@@ -9,11 +9,7 @@ from src.myio import myio
 from src.fluid import flow_statistics as fstat
 from src import theory
 from src import plotting
-from src.plotting.templates import (
-    create_velocity_profile_wall_plot,
-    create_normal_stress_wall_plot,
-    create_particle_slice_plot,
-)
+from src.plotting.tools import PlotSeries
 
 
 def compute_all_reynolds_stresses(
@@ -44,7 +40,9 @@ def compute_all_reynolds_stresses(
         Dictionary containing all final results including wall units
     """
     print("Starting Reynolds stress computation...")
-    print(f'Looking for datafile in directory: "{parties_data_dir}" with min_file_index: {min_file_index} and max_file_index: {max_file_index}')
+    print(
+        f'Looking for datafile in directory: "{parties_data_dir}" with min_file_index: {min_file_index} and max_file_index: {max_file_index}'
+    )
     data_files: List[Path] = myio.list_parties_data_files(
         parties_data_dir, "Data", min_file_index, max_file_index
     )
@@ -78,88 +76,39 @@ def compute_all_reynolds_stresses(
     return results | results_wall | {"Re": Re}
 
 
-def collect_flow_statistics(
-    processing_method: Literal["load", "compute"],
-    Re: float,
-    output_dir: Union[str, Path],
+def compute_and_save_utexas(
     utexas_data_dir: Union[str, Path],
-    parties_data_dir: Optional[Union[str, Path]] = None,
-    min_file_index: Optional[int] = None,
-    max_file_index: Optional[int] = None,
-    num_workers_single_component: Optional[int] = None,
-    num_workers_cross_component: Optional[int] = None,
-    use_threads: bool = False,
+    out_h5: Union[str, Path],
 ) -> Dict[str, Union[np.ndarray, float]]:
-    """
-    Main data retrieval function that coordinates data processing and theory.
+    """Load UTEXAS text files, compute law-of-the-wall fits & profiles, save to HDF5 and return dict."""
+    utexas_mean_data_file = f"{utexas_data_dir}/LM_Channel_0180_mean_prof.dat"
+    utexas_fluc_data_file = f"{utexas_data_dir}/LM_Channel_0180_vel_fluc_prof.dat"
 
-    Args:
-        processing_method: One of "load" or "compute"
-
-    Returns:
-        The parties_results dict updated with utexas data, derived profiles,
-        fit parameters and scalar metadata.
-    """
-    utexas_mean_data_file: str = f"{utexas_data_dir}/LM_Channel_0180_mean_prof.dat"
-    utexas_fluc_data_file: str = f"{utexas_data_dir}/LM_Channel_0180_vel_fluc_prof.dat"
     (
-        _,  # utexas_y_delta,
+        _,  # utexas_y_delta
         utexas_y_plus,
         utexas_U_plus,
-        _,  # utexas_velocity_gradient,
-        _,  # utexas_w,
-        _,  # utexas_p,
+        _,  # utexas_velocity_gradient
+        _,  # utexas_w
+        _,  # utexas_p
     ) = myio.load_columns_from_txt_numpy(utexas_mean_data_file)
+
     (
         _,
         _,
         utexas_upup_plus,
         utexas_vpvp_plus,
         utexas_wpwp_plus,
-        _,  # utexas_upvp_plus,
-        _,  # utexas_upwp_plus,
-        _,  # utexas_vpwp_plus,
+        _,  # utexas_upvp_plus
+        _,  # utexas_upwp_plus
+        _,  # utexas_vpwp_plus
         utexas_k_plus,
     ) = myio.load_columns_from_txt_numpy(utexas_fluc_data_file)
 
-    parties_results: Dict[str, Union[np.ndarray, float]]
-    if processing_method == "compute":
-        if parties_data_dir is None:
-            raise ValueError(
-                "Specify parties_data_dir in collect_flow_statistics() if reynolds_stresses are to be computed"
-            )
-        parties_results = compute_all_reynolds_stresses(
-            parties_data_dir,
-            output_dir,
-            Re,
-            min_file_index,
-            max_file_index,
-            num_workers_single_component,
-            num_workers_cross_component,
-            use_threads,
-        )
-    elif processing_method == "load":
-        parties_results, _ = myio.load_from_h5(f"{output_dir}/reynolds_stresses.h5")
-    else:
-        raise ValueError(
-            f'processing_method must be one of ["load", "compute"]. Got: {processing_method}'
-        )
-
-    parties_yc_plus: np.ndarray = parties_results["yc_plus"]  # type: ignore
-    parties_U_plus: np.ndarray = parties_results["U_plus"]  # type: ignore
-    u_tau: float = parties_results["u_tau"]  # type: ignore
-    tau_w: float = parties_results["tau_w"]  # type: ignore
-
-    print(f"u_tau: {u_tau}, tau_w: {tau_w}")
-
-    # Fit law of the wall parameters to both datasets
+    # law-of-the-wall fit + profile
     utexas_kappa, utexas_constant = theory.law_of_the_wall.fit_parameters(
         utexas_y_plus, utexas_U_plus
     )
-    parties_kappa, parties_constant = theory.law_of_the_wall.fit_parameters(
-        parties_yc_plus, parties_U_plus
-    )
-
     (
         utexas_viscous_y_plus,
         utexas_viscous_U_plus,
@@ -169,6 +118,54 @@ def collect_flow_statistics(
         utexas_y_plus, utexas_kappa, utexas_constant
     )
 
+    utexas_stats: Dict[str, Union[np.ndarray, float]] = {
+        "utexas_y_plus": utexas_y_plus,
+        "utexas_U_plus": utexas_U_plus,
+        "utexas_upup_plus": utexas_upup_plus,
+        "utexas_vpvp_plus": utexas_vpvp_plus,
+        "utexas_wpwp_plus": utexas_wpwp_plus,
+        "utexas_k_plus": utexas_k_plus,
+        "utexas_kappa": utexas_kappa,
+        "utexas_constant": utexas_constant,
+        "utexas_viscous_y_plus": utexas_viscous_y_plus,
+        "utexas_viscous_U_plus": utexas_viscous_U_plus,
+        "utexas_log_y_plus": utexas_log_y_plus,
+        "utexas_log_U_plus": utexas_log_U_plus,
+    }
+
+    # save
+    myio.save_to_h5(out_h5, utexas_stats, {"source": "utexas_text_files"})
+    return utexas_stats
+
+
+def compute_and_save_parties(
+    parties_data_dir: Union[str, Path],
+    output_dir: Union[str, Path],
+    output_h5_filename: str,
+    Re: float,
+    min_file_index: Optional[int] = None,
+    max_file_index: Optional[int] = None,
+    num_workers_single_component: Optional[int] = None,
+    num_workers_cross_component: Optional[int] = None,
+    use_threads: bool = False,
+) -> Dict[str, Union[np.ndarray, float]]:
+    parties_results = compute_all_reynolds_stresses(
+        parties_data_dir,
+        output_dir,
+        Re,
+        min_file_index,
+        max_file_index,
+        num_workers_single_component,
+        num_workers_cross_component,
+        use_threads,
+    )
+
+    # compute law-of-the-wall fits & profiles for PARTIES
+    parties_yc_plus: np.ndarray = parties_results["yc_plus"]  # type: ignore
+    parties_U_plus: np.ndarray = parties_results["U_plus"]  # type: ignore
+    parties_kappa, parties_constant = theory.law_of_the_wall.fit_parameters(
+        parties_yc_plus, parties_U_plus
+    )
     (
         parties_viscous_yc_plus,
         parties_viscous_U_plus,
@@ -178,37 +175,23 @@ def collect_flow_statistics(
         parties_yc_plus, parties_kappa, parties_constant
     )
 
-    print(
-        f"Law of the wall parameters (utexas):  κ={utexas_kappa:.3f}, C+={utexas_constant:.3f}\n"
-        f"Law of the wall parameters (PARTIES): κ={parties_kappa:.3f}, C+={parties_constant:.3f}"
+    parties_results.update(
+        {
+            "parties_kappa": parties_kappa,
+            "parties_constant": parties_constant,
+            "parties_viscous_yc_plus": parties_viscous_yc_plus,
+            "parties_viscous_U_plus": parties_viscous_U_plus,
+            "parties_log_yc_plus": parties_log_yc_plus,
+            "parties_log_U_plus": parties_log_U_plus,
+        }
     )
 
-    new_entries: Dict[str, Union[np.ndarray, float]] = {
-        # utexas reference data
-        "utexas_y_plus": utexas_y_plus,
-        "utexas_U_plus": utexas_U_plus,
-        "utexas_viscous_y_plus": utexas_viscous_y_plus,
-        "utexas_viscous_U_plus": utexas_viscous_U_plus,
-        "utexas_log_y_plus": utexas_log_y_plus,
-        "utexas_log_U_plus": utexas_log_U_plus,
-        "utexas_upup_plus": utexas_upup_plus,
-        "utexas_vpvp_plus": utexas_vpvp_plus,
-        "utexas_wpwp_plus": utexas_wpwp_plus,
-        "utexas_k_plus": utexas_k_plus,
-        # parties (computed) data (also include profiles to keep everything together)
-        "parties_viscous_yc_plus": parties_viscous_yc_plus,
-        "parties_viscous_U_plus": parties_viscous_U_plus,
-        "parties_log_yc_plus": parties_log_yc_plus,
-        "parties_log_U_plus": parties_log_U_plus,
-        # law-of-the-wall fits
-        "utexas_kappa": utexas_kappa,
-        "utexas_constant": utexas_constant,
-        "parties_kappa": parties_kappa,
-        "parties_constant": parties_constant,
+    # Save final parties dict (metadata: indices if available)
+    meta = {
+        "min_index": min_file_index,
+        "max_index": max_file_index,
     }
-
-    parties_results.update(new_entries)
-
+    myio.save_to_h5(Path(output_dir) / output_h5_filename, parties_results, meta)
     return parties_results
 
 
@@ -224,11 +207,10 @@ def main(
     # CONFIGURATION AND CONSTANTS
     # =============================================================================
 
-    plotting.tools.update_rcParams()
-
     Re: float = 2800.0
 
     output_dir = Path(output_dir) / "fluid"
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     num_workers_single_component: Optional[int] = 5
     num_workers_cross_component: Optional[int] = 2
@@ -246,31 +228,41 @@ def main(
     # Computation and plotting
     # =============================================================================
 
-    results: Dict[str, Union[np.ndarray, float]] = collect_flow_statistics(
-        processing_method,
-        Re,
-        output_dir,
-        utexas_data_dir,
-        parties_data_dir,
-        min_file_index,
-        max_file_index,
-        num_workers_single_component,
-        num_workers_cross_component,
-        use_threads=False,
-    )
-
-    create_velocity_profile_wall_plot(output_dir, results)
-
-    create_normal_stress_wall_plot(output_dir, results)
-
-    create_particle_slice_plot(
+    plot_dir = output_dir / "plots"
+    utexas_h5 = output_dir / "utexas.h5"
+    results_utexas = compute_and_save_utexas(utexas_data_dir, utexas_h5)
+    parties_processed_filename = "parties_reynolds.h5"
+    results_parties = compute_and_save_parties(
         parties_data_dir,
         output_dir,
+        parties_processed_filename,
         Re,
-        float(results["Re_tau"]),
         min_file_index,
         max_file_index,
     )
+
+    plot_dir: Path = Path(output_dir) / "plots"
+    plot_dir.mkdir(parents=True, exist_ok=True)
+
+    utexas_wall_series: List[PlotSeries] = plotting.series.u_plus_mean_wall_utexas(
+        utexas_h5
+    )
+    parties_wall_series: List[PlotSeries] = plotting.series.u_plus_mean_wall_parties(
+        output_dir / parties_processed_filename, label="PARTIES", colour="C1"
+    )
+    all_wall_series: List[PlotSeries] = utexas_wall_series + parties_wall_series
+    plotting.templates.velocity_profile_wall(plot_dir, all_wall_series)
+
+    utexas_stress_series: List[PlotSeries] = plotting.series.normal_stress_wall_utexas(
+        utexas_h5
+    )
+    parties_stress_series: List[PlotSeries] = (
+        plotting.series.normal_stress_wall_parties(
+            output_dir / parties_processed_filename, label="PARTIES", colour="C1"
+        )
+    )
+    all_stress_series: List[PlotSeries] = utexas_stress_series + parties_stress_series
+    plotting.templates.normal_stress_wall(plot_dir, all_stress_series)
 
     data_files: List[Path] = myio.list_parties_data_files(parties_data_dir, "Data")
     data_file: Path = data_files[-1]
