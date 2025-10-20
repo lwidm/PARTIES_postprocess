@@ -1,7 +1,7 @@
 # -- src/scripts/run_floc_analysis.py
 
 import numpy as np
-from typing import Dict, Union, Optional, Tuple, List, Literal
+from typing import Dict, Union, Optional, Tuple, List
 from pathlib import Path
 import tqdm  # type: ignore
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
@@ -9,22 +9,13 @@ from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_compl
 from src.myio import myio
 from src.flocs.find_flocs import find_flocs
 from src.flocs import floc_statistics as floc_stat
-from src import globals
 from src import plotting
-from src.plotting.series import PlotSeries
 
 
 def analyze_floc(
     particle_data: Dict[str, Union[np.ndarray, float]],
     domain: Dict[str, Union[int, float]],
 ) -> Tuple[Dict[str, Union[np.ndarray, float]], Dict[str, Union[int, float]]]:
-    """Analyze a single floc and compute its statistics.
-    Args:
-        particle_data: Dict containing particle data for a single floc.
-        domain: Dict containing domain size and periodicity information.
-    Returns:
-        Tuple containing updated particle data and a dict with floc statistics.
-    """
     N_particles: int = len(np.asarray(particle_data["r"]))
     particle_diameter: float = 2 * np.asarray(particle_data["r"])[0]
 
@@ -170,6 +161,7 @@ def process_all_flocs(
 ):
     output_dir = Path(output_dir)
 
+    print(f"Looking for particle files in {parties_data_dir} ...")
     particle_files: List[Path] = myio.list_data_files(
         parties_data_dir, "Particle", min_file_index, max_file_index
     )
@@ -215,6 +207,8 @@ def main(
     trn: bool,
     min_file_index: Optional[int] = None,
     max_file_index: Optional[int] = None,
+    min_steady_index: Optional[int] = None,
+    max_steady_index: Optional[int] = None,
     num_workers: Optional[int] = None,
     use_threading: bool = False,
 ):
@@ -226,15 +220,7 @@ def main(
 
     Path(output_dir).mkdir(parents=True, exist_ok=True)
 
-    plotting.tools.update_rcParams()
-
-    # Re: float = 2800.0
-
-    if globals.on_anvil:
-        min_file_index = 250
-
-    # processing_method: Literal["load", "compute"] = "load"
-    processing_method: Literal["load", "compute"] = "compute"
+    plotting.tools.update_plot_params()
 
     # =============================================================================
     # Computation and plotting
@@ -243,21 +229,21 @@ def main(
     if trn:
         parties_data_dir = Path(parties_data_dir) / "trn"
 
-    if processing_method == "compute":
-        process_all_flocs(
-            parties_data_dir,
-            output_dir,
-            min_file_index,
-            max_file_index,
-            num_workers,
-            use_threading,
-        )
+    process_all_flocs(
+        parties_data_dir,
+        output_dir,
+        min_file_index,
+        max_file_index,
+        num_workers,
+        use_threading,
+    )
 
     floc_stat.calc_PDF(
         output_dir=output_dir,
+        bin_widths=(1, 1, 1),
         floc_dir=output_dir,
-        min_file_index=min_file_index,
-        max_file_index=max_file_index,
+        min_file_index=min_steady_index,
+        max_file_index=max_steady_index,
         num_workers=num_workers,
         use_threading=False,
     )
@@ -268,22 +254,3 @@ def main(
     #
     # tree_file = analysis_dir / "family_tree.pkl"
     # myio.save_to_pickle(tree_file, family_tree.family_tree)
-
-    s: PlotSeries = plotting.series.floc_count_evolution(
-        output_dir, "k", None, min_file_index, max_file_index
-    )
-    plot_dir = Path(output_dir) / "plots"
-    plotting.templates.floc_count_evolution(plot_dir, [s])
-
-    s_n_p, s_D_f, s_D_g = plotting.series.floc_pdf(
-        floc_dir=output_dir,
-        labels=["None", "None", "None"],
-        colours=["k", "k", "k"],
-        linestyles=["-", "-", "-"],
-    )
-
-    print(s_n_p.data)
-
-    plotting.templates.n_p_pdf(plot_dir, [s_n_p]) 
-    plotting.templates.D_f_pdf(plot_dir, [s_D_f]) 
-    plotting.templates.D_g_pdf(plot_dir, [s_D_g]) 

@@ -25,7 +25,7 @@ def compute_fluid_Ekin_evolution(
     print(
         f'Looking for datafile in directory: "{parties_data_dir}" with min_file_index: {min_file_index} and max_file_index: {max_file_index}'
     )
-    data_files: List[Path] = myio.list_parties_data_files(
+    data_files: List[Path] = myio.list_data_files(
         parties_data_dir, "Data", min_file_index, max_file_index
     )
 

@@ -1,7 +1,8 @@
 # -- src/myio/myio.py
 
+from concurrent.futures import ThreadPoolExecutor
 import numpy as np
-from typing import Optional, List, Dict, Union, Any, Tuple, Literal
+from typing import Optional, List, Dict, Union, Any, Tuple, Generator
 from natsort import natsorted
 from pathlib import Path
 import io
@@ -12,8 +13,14 @@ import h5py  # type: ignore
 import configparser
 import ast
 import sys
+import subprocess
+import tqdm # type: ignore
+import shlex
 
 sys.setrecursionlimit(int(1e9))
+
+MyPath = Union[str, Path]
+PathH5Union = Union[h5py.File, MyPath]
 
 
 def save_to_h5(
@@ -163,8 +170,8 @@ def load_columns_from_txt_numpy(
 def list_data_files(
     path: Union[str, Path],
     base_name: str,
-    min_file_index: Optional[int] = None,
-    max_file_index: Optional[int] = None,
+    min_file_index: Optional[int],
+    max_file_index: Optional[int],
 ) -> List[Path]:
     """
     Find HDF5 data files matching the pattern and filter by index range.
@@ -199,6 +206,124 @@ def list_data_files(
             continue
 
     return filtered_files
+
+
+def _is_ssh_path(file_path: MyPath) -> bool:
+    path_str = str(file_path)
+    return ":" in path_str and not Path(path_str).exists()
+
+
+def rsync_download_file(remote_path: MyPath, local_path: Path) -> bool:
+    try:
+        cmd: List[str] = [
+            "rsync",
+            "-ahv",
+            "--partial",
+            "--append-verify",
+            str(remote_path),
+            str(local_path),
+        ]
+        subprocess.run(cmd, capture_output=True, text=True, check=True)
+        print(f"Downloaded {remote_path} to {local_path}")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to download {remote_path}: {e}")
+        return False
+
+
+def _list_remote_files(ssh_path: str, base_name: str) -> List[MyPath]:
+    host, remote_dir = ssh_path.split(":", 1)
+    remote_pattern: str = f"{shlex.quote(remote_dir.rstrip('/'))}/{base_name}_*.h5"
+    ssh_cmd = ["ssh", host, "ls -l " + remote_pattern]
+    try:
+        proc = subprocess.run(ssh_cmd, capture_output=True, text=True, check=True)
+        lines = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
+        results: List[MyPath] = []
+        for l in lines:
+            remote_file: MyPath
+            if l.startswith("/"):
+                remote_file = l
+            else:
+                remote_file = f"{remote_dir.rstrip('/')}/{l}"
+            results.append(f"{host}:{remote_file}")
+        return results
+    except subprocess.CalledProcessError:
+        return []
+
+
+def streaming_data_files_generator(
+    data_dir: MyPath,
+    download_dir: MyPath,
+    base_name: str,
+    min_file_index: Optional[int],
+    max_file_index: Optional[int],
+    download_workers: int,
+) -> Generator[MyPath, None, None]:
+    data_dir = Path(data_dir)
+    download_dir = Path(download_dir)
+    download_dir.mkdir(parents=True, exist_ok=True)
+
+    def parse_index_from_name(name: str) -> Optional[int]:
+        try:
+            tail: str = str(name).split(":", 1)[-1]
+            stem: str = Path(tail).stem
+            idx: int = int(stem.split("_")[-1])
+            return idx
+        except Exception:
+            return None
+
+    def discover_once() -> List[MyPath]:
+        discovered: List[MyPath] = []
+        if _is_ssh_path(data_dir):
+            discovered = _list_remote_files(str(data_dir), base_name)
+        else:
+            pattern: str = f"{data_dir}/{base_name}_*.h5"
+            discovered = [str(p) for p in glob.glob(pattern)]
+
+        discovered_sorted = natsorted(
+            discovered, key=lambda p: Path(str(p).split(":")[-1]).stem
+        )
+        filtered: List[MyPath] = []
+        for p in discovered_sorted:
+            idx = parse_index_from_name(str(p))
+            if idx is None:
+                continue
+            if (min_file_index is not None and idx < min_file_index) or (
+                max_file_index is not None and idx > max_file_index
+            ):
+                continue
+            filtered.append(p)
+        return filtered
+
+    def downlaod_and_return_local(remote_or_local: MyPath) -> Path:
+        pstr = str(remote_or_local)
+        if _is_ssh_path(pstr):
+            local_name = Path(pstr).name
+            local_path = download_dir / local_name
+            if local_path.exists():
+                return local_path
+            ok: bool = rsync_download_file(pstr, local_path)
+            if not ok:
+                raise RuntimeError(f"rsync failed for {pstr}")
+            return local_path
+        else:
+            local_path = Path(pstr)
+            if not local_path.exists():
+                raise RuntimeError(f"Local file not found: {local_path}")
+            return local_path
+
+    files_to_process: List[MyPath] = discover_once()
+
+    if not files_to_process:
+        return
+        yield
+
+    with ThreadPoolExecutor(max_workers=max(1, download_workers)) as ex:
+        futures = [ex.submit(downlaod_and_return_local, p) for p in files_to_process]
+
+        for fut in tqdm.tqdm(futures, desc="Processing files", total=len(files_to_process)):
+            local_path: Path = fut.result()
+            yield local_path
 
 
 def read_coh_range(
@@ -368,7 +493,7 @@ def _merge_dicts(dict_list: list[dict]) -> dict:
 
 def get_time_array(
     file_prefix: str,
-    parties_data_dir: Union[str, Path],
+    data_dir: Union[str, Path],
     min_file_index: Optional[int],
     max_file_index: Optional[int],
     key: Optional[str] = None,
@@ -376,12 +501,12 @@ def get_time_array(
 
     print("Obtaining time array of data hdf5 files")
     print(
-        f'Looking for datafile in directory: "{parties_data_dir}" with min_file_index: {min_file_index} and max_file_index: {max_file_index}'
+        f'Looking for datafiles in directory: "{data_dir}" with min_file_index: {min_file_index} and max_file_index: {max_file_index}'
     )
     if key == None:
         key = "time"
     data_files: List[Path] = list_data_files(
-        parties_data_dir, file_prefix, min_file_index, max_file_index
+        data_dir, file_prefix, min_file_index, max_file_index
     )
 
     t_arr: np.ndarray = np.zeros(len(data_files))
@@ -391,3 +516,31 @@ def get_time_array(
             t_arr[i] = h5_file[key][()]  # type: ignore
 
     return t_arr
+
+def find_idx_from_time(
+    file_prefix: str,
+    data_dir: Union[str, Path],
+    target_time: float,
+    key: Optional[str] = None,
+) -> Dict[str, Any]:
+    if key is None:
+        key = "time"
+
+    data_files: List[Path] = list_data_files(data_dir, file_prefix, None, None)
+
+    if not data_files:
+        return {"position": None, "path": None, "file_idx": None}
+
+    for pos, data_file in enumerate(data_files):
+        time: float
+        with h5py.File(data_file, "r") as f:
+            if key not in f:
+                raise KeyError(f"Key '{key}' not found in file {data_file}")
+            time = f[key][()]  # type: ignore
+
+        if time > float(target_time):
+            m = re.search(r"(\d+)$", data_file.stem)
+            file_index = int(m.group(1)) if m else None
+            return {"position": pos, "path": data_file, "file_idx": file_index}
+
+    return {"position": None, "path": None, "file_idx": None}

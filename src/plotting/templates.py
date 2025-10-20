@@ -7,13 +7,12 @@ from matplotlib import pyplot as plt
 
 from src.plotting.tools import (
     PlotSeries,
-    generic_line_plot,
+    generic_plot,
     _plot_one,
-    update_rcParams,
+    update_plot_params,
     format_plot_axes,
 )
 from src import globals
-
 
 
 def velocity_profile_wall(
@@ -29,7 +28,7 @@ def velocity_profile_wall(
     if not series_list:
         raise ValueError("series_list must contain at least one PlotSeries")
 
-    update_rcParams()
+    update_plot_params()
     fig, ax = plt.subplots(figsize=figsize)
 
     for s in series_list:
@@ -144,12 +143,11 @@ def normal_stress_wall(
     xlim: Optional[Tuple[float, float]] = None
     ylim: Optional[Tuple[float, float]] = None
     if ymax is not None:
-        ylim = (ymin, min( 1.1 * ymax, 8.0))
+        ylim = (ymin, min(1.1 * ymax, 8.0))
     if xmax is not None:
-        xlim = (xmin, min( xmax, 80.0))
+        xlim = (xmin, min(xmax, 80.0))
 
-
-    generic_line_plot(
+    generic_plot(
         output_dir,
         list(series_list),
         xlabel=r"$y^+$",
@@ -157,19 +155,24 @@ def normal_stress_wall(
         figsize=(6.5, 5.5),
         legend_loc="lower right",
         legend_bbox=(1.0, 0.70),
-        xlim = xlim,
-        ylim = ylim,
+        xlim=xlim,
+        ylim=ylim,
     )
     return
 
 
-def floc_count_evolution(output_dir: Path, series_list: Sequence[PlotSeries]) -> None:
+def floc_count_evolution(
+    output_dir: Path, series_list: Sequence[PlotSeries], normalised: bool
+) -> None:
     out_path = Path(output_dir) / "floc_count_evolution.png"
-    generic_line_plot(
+    ylabel: str = r"\# Flocs"
+    if normalised:
+        ylabel = r"(\# Flocs) / (\# Particles)"
+    generic_plot(
         out_path,
         list(series_list),
         xlabel="time [-]",
-        ylabel=r"\# Flocs",
+        ylabel=ylabel,
         figsize=(6.5, 5.5),
         legend_loc="lower right",
         legend_bbox=(1.0, 0.80),
@@ -177,11 +180,9 @@ def floc_count_evolution(output_dir: Path, series_list: Sequence[PlotSeries]) ->
     )
 
 
-def fluid_Ekin_evolution(
-    output_dir: Union[str, Path], series_list
-) -> None:
+def fluid_Ekin_evolution(output_dir: Union[str, Path], series_list) -> None:
     out_path = Path(output_dir) / "E_kin_evolution.png"
-    generic_line_plot(
+    generic_plot(
         out_path,
         list(series_list),
         xlabel="time [-]",
@@ -192,32 +193,39 @@ def fluid_Ekin_evolution(
         dpi=150,
     )
 
+
 def _pdf(
-    output_dir: Union[str, Path], series_list, name: str, xlabel:str, ylabel: str
+    output_dir: Union[str, Path],
+    series_list,
+    name: str,
+    xlabel: str,
+    ylabel: str,
+    xmin: float,
+    xmax: float,
+    ymin: float
 ) -> None:
     out_path = Path(output_dir) / f"{name}.png"
-    generic_line_plot(
+    generic_plot(
         out_path,
         list(series_list),
         xlabel=xlabel,
         ylabel=ylabel,
+        xlim=(xmin, xmax),
+        ylim=(ymin, 1.1e0),
         figsize=(6.5, 5.5),
         legend_loc="lower right",
         legend_bbox=(1.0, 0.80),
         dpi=150,
     )
 
-def n_p_pdf(
-    output_dir: Union[str, Path], series_list
-):
-    _pdf(output_dir, series_list, "PDF_n_p", r"$PDF$", r"$n_p$")
 
-def D_f_pdf(
-    output_dir: Union[str, Path], series_list
-):
-    _pdf(output_dir, series_list, "PDF_D_f", r"$PDF$", r"$D_f$")
+def n_p_pdf(output_dir: Union[str, Path], series_list):
+    _pdf(output_dir, series_list, r"PDF_n_p", r"$n_p$", r"$PDF(n_p)$", 0.9, 4.5, 1e-3)
 
-def D_g_pdf(
-    output_dir: Union[str, Path], series_list
-):
-    _pdf(output_dir, series_list, "PDF_D_g", r"$PDF$", r"$D_g$")
+
+def D_f_pdf(output_dir: Union[str, Path], series_list):
+    _pdf(output_dir, series_list, r"PDF_D_f", r"$D_f / D_p$", r"$PDF(D_f)$", 0.0, 20, 1e-6)
+
+
+def D_g_pdf(output_dir: Union[str, Path], series_list):
+    _pdf(output_dir, series_list, r"PDF_D_g", r"$D_g / D_p$", r"$PDF(D_g)$", 0.0, 20, 1e-6)

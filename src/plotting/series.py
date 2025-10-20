@@ -20,8 +20,13 @@ def floc_count_evolution(
     label: Optional[str],
     min_file_index: Optional[int],
     max_file_index: Optional[int],
+    normalised: bool,
+    reset_time: bool,
 ) -> PlotSeries:
 
+    print(
+        f'Looking for floc files in directory: "{floc_dir}" with min_file_index: {min_file_index} and max_file_index: {max_file_index}'
+    )
     floc_files: List[Path] = myio.list_data_files(
         floc_dir, "Flocs", min_file_index, max_file_index
     )
@@ -34,19 +39,31 @@ def floc_count_evolution(
     )
     counts: List[int] = []
 
+    if reset_time:
+        time = time - time[0]
+
     for floc_file in floc_files:
         with h5py.File(floc_file, "r") as f:
-            if "flocs" in f and "floc_id" in f["flocs"]:  # type: ignore
-                floc_count = len(np.unique(f["flocs"]["floc_id"][:]))  # type: ignore
-                counts.append(floc_count)
+            floc_count = len(np.unique(f["flocs"]["floc_id"][:]))  # type: ignore
+            counts.append(floc_count)
+
+    counts_arr = np.asarray(counts)
+    if normalised:
+        counts_arr = counts_arr.astype(float)
+        N_particles: int
+        with h5py.File(floc_files[0], "r") as f:
+            N_particles = len(f["particles"]["r"][:])  # type: ignore
+        counts_arr /= N_particles
 
     s: PlotSeries = PlotSeries(
-        data={"time": time, "counts": np.asarray(counts)},
+        data={"time": time, "counts": counts_arr},
         x_key="time",
         y_key="counts",
-        label=label,
         plot_method="plot",
-        color=colour,
+        kwargs={
+            "label": label,
+            "color": colour,
+        },
     )
 
     return s
@@ -54,51 +71,99 @@ def floc_count_evolution(
 
 def floc_pdf(
     floc_dir: Union[str, Path],
-    labels: List[str],
+    labels: List[Optional[str]],
     colours: List[str],
     linestyles: List[str],
+    markers: List[str],
 ) -> Tuple[PlotSeries, PlotSeries, PlotSeries]:
 
+    # edges_n_p: np.ndarray
+    # edges_D_f: np.ndarray
+    # edges_D_g: np.ndarray
     centers_n_p: np.ndarray
     centers_D_f: np.ndarray
     centers_D_g: np.ndarray
+
+    bin_width_n_p: np.ndarray
+    bin_width_D_f: np.ndarray
+    bin_width_D_g: np.ndarray
+
     probab_n_p: np.ndarray
     probab_D_f: np.ndarray
     probab_D_g: np.ndarray
     with h5py.File(Path(floc_dir) / "floc_PDF.h5", "r") as f:
+        # edges_n_p = f["edges_n_p"][:]  # type: ignore
+        # edges_D_f = f["edges_D_f"][:]  # type: ignore
+        # edges_D_g = f["edges_D_g"][:]  # type: ignore
         centers_n_p = f["centers_n_p"][:]  # type: ignore
         centers_D_f = f["centers_D_f"][:]  # type: ignore
         centers_D_g = f["centers_D_g"][:]  # type: ignore
+
+        bin_width_n_p = f["bin_width_n_p"][()]  # type: ignore
+        bin_width_D_f = f["bin_width_D_f"][()]  # type: ignore
+        bin_width_D_g = f["bin_width_D_g"][()]  # type: ignore
         probab_n_p = f["probab_n_p"][:]  # type: ignore
         probab_D_f = f["probab_D_f"][:]  # type: ignore
         probab_D_g = f["probab_D_g"][:]  # type: ignore
 
+    markeredgewidth: float = 0.5
+
     s_n_p: PlotSeries = PlotSeries(
-        data={"x": centers_n_p, "y": probab_n_p},
+        # data={"edges": edges_n_p, "counts": probab_n_p},
+        data={"x": centers_n_p, "y": probab_n_p, "bin_width": bin_width_n_p},
+        # x_key="edges",
+        # y_key="counts",
         x_key="x",
         y_key="y",
-        label=labels[0],
-        linestyle=linestyles[0],
-        plot_method="plot",
-        color=colours[0],
+        plot_method="semilogy",
+        kwargs={
+            "label": labels[0],
+            "linestyle": linestyles[0],
+            "marker": markers[0],
+            "markerfacecolor": colours[0],
+            "markeredgecolor": "k",
+            "markeredgewidth": markeredgewidth,
+            "color": "k",
+            "fillstyle": "full",
+        },
     )
     s_D_f: PlotSeries = PlotSeries(
-        data={"x": centers_D_f, "y": probab_D_f},
+        # data={"edges": edges_D_f, "counts": probab_D_f},
+        data={"x": centers_D_f, "y": probab_D_f, "bin_width": bin_width_D_f},
+        # x_key="edges",
+        # y_key="counts",
         x_key="x",
         y_key="y",
-        label=labels[1],
-        linestyle=linestyles[1],
-        plot_method="plot",
-        color=colours[1],
+        plot_method="semilogy",
+        kwargs={
+            "label": labels[1],
+            "linestyle": linestyles[1],
+            "marker": markers[1],
+            "markerfacecolor": colours[1],
+            "markeredgecolor": "k",
+            "markeredgewidth": markeredgewidth,
+            "color": "k",
+            "fillstyle": "full",
+        },
     )
     s_D_g: PlotSeries = PlotSeries(
-        data={"x": centers_D_g, "y": probab_D_g},
+        # data={"edges": edges_D_g, "counts": probab_D_g},
+        data={"x": centers_D_g, "y": probab_D_g, "bin_width": bin_width_D_g},
+        # x_key="edges",
+        # y_key="counts",
         x_key="x",
         y_key="y",
-        label=labels[2],
-        linestyle=linestyles[2],
-        plot_method="plot",
-        color=colours[2],
+        plot_method="semilogy",
+        kwargs={
+            "label": labels[2],
+            "linestyle": linestyles[2],
+            "marker": markers[2],
+            "markerfacecolor": colours[2],
+            "markeredgecolor": "k",
+            "markeredgewidth": markeredgewidth,
+            "color": "k",
+            "fillstyle": "full",
+        },
     )
 
     return s_n_p, s_D_f, s_D_g
@@ -127,10 +192,8 @@ def u_plus_mean_wall_parties(
         },
         x_key="x",
         y_key="y",
-        label=label,
         plot_method="semilogx",
-        linestyle=linestyles[0],
-        color=colour,
+        kwargs={"label": label, "linestyle": linestyles[0], "color": colour},
     )
     s_parties_log = PlotSeries(
         data={
@@ -141,10 +204,12 @@ def u_plus_mean_wall_parties(
         x_key="x",
         y_key="y",
         plot_method="semilogx",
-        linestyle=linestyles[1],
-        linewidth=0.9,
-        label=f"Law of the wall ({label})",
-        color=colour,
+        kwargs={
+            "linestyle": linestyles[1],
+            "linewidth": 0.9,
+            "label": f"Law of the wall ({label})",
+            "color": colour,
+        },
     )
 
     return [s_parties, s_parties_log]
@@ -177,10 +242,12 @@ def u_plus_mean_wall_utexas(
         },
         x_key="x",
         y_key="y",
-        label="utexas",
-        linestyle=linestyle_map["utexas"],
         plot_method="semilogx",
-        color=colour_map["utexas"],
+        kwargs={
+            "label": "utexas",
+            "linestyle": linestyle_map["utexas"],
+            "color": colour_map["utexas"],
+        },
     )
     s_utexas_visc = PlotSeries(
         data={
@@ -190,11 +257,13 @@ def u_plus_mean_wall_utexas(
         },
         x_key="x",
         y_key="y",
-        label="Law of the wall (utexas)",
         plot_method="semilogx",
-        linestyle=linestyle_map["utexas_visc"],
-        linewidth=0.9,
-        color=colour_map["utexas_visc"],
+        kwargs={
+            "label": "Law of the wall (utexas)",
+            "linestyle": linestyle_map["utexas_visc"],
+            "linewidth": 0.9,
+            "color": colour_map["utexas_visc"],
+        },
     )
     s_utexas_log = PlotSeries(
         data={
@@ -205,9 +274,11 @@ def u_plus_mean_wall_utexas(
         x_key="x",
         y_key="y",
         plot_method="semilogx",
-        linestyle=linestyle_map["utexas_visc"],
-        linewidth=0.9,
-        color=colour_map["utexas_visc"],
+        kwargs={
+            "linestyle": linestyle_map["utexas_visc"],
+            "linewidth": 0.9,
+            "color": colour_map["utexas_visc"],
+        },
     )
     return [s_utexas, s_utexas_visc, s_utexas_log]
 
@@ -253,10 +324,12 @@ def normal_stress_wall_parties(
         },
         x_key="x",
         y_key="y",
-        label=l_u_part,
         plot_method="plot",
-        linestyle=linestyle_map.get("u", "-"),
-        color=colour,
+        kwargs={
+            "label": l_u_part,
+            "linestyle": linestyle_map.get("u", "-"),
+            "color": colour,
+        },
     )
     s_v_part = PlotSeries(
         data={
@@ -267,10 +340,12 @@ def normal_stress_wall_parties(
         },
         x_key="x",
         y_key="y",
-        label=l_v_part,
         plot_method="plot",
-        linestyle=linestyle_map.get("v", "-."),
-        color=colour,
+        kwargs={
+            "label": l_v_part,
+            "linestyle": linestyle_map.get("v", "-."),
+            "color": colour,
+        },
     )
     s_w_part = PlotSeries(
         data={
@@ -281,10 +356,12 @@ def normal_stress_wall_parties(
         },
         x_key="x",
         y_key="y",
-        label=l_w_part,
         plot_method="plot",
-        linestyle=linestyle_map.get("w", "--"),
-        color=colour,
+        kwargs={
+            "label": l_w_part,
+            "linestyle": linestyle_map.get("w", "--"),
+            "color": colour,
+        },
     )
     s_k_part = PlotSeries(
         data={
@@ -295,10 +372,12 @@ def normal_stress_wall_parties(
         },
         x_key="x",
         y_key="y",
-        label=l_k_part,
         plot_method="plot",
-        linestyle=linestyle_map.get("k", ":"),
-        color=colour,
+        kwargs={
+            "label": l_k_part,
+            "linestyle": linestyle_map.get("k", ":"),
+            "color": colour,
+        },
     )
 
     return [s_u_part, s_v_part, s_w_part, s_k_part]
@@ -357,12 +436,14 @@ def normal_stress_wall_utexas(
             },
             x_key="x",
             y_key="y",
-            label=label,
             plot_method="plot",
-            marker=marker,
-            linestyle=linestyle,
-            color=colour,
-            kwargs={"fillstyle": "none"},
+            kwargs={
+                "label": label,
+                "marker": marker,
+                "linestyle": linestyle,
+                "color": colour,
+                "fillstyle": "none",
+            },
         )
 
     s_u_tex = create_series(
@@ -425,10 +506,12 @@ def Ekin_evolution(
         },
         x_key="x",
         y_key="y",
-        label=label,
         plot_method="plot",
-        linestyle=linestyle,
-        marker=marker,
-        color=colour,
-        kwargs={"fillstyle": "none"},
+        kwargs={
+            "label": label,
+            "linestyle": linestyle,
+            "marker": marker,
+            "color": colour,
+            "fillstyle": "none",
+        },
     )

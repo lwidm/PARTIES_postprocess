@@ -15,12 +15,20 @@ module load conda texlive
 eval "$(conda shell.bash hook)"
 conda activate PARTIES_postprocess_anvil
 
+# PYTHONPATH=. python ./main.py \
+# 	--output_dir="/home/x-lwidmer/Documents/PARTIES_postprocess/output/RUN7" \
+# 	--utexas_data_dir="/home/x-lwidmer/Documents/PARTIES_postprocess/data" \
+# 	--parties_data_dir="/anvil/scratch/x-lwidmer/RUN7" \
+# 	-trn \
+# 	--num_workers=8 \
+# 	--min_file_index=99351 \
+# 	--max_file_index=125152
+# 	# --use_threading
+
 PYTHONPATH=. python ./main.py \
 	--output_dir="/home/x-lwidmer/Documents/PARTIES_postprocess/output/RUN7" \
 	--utexas_data_dir="/home/x-lwidmer/Documents/PARTIES_postprocess/data" \
 	--parties_data_dir="/anvil/scratch/x-lwidmer/RUN7" \
-	-trn \
 	--num_workers=8 \
-	--min_file_index=99351 \
-	--max_file_index=125152
-	# --use_threading
+	--min_file_index=260 \
+	--max_file_index=360

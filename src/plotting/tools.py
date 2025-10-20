@@ -5,12 +5,14 @@ from typing import Any, Dict, Optional, Sequence, Tuple, Union, Literal
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
+from matplotlib import colors as mcolors
+import colorsys
 
 from src import globals
 
 NumericArray = Union[np.ndarray, float, int]
 PlotMethod = Literal[
-    "plot", "semilogx", "semilogy", "loglog", "pcolormesh", "imshow", "scatter"
+    "plot", "semilogx", "semilogy", "loglog", "pcolormesh", "imshow", "scatter", "bar"
 ]
 
 
@@ -19,11 +21,6 @@ class PlotSeries:
     data: Dict[str, Any]
     x_key: Optional[str] = "x"
     y_key: Optional[str] = "y"
-    label: Optional[str] = None
-    color: Optional[str] = None
-    linestyle: Optional[str] = None
-    marker: Optional[str] = None
-    linewidth: Optional[float] = None
     plot_method: Optional[PlotMethod] = "plot"
     kwargs: Dict[str, Any] = field(default_factory=dict)
 
@@ -34,7 +31,7 @@ SeriesLike = Union[PlotSeries, Sequence[PlotSeries]]
 # ------------------------- rc / axis helpers -------------------------
 
 
-def update_rcParams() -> None:
+def update_plot_params() -> None:
     plt.rcParams.update(
         {
             "text.usetex": True,
@@ -83,24 +80,23 @@ def _extract_xy(
     return x, y
 
 
-def _clean_plot_kwargs(series: PlotSeries) -> Dict[str, Any]:
-    kw: Dict[str, Any] = {}
-    if series.label is not None:
-        kw["label"] = series.label
-    if series.color is not None:
-        kw["color"] = series.color
-    if series.linestyle is not None:
-        kw["linestyle"] = series.linestyle
-    if series.marker is not None:
-        kw["marker"] = series.marker
-    if series.linewidth is not None:
-        kw["linewidth"] = series.linewidth
-    kw.update(series.kwargs or {})
-    return kw
+def _hex_to_rgb01(hexcolor):
+    return mcolors.to_rgb(hexcolor)
 
+def _adjust_color(hexcolor, lighter=0.0, sat_mul=1.0):
+    """
+    Return an RGB tuple (0..1) that is the input color shifted in lightness
+    by `lighter` (positive => lighter, negative => darker) and saturation scaled by sat_mul.
+    """
+    r, g, b = _hex_to_rgb01(hexcolor)
+    h, l, s = colorsys.rgb_to_hls(r, g, b)  # note: HLS (not HSL)
+    l = min(max(0.0, l + lighter), 1.0)
+    s = min(max(0.0, s * sat_mul), 1.0)
+    r2, g2, b2 = colorsys.hls_to_rgb(h, l, s)
+    return (r2, g2, b2)
 
 def _plot_one(ax: Axes, series: PlotSeries) -> None:
-    method = (series.plot_method or "plot").lower()
+    method: PlotMethod = series.plot_method or "plot"
     if method in ("plot", "semilogx", "semilogy", "loglog", "scatter"):
         x, y = _extract_xy(series)
         ax_values_tuple: Tuple
@@ -112,7 +108,7 @@ def _plot_one(ax: Axes, series: PlotSeries) -> None:
             ax_values_tuple = (y,)
         else:
             ax_values_tuple = (x, y)
-        plot_kwargs = _clean_plot_kwargs(series)
+        plot_kwargs = series.kwargs
         if method == "plot":
             ax.plot(*(ax_values_tuple), **plot_kwargs)
         elif method == "semilogx":
@@ -127,8 +123,25 @@ def _plot_one(ax: Axes, series: PlotSeries) -> None:
                     "Failed to extract either x or y when trying to create scatter plot"
                 )
             ax.scatter(x, y, **plot_kwargs)
+
+    elif method == "bar":
+        plot_kwargs = series.kwargs
+        counts: np.ndarray = series.data["counts"]
+        edges: np.ndarray = series.data["edges"]
+        widths = edges[1:] - edges[:-1]
+        edge_lighter=-0.18
+        edge_sat=1.3
+        base_colour: Optional[str] = series.kwargs["color"]
+        if base_colour is None:
+            base_colour = "red"
+        face_alpha: float = 0.38
+        face_rgb: Tuple[float, float, float] = _hex_to_rgb01(base_colour)
+        face_rgba: Tuple[float, float, float, float] = (face_rgb[0], face_rgb[1], face_rgb[2], face_alpha)
+        edge_rgb: Tuple[float, float, float] =  _adjust_color(base_colour, lighter=edge_lighter, sat_mul=edge_sat)
+        plot_kwargs.update({"align": "edge", "facecolor": face_rgba, "edgecolor": edge_rgb, "linewidth": 2.8, "zorder": 2})
+        ax.bar(edges[:-1], counts, width=widths, **plot_kwargs)
     elif method == "pcolormesh":
-        plot_kwargs = _clean_plot_kwargs(series)
+        plot_kwargs = series.kwargs
         data = series.data
         X = data.get("X")
         Y = data.get("Y")
@@ -147,13 +160,13 @@ def _plot_one(ax: Axes, series: PlotSeries) -> None:
     elif method == "imshow":
         data = series.data
         C = np.asarray(data.get("C") or data.get("u"))
-        plot_kwargs = _clean_plot_kwargs(series)
+        plot_kwargs = series.kwargs
         ax.imshow(C, **plot_kwargs)
     else:
         raise ValueError("Plot method specified not implemented yet")
 
 
-def generic_line_plot(
+def generic_plot(
     output_path: Union[str, Path],
     series_list: Sequence[PlotSeries],
     figsize: Tuple[float, float] = (6.5, 5.5),
@@ -166,7 +179,55 @@ def generic_line_plot(
     legend_bbox: Optional[Tuple[float, float]] = None,
     dpi: int = 300,
 ) -> None:
-    update_rcParams()
+    update_plot_params()
+    fig, ax = plt.subplots(figsize=figsize)
+
+    for s in series_list:
+        _plot_one(ax, s)
+
+    if xlabel:
+        ax.set_xlabel(xlabel, fontsize=14)
+    if ylabel:
+        ax.set_ylabel(ylabel, fontsize=14)
+    if title:
+        ax.set_title(title)
+    if xlim is not None:
+        ax.set_xlim(*xlim)
+    if ylim is not None:
+        ax.set_ylim(*ylim)
+
+    legend_kwargs = {}
+    if legend_loc is not None:
+        legend_kwargs["loc"] = legend_loc
+    if legend_bbox is not None:
+        legend_kwargs["bbox_to_anchor"] = legend_bbox
+    if legend_kwargs:
+        ax.legend(**legend_kwargs)
+
+    ax = format_plot_axes(ax)
+
+    out_path = Path(output_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(str(out_path), dpi=dpi)
+
+    if not globals.on_anvil:
+        plt.show()
+    plt.close(fig)
+
+def generic_hist_plot(
+    output_path: Union[str, Path],
+    series_list: Sequence[PlotSeries],
+    figsize: Tuple[float, float] = (6.5, 5.5),
+    xlabel: Optional[str] = None,
+    ylabel: Optional[str] = None,
+    xlim: Optional[Tuple[float, float]] = None,
+    ylim: Optional[Tuple[float, float]] = None,
+    title: Optional[str] = None,
+    legend_loc: Optional[str] = None,
+    legend_bbox: Optional[Tuple[float, float]] = None,
+    dpi: int = 300,
+) -> None:
+    update_plot_params()
     fig, ax = plt.subplots(figsize=figsize)
 
     for s in series_list:
