@@ -1,7 +1,7 @@
 # -- src/plotting/series.py
 
 from pathlib import Path
-from typing import Union, Any, Dict, List, Optional, Tuple
+from typing import Union, Dict, List, Optional, Tuple
 import h5py  # type: ignore
 
 import numpy as np

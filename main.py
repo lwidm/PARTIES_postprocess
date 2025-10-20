@@ -1,5 +1,4 @@
 import argparse
-from typing import Union, Optional
 from pathlib import Path
 
 from src import scripts

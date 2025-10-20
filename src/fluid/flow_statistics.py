@@ -3,11 +3,9 @@
 import numpy as np
 import h5py  # type: ignore
 from pathlib import Path
-from typing import Union, Dict, Literal, List, Tuple, Any, Optional
+from typing import Union, Dict, Literal, List, Tuple, Any
 import tqdm  # type: ignore
 import gc
-
-from src.myio import myio
 
 
 def get_grid(fluid_file: Union[str, Path]) -> Dict[str, np.ndarray]:

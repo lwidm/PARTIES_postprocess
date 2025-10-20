@@ -3,7 +3,6 @@
 from typing import Optional, List, Dict, Union, Literal
 from pathlib import Path
 import numpy as np
-from matplotlib import pyplot as plt
 import h5py # type: ignore
 import tqdm # type: ignore
 

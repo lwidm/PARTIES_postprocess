@@ -264,7 +264,7 @@ def main(
     all_stress_series: List[PlotSeries] = utexas_stress_series + parties_stress_series
     plotting.templates.normal_stress_wall(plot_dir, all_stress_series)
 
-    data_files: List[Path] = myio.list_parties_data_files(parties_data_dir, "Data")
+    data_files: List[Path] = myio.list_data_files(parties_data_dir, "Data", min_file_index, max_file_index)
     data_file: Path = data_files[-1]
     phi: float = fstat.calc_tot_vol_frac(data_file)
     print(f"Total volume fraction is {phi*100} %")
