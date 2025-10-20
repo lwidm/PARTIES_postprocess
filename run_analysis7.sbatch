@@ -30,5 +30,5 @@ PYTHONPATH=. python ./main.py \
 	--utexas_data_dir="/home/x-lwidmer/Documents/PARTIES_postprocess/data" \
 	--parties_data_dir="/anvil/scratch/x-lwidmer/RUN7" \
 	--num_workers=8 \
-	--min_file_index=260 \
-	--max_file_index=360
+	--min_file_index=322 \
+	--max_file_index=371
