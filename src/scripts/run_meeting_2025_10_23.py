@@ -9,8 +9,71 @@ from src.plotting import series as plt_series
 from src.plotting import templates as plt_templ
 
 
-def main() -> None:
+def fluid(utexas_dir: MyPath, plot_dir: MyPath):
 
+    utexas_h5 = Path(utexas_dir) / "utexas.h5"
+    parties_processed_filename = "parties_reynolds.h5"
+    utexas_wall_series: List[PlotSeries] = plt_series.u_plus_mean_wall_utexas(utexas_h5)
+    parties_wall_series_phi1p5: List[PlotSeries] = plt_series.u_plus_mean_wall_parties(
+        Path("/media/usb/UCSB/phi1p5") / parties_processed_filename,
+        label=r"$\phi_{1.5\%}$",
+        colour="C0",
+    )
+    parties_wall_series_phi5p0: List[PlotSeries] = plt_series.u_plus_mean_wall_parties(
+        Path("/media/usb/UCSB/phi5p0") / parties_processed_filename,
+        label=r"$\phi_{5\%}$ no cohesion",
+        colour="C1",
+    )
+    parties_wall_series_phi5p0_co: List[PlotSeries] = (
+        plt_series.u_plus_mean_wall_parties(
+            Path("/media/usb/UCSB/phi5p0_co") / parties_processed_filename,
+            label=r"\phi_{5\%}$",
+            colour="C2",
+        )
+    )
+
+    all_wall_series: List[PlotSeries] = (
+        utexas_wall_series
+        + parties_wall_series_phi5p0_co
+        + parties_wall_series_phi5p0
+        + parties_wall_series_phi1p5
+    )
+    plt_templ.velocity_profile_wall(plot_dir, all_wall_series)
+
+    utexas_stress_series: List[PlotSeries] = plt_series.normal_stress_wall_utexas(
+        utexas_h5
+    )
+    parties_stress_series_phi1p5: List[PlotSeries] = (
+        plt_series.normal_stress_wall_parties(
+            Path("/media/usb/UCSB/phi1p5") / parties_processed_filename,
+            label=r"$\phi_{1.5\%}$",
+            colour="C0",
+        )
+    )
+    parties_stress_series_phi5p0: List[PlotSeries] = (
+        plt_series.normal_stress_wall_parties(
+            Path("/media/usb/UCSB/phi5p0") / parties_processed_filename,
+            label=r"$\phi_{5\%}$ no cohesion",
+            colour="C1",
+        )
+    )
+    parties_stress_series_phi5p0_co: List[PlotSeries] = (
+        plt_series.normal_stress_wall_parties(
+            Path("/media/usb/UCSB/phi5p0_co") / parties_processed_filename,
+            label=r"$\phi_{5\%}$",
+            colour="C2",
+        )
+    )
+    all_stress_series: List[PlotSeries] = (
+        utexas_stress_series
+        + parties_stress_series_phi5p0_co
+        + parties_stress_series_phi5p0
+        + parties_stress_series_phi1p5
+    )
+    plt_templ.normal_stress_wall(plot_dir, all_stress_series)
+
+def floc(plot_dir: MyPath):
+    plot_dir = Path(plot_dir)
     time_idx_info: List[dict] = [{}, {}, {}]
     time_idx_info[0] = myio.find_idx_from_time(
         file_prefix="Particle",
@@ -92,7 +155,6 @@ def main() -> None:
         )
         return s, s_n_p, s_D_f, s_D_g
 
-    plot_dir: Path = Path("./output/plots")
     plot_dir.mkdir(parents=True, exist_ok=True)
     tuple_s_1p5 = get_plot_series(
         "./output/phi1p5/flocs",
@@ -125,3 +187,8 @@ def main() -> None:
     plt_templ.n_p_pdf(plot_dir, [tuple_s_1p5[1], tuple_s_5p0[1], tuple_s_5p0_co[1]])
     plt_templ.D_f_pdf(plot_dir, [tuple_s_1p5[2], tuple_s_5p0[2], tuple_s_5p0_co[2]])
     plt_templ.D_g_pdf(plot_dir, [tuple_s_1p5[3], tuple_s_5p0[3], tuple_s_5p0_co[3]])
+
+def main() -> None:
+    plot_dir: Path = Path("./output/plots")
+    floc(plot_dir)
+
