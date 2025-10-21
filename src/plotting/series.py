@@ -74,105 +74,82 @@ def floc_pdf(
     labels: List[Optional[str]],
     colours: List[str],
     markers: List[str],
-) -> Tuple[PlotSeries, PlotSeries, PlotSeries]:
+) -> Tuple[PlotSeries, PlotSeries, PlotSeries, PlotSeries, PlotSeries, PlotSeries]:
 
-    # edges_n_p: np.ndarray
-    # edges_D_f: np.ndarray
-    # edges_D_g: np.ndarray
-    centers_n_p: np.ndarray
-    centers_D_f: np.ndarray
-    centers_D_g: np.ndarray
+    means_list: List[np.ndarray] = []
+    stds_list: List[np.ndarray] = []
+    bin_widths_list: List[np.ndarray] = []
+    probabs_list: List[np.ndarray] = []
+    postfixes: List[str] = ["n_p", "D_f", "D_g"]
 
-    bin_width_n_p: np.ndarray
-    bin_width_D_f: np.ndarray
-    bin_width_D_g: np.ndarray
-
-    probab_n_p: np.ndarray
-    probab_D_f: np.ndarray
-    probab_D_g: np.ndarray
     with h5py.File(Path(floc_dir) / "floc_PDF.h5", "r") as f:
-        # edges_n_p = f["edges_n_p"][:]  # type: ignore
-        # edges_D_f = f["edges_D_f"][:]  # type: ignore
-        # edges_D_g = f["edges_D_g"][:]  # type: ignore
-        centers_n_p = f["centers_n_p"][:]  # type: ignore
-        centers_D_f = f["centers_D_f"][:]  # type: ignore
-        centers_D_g = f["centers_D_g"][:]  # type: ignore
-
-        bin_width_n_p = f["bin_width_n_p"][()]  # type: ignore
-        bin_width_D_f = f["bin_width_D_f"][()]  # type: ignore
-        bin_width_D_g = f["bin_width_D_g"][()]  # type: ignore
-        probab_n_p = f["probab_n_p"][:]  # type: ignore
-        probab_D_f = f["probab_D_f"][:]  # type: ignore
-        probab_D_g = f["probab_D_g"][:]  # type: ignore
+        for i in range(len(postfixes)):
+            # centers.append(f["centers_" + strings[i]][:])  # type: ignore
+            means_list.append(f["means_" + postfixes[i]][:])  # type: ignore
+            stds_list.append(f["stds_" + postfixes[i]][:])  # type: ignore
+            bin_widths_list.append(f["bin_width_" + postfixes[i]][()])  # type: ignore
+            probabs_list.append(f["probab_" + postfixes[i]][:])  # type: ignore
 
     markeredgewidth: float = 0.5
 
-    s_n_p: PlotSeries = PlotSeries(
-        # data={"edges": edges_n_p, "counts": probab_n_p},
-        data={"x": centers_n_p, "y": probab_n_p, "bin_width": bin_width_n_p},
-        # x_key="edges",
-        # y_key="counts",
-        x_key="x",
-        y_key="y",
-        plot_method="semilogy",
-        kwargs={
-            "label": labels[0],
-            "linestyle": "None",
-            "marker": markers[0],
-            "markerfacecolor": colours[0],
-            "markeredgecolor": "k",
-            "markeredgewidth": markeredgewidth,
-            "color": "k",
-            "fillstyle": "full",
-        },
-    )
-    s_D_f: PlotSeries = PlotSeries(
-        # data={"edges": edges_D_f, "counts": probab_D_f},
-        data={"x": centers_D_f, "y": probab_D_f, "bin_width": bin_width_D_f},
-        # x_key="edges",
-        # y_key="counts",
-        x_key="x",
-        y_key="y",
-        plot_method="semilogy",
-        kwargs={
-            "label": labels[1],
-            "linestyle": linestyles[1],
-            "marker": markers[1],
-            "markerfacecolor": colours[1],
-            "markeredgecolor": "k",
-            "markeredgewidth": markeredgewidth,
-            "color": "k",
-            "fillstyle": "full",
-        },
-    )
-    s_D_g: PlotSeries = PlotSeries(
-        # data={"edges": edges_D_g, "counts": probab_D_g},
-        data={"x": centers_D_g, "y": probab_D_g, "bin_width": bin_width_D_g},
-        # x_key="edges",
-        # y_key="counts",
-        x_key="x",
-        y_key="y",
-        plot_method="semilogy",
-        kwargs={
-            "label": labels[2],
-            "linestyle": linestyles[2],
-            "marker": markers[2],
-            "markerfacecolor": colours[2],
-            "markeredgecolor": "k",
-            "markeredgewidth": markeredgewidth,
-            "color": "k",
-            "fillstyle": "full",
-        },
-    )
+    def create_series(i: int) -> Tuple[PlotSeries, PlotSeries]:
+        s: PlotSeries = PlotSeries(
+            data={
+                "x": means_list[i],
+                "y": probabs_list[i],
+                "bin_width": bin_widths_list[i],
+            },
+            x_key="x",
+            y_key="y",
+            plot_method="semilogy",
+            kwargs={
+                "label": labels[i],
+                "linestyle": "None",
+                "marker": markers[i],
+                "markerfacecolor": colours[i],
+                "markeredgecolor": "k",
+                "markeredgewidth": markeredgewidth,
+                "color": "k",
+                "fillstyle": "full",
+            },
+        )
 
-    return s_n_p, s_D_f, s_D_g
+        s_err: PlotSeries = PlotSeries(
+            data={
+                "x": means_list[i],
+                "y": probabs_list[i],
+                "bin_width": bin_widths_list[i],
+                "x_err": stds_list[i],
+            },
+            x_key="x",
+            y_key="y",
+            plot_method="err_semilogy",
+            kwargs={
+                "color": "k",
+                "linestyle": "None",
+                "fmt": "None",
+                "ecolor": "k",
+                "elinewidth": 0.6,
+                "capsize": 2,
+                "capthick": 0.8,
+                "barsabove": True,
+            },
+        )
+
+        return s, s_err
+
+    s_n_p, s_n_p_err = create_series(0)
+    s_D_f, s_D_f_err = create_series(1)
+    s_D_g, s_D_g_err = create_series(2)
+
+    return s_n_p, s_D_f, s_D_g, s_n_p_err, s_D_f_err, s_D_g_err
 
 
 def floc_avg_dir(
     floc_dir: Union[str, Path],
     labels: List[Optional[str]],
     colours: List[str],
-    linestyles: List[str],
+    markers: List[str],
     inner_units: bool,
 ) -> Tuple[PlotSeries, PlotSeries, PlotSeries, PlotSeries]:
 
@@ -207,8 +184,8 @@ def floc_avg_dir(
             plot_method="plot",
             kwargs={
                 "label": labels[idx],
-                "linestyle": linestyles[idx],
-                "marker": "None",
+                "linestyle": "None",
+                "marker": markers[idx],
                 "markerfacecolor": colours[idx],
                 "markeredgecolor": "k",
                 "markeredgewidth": markeredgewidth,

@@ -12,7 +12,7 @@ from src import globals
 
 NumericArray = Union[np.ndarray, float, int]
 PlotMethod = Literal[
-    "plot", "semilogx", "semilogy", "loglog", "pcolormesh", "imshow", "scatter", "bar"
+    "plot", "semilogx", "semilogy", "loglog", "pcolormesh", "imshow", "scatter", "bar", "err_plot", "err_semilogx", "err_semilogy", "err_loglog"
 ]
 
 
@@ -97,7 +97,7 @@ def _adjust_color(hexcolor, lighter=0.0, sat_mul=1.0):
 
 def _plot_one(ax: Axes, series: PlotSeries) -> None:
     method: PlotMethod = series.plot_method or "plot"
-    if method in ("plot", "semilogx", "semilogy", "loglog", "scatter"):
+    if method in ("plot", "semilogx", "semilogy", "loglog", "scatter", "err_plot", "err_semilogx", "err_semilogy", "err_loglog"):
         x, y = _extract_xy(series)
         ax_values_tuple: Tuple
         if x is None:
@@ -109,6 +109,7 @@ def _plot_one(ax: Axes, series: PlotSeries) -> None:
         else:
             ax_values_tuple = (x, y)
         plot_kwargs = series.kwargs
+
         if method == "plot":
             ax.plot(*(ax_values_tuple), **plot_kwargs)
         elif method == "semilogx":
@@ -117,6 +118,23 @@ def _plot_one(ax: Axes, series: PlotSeries) -> None:
             ax.semilogy(*(ax_values_tuple), **plot_kwargs)
         elif method == "loglog":
             ax.loglog(x, y, **plot_kwargs)
+        elif method in ["err_semilogx", "err_semilogy", "err_plot", "err_loglog"]:
+            if "x_err" in series.data and "y_err" in series.data:
+                ax.errorbar(*(ax_values_tuple), xerr=series.data["x_err"], yerr=series.data["y_err"], **plot_kwargs)
+            elif "x_err" in series.data:
+                ax.errorbar(*(ax_values_tuple), xerr=series.data["x_err"], **plot_kwargs)
+            elif "y_err" in series.data:
+                ax.errorbar(*(ax_values_tuple), yerr=series.data["y_err"], **plot_kwargs)
+            else:
+                raise ValueError('Either "x_err" or "y_err" must be defined in PlotSeries data dict')
+
+            if method == "err_semilogx":
+                ax.set_xscale('log')
+            elif method == "err_semilogy":
+                ax.set_yscale('log')
+            elif method == "err_loglog":
+                ax.set_xscale('log')
+                ax.set_yscale('log')
         elif method == "scatter":
             if x is None or y is None:
                 raise ValueError(

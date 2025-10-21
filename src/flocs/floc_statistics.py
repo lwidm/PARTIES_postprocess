@@ -287,45 +287,70 @@ def calc_PDF(
     D_f_arr: np.ndarray = np.array(D_f_list) / d
     D_g_arr: np.ndarray = np.array(D_g_list) / d
 
-    def edges_from_width(data, width):
+    def edges_from_width(data: np.ndarray, width: float) -> np.ndarray:
         min_val, max_val = min(data) - width / 2, max(data) - width / 2
         num_bins = int(np.ceil((max_val - min_val) / width))
         return np.linspace(min_val, min_val + num_bins * width, num_bins + 1)
 
-    edges_n_p = edges_from_width(n_p_arr, bin_widths[0])
-    edges_D_f = edges_from_width(D_f_arr, bin_widths[1])
-    edges_D_g = edges_from_width(D_g_arr, bin_widths[2])
 
-    counts_n_p, edges_n_p = np.histogram(n_p_arr, bins=edges_n_p)
-    counts_D_f, edges_D_f = np.histogram(D_f_arr, bins=edges_D_f)
-    counts_D_g, edges_D_g = np.histogram(D_g_arr, bins=edges_D_g)
-
-    centers_n_p: np.ndarray = (edges_n_p[:-1] + edges_n_p[1:]) / 2.0
-    centers_D_f: np.ndarray = (edges_D_f[:-1] + edges_D_f[1:]) / 2.0
-    centers_D_g: np.ndarray = (edges_D_g[:-1] + edges_D_g[1:]) / 2.0
-
-    probab_n_p: np.ndarray = counts_n_p.astype(float) / float(N_flocs)
-    probab_D_f: np.ndarray = counts_D_f.astype(float) / float(N_flocs)
-    probab_D_g: np.ndarray = counts_D_g.astype(float) / float(N_flocs)
+    edges_list: List[np.ndarray] = []
+    centers_list: List[np.ndarray] = []
+    means_list: List[np.ndarray] = []
+    medians_list: List[np.ndarray] = []
+    stds_list: List[np.ndarray] = []
+    counts_list: List[np.ndarray] = []
+    probabs_list: List[np.ndarray] = []
+    for i, vals in enumerate([n_p_arr, D_f_arr, D_g_arr]):
+        edges: np.ndarray = edges_from_width(vals, bin_widths[0])
+        edges_list.append(edges)
+        centers: np.ndarray = (edges_list[i][:-1] + edges_list[i][1:]) / 2.0
+        centers_list.append(centers)
+        means, _, _ = scipy.stats.binned_statistic(vals, vals, statistic="mean", bins=edges_list[i].tolist())
+        means_list.append(means)
+        medians, _, _ = scipy.stats.binned_statistic(vals, vals, statistic="median", bins=edges_list[i].tolist())
+        medians_list.append(medians)
+        stds, _, _ = scipy.stats.binned_statistic(vals, vals, statistic="std", bins=edges_list[i].tolist())
+        stds_list.append(stds)
+        counts, _, _ = scipy.stats.binned_statistic(vals, vals, statistic="count", bins=edges_list[i].tolist())
+        counts_list.append(counts)
+        probabs = counts_list[i].astype(float) / float(N_flocs)
+        probabs_list.append(probabs)
 
     results: Dict[str, Union[float, np.ndarray]] = {
         "d": d,
         "N_flocs": N_flocs,
+
         "bin_width_n_p": bin_widths[0],
         "bin_width_D_f": bin_widths[1],
         "bin_width_D_g": bin_widths[2],
-        "counts_n_p": counts_n_p,
-        "counts_D_f": counts_D_f,
-        "counts_D_g": counts_D_g,
-        "edges_n_p": edges_n_p,
-        "edges_D_f": edges_D_f,
-        "edges_D_g": edges_D_g,
-        "centers_n_p": centers_n_p,
-        "centers_D_f": centers_D_f,
-        "centers_D_g": centers_D_g,
-        "probab_n_p": probab_n_p,
-        "probab_D_f": probab_D_f,
-        "probab_D_g": probab_D_g,
+
+        "edges_n_p": edges_list[0],
+        "edges_D_f": edges_list[1],
+        "edges_D_g": edges_list[2],
+
+        "centers_n_p": centers_list[0],
+        "centers_D_f": centers_list[1],
+        "centers_D_g": centers_list[2],
+
+        "means_n_p": means_list[0],
+        "means_D_f": means_list[1],
+        "means_D_g": means_list[2],
+
+        "medians_n_p": medians_list[0],
+        "medians_D_f": medians_list[1],
+        "medians_D_g": medians_list[2],
+
+        "stds_n_p": stds_list[0],
+        "stds_D_f": stds_list[1],
+        "stds_D_g": stds_list[2],
+
+        "counts_n_p": counts_list[0],
+        "counts_D_f": counts_list[1],
+        "counts_D_g": counts_list[2],
+
+        "probab_n_p": probabs_list[0],
+        "probab_D_f": probabs_list[1],
+        "probab_D_g": probabs_list[2],
     }
 
     myio.save_to_h5(Path(output_dir) / "floc_PDF.h5", results)

@@ -233,14 +233,14 @@ def main(
     if trn:
         parties_data_dir = Path(parties_data_dir) / "trn"
 
-    process_all_flocs(
-        parties_data_dir,
-        output_dir,
-        min_file_index,
-        max_file_index,
-        num_workers,
-        use_threading,
-    )
+    # process_all_flocs(
+    #     parties_data_dir,
+    #     output_dir,
+    #     min_file_index,
+    #     max_file_index,
+    #     num_workers,
+    #     use_threading,
+    # )
 
     floc_stat.calc_PDF(
         output_dir=output_dir,
@@ -259,8 +259,8 @@ def main(
         channel_half_width=L,
         Re=Re,
         u_tau=u_tau,
-        n_bins=100,
-        n_bins_inner=100,
+        n_bins=20,
+        n_bins_inner=20,
         min_file_index=min_steady_index,
         max_file_index=max_steady_index,
         num_workers=num_workers,
