@@ -205,6 +205,7 @@ def main(
     parties_data_dir: Union[str, Path],
     output_dir: Union[str, Path],
     trn: bool,
+    u_tau: float,
     min_file_index: Optional[int] = None,
     max_file_index: Optional[int] = None,
     min_steady_index: Optional[int] = None,
@@ -226,6 +227,9 @@ def main(
     # Computation and plotting
     # =============================================================================
 
+    Re: float = myio.read_Re(parties_data_dir)
+    L: float = myio.read_channel_half_height(parties_data_dir)
+
     if trn:
         parties_data_dir = Path(parties_data_dir) / "trn"
 
@@ -242,6 +246,20 @@ def main(
         output_dir=output_dir,
         bin_widths=(1, 1, 1),
         floc_dir=output_dir,
+        min_file_index=min_steady_index,
+        max_file_index=max_steady_index,
+        num_workers=num_workers,
+        use_threading=False,
+    )
+
+    floc_stat.CalcAvgDiam(
+        output_dir=output_dir,
+        floc_dir=output_dir,
+        channel_half_width=L,
+        Re=Re,
+        u_tau=u_tau,
+        n_bins=100,
+        n_bins_inner=100,
         min_file_index=min_steady_index,
         max_file_index=max_steady_index,
         num_workers=num_workers,

@@ -11,6 +11,13 @@ from .templates import (
     normal_stress_wall,
     velocity_profile_wall,
     floc_count_evolution,
+    n_p_pdf,
+    D_f_pdf,
+    D_g_pdf,
+    avg_D_f,
+    avg_D_g,
+    mass_avg_D_f,
+    mass_avg_D_g,
 )
 
 from .series import (
@@ -19,6 +26,9 @@ from .series import (
     normal_stress_wall_parties,
     normal_stress_wall_utexas,
     Ekin_evolution,
+    floc_count_evolution,
+    floc_pdf,
+    floc_avg_dir,
 )
 
 
@@ -33,4 +43,14 @@ __all__ = [
     "normal_stress_wall_parties",
     "normal_stress_wall_utexas",
     "Ekin_evolution",
+    "n_p_pdf",
+    "D_f_pdf",
+    "D_g_pdf",
+    "avg_D_f",
+    "avg_D_g",
+    "mass_avg_D_f",
+    "mass_avg_D_g",
+    "floc_count_evolution",
+    "floc_pdf",
+    "floc_avg_dir",
 ]

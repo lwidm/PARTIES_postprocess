@@ -192,6 +192,7 @@ def calc_theta(orientation: np.ndarray, N_particles: int) -> np.ndarray:
         return np.zeros(3)
     return np.arccos(orientation / np.linalg.norm(orientation))
 
+
 def _count_floc_PDF_occurences(
     h5_file: Union[str, Path],
 ) -> Tuple[List[int], List[float], List[float], int]:
@@ -211,6 +212,7 @@ def _count_floc_PDF_occurences(
     D_g_list: List[float] = D_g[first_indices].tolist()
 
     return n_p_list, D_f_list, D_g_list, N_flocs_local
+
 
 def calc_PDF(
     output_dir: Union[str, Path],
@@ -284,7 +286,7 @@ def calc_PDF(
     D_g_arr: np.ndarray = np.array(D_g_list) / d
 
     def edges_from_width(data, width):
-        min_val, max_val = min(data)-width/2, max(data)-width/2
+        min_val, max_val = min(data) - width / 2, max(data) - width / 2
         num_bins = int(np.ceil((max_val - min_val) / width))
         return np.linspace(min_val, min_val + num_bins * width, num_bins + 1)
 
@@ -329,7 +331,6 @@ def calc_PDF(
     return results
 
 
-
 def CalcAvgDiam(
     output_dir: Union[str, Path],
     floc_dir: Union[str, Path],
@@ -353,58 +354,71 @@ def CalcAvgDiam(
 
     r_p: float
     with h5py.File(floc_files[0], "r") as f:
-        r_p: float = f["particles/r"][0] # type: ignore
+        r_p: float = f["particles/r"][0]  # type: ignore
 
-    def to_wall_units(y: np.ndarray):
-        return Re * y * u_tau
+    def to_wall_units(y: np.ndarray) -> np.ndarray:
+        y = np.asarray(y)
+        return np.asarray(Re * y * u_tau)
 
     y: np.ndarray = np.linspace(0.0, channel_half_width, n_bins, endpoint=True)
-    yp: np.ndarray = np.linspace(0.0, to_wall_units(y[-1])[0], n_bins_inner, endpoint=True)
+    yp: np.ndarray = np.linspace(0.0, to_wall_units(y[-1]), n_bins_inner, endpoint=True)
     y_left_arr: np.ndarray = y[:-1]
     y_right_arr: np.ndarray = y[1:]
     yp_left_arr: np.ndarray = yp[:-1]
     yp_right_arr: np.ndarray = yp[1:]
-    N_flocs_bin: np.ndarray = np.zeros_like(y_left_arr) # total number of flocs in each bin
+    N_flocs_bin: np.ndarray = np.zeros_like(
+        y_left_arr
+    )  # total number of flocs in each bin
+    mass_bin: np.ndarray = np.zeros_like(y_left_arr)  # total floc_mass in each bin
     inner_N_flocs_bin: np.ndarray = np.zeros_like(yp_left_arr)
-    tot_n_p_arr = np.zeros_like(y_left_arr) # total number of particles in each bin
-    tot_D_f_arr = np.zeros_like(y_left_arr) # total number of particles in each bin
-    tot_D_g_arr = np.zeros_like(y_left_arr) # total number of particles in each bin
-    tot_Vol_arr = np.zeros_like(y_left_arr)
-    inner_tot_n_p_arr = np.zeros_like(yp_left_arr) # total number of particles in each bin (bin in inner units)
+    inner_mass_bin: np.ndarray = np.zeros_like(yp_left_arr)
+    tot_D_f_arr = np.zeros_like(y_left_arr)
+    tot_D_g_arr = np.zeros_like(y_left_arr)
     inner_tot_D_f_arr = np.zeros_like(yp_left_arr)
     inner_tot_D_g_arr = np.zeros_like(yp_left_arr)
-    inner_tot_Vol_arr = np.zeros_like(yp_left_arr)
+    tot_mass_D_f_arr = np.zeros_like(y_left_arr)
+    tot_mass_D_g_arr = np.zeros_like(y_left_arr)
+    inner_tot_mass_D_f_arr = np.zeros_like(yp_left_arr)
+    inner_tot_mass_D_g_arr = np.zeros_like(yp_left_arr)
 
-    for floc_file in floc_files:
+    for floc_file in tqdm(
+        floc_files, desc="Processing average diameter", total=len(floc_files)
+    ):
         y_floc_arr: np.ndarray
         yp_floc_arr: np.ndarray
         n_p_arr: np.ndarray
         D_f_arr: np.ndarray
         D_g_arr: np.ndarray
         with h5py.File(floc_file, "r") as f:
-            floc_ids: np.ndarray = f["flocs/floc_id"][:] # type: ignore
+            floc_ids: np.ndarray = f["flocs/floc_id"][:]  # type: ignore
             _, first_indices = np.unique(floc_ids, return_index=True)
-            y_floc_arr = f["flocs/y"][first_indices] # type: ignore
+            y_floc_arr = f["flocs/y"][first_indices]  # type: ignore
             yp_floc_arr = to_wall_units(y_floc_arr)
-            n_p_arr = f["flocs/n_p"][first_indices] # type: ignore
-            D_f_arr = f["flocs/D_f"][first_indices] # type: ignore
-            D_g_arr = f["flocs/D_p"][first_indices] # type: ignore
+            n_p_arr = f["flocs/n_p"][first_indices]  # type: ignore
+            D_f_arr = f["flocs/D_f"][first_indices]  # type: ignore
+            D_g_arr = f["flocs/D_g"][first_indices]  # type: ignore
 
         for i in range(y_left_arr.shape[0]):
-            bin_map: np.ndarray = y_floc_arr >= y_left_arr[i] & y_floc_arr > y_left_arr[i]
+            bin_map: np.ndarray = (y_floc_arr >= y_left_arr[i]) & (
+                y_floc_arr > y_left_arr[i]
+            )
             N_flocs_bin[i] += np.sum(bin_map)
-            tot_n_p_arr[i] += np.sum(n_p_arr[bin_map])
+            mass_bin[i] += np.sum(n_p_arr[bin_map])
             tot_D_f_arr[i] += np.sum(D_f_arr[bin_map])
             tot_D_g_arr[i] += np.sum(D_g_arr[bin_map])
-            tot_Vol_arr[i] += np.sum(n_p_arr[bin_map] * 4.0/3.0 * np.pi *r_p**3)
+            tot_mass_D_f_arr[i] += np.sum(D_f_arr[bin_map] * n_p_arr[bin_map])
+            tot_mass_D_g_arr[i] += np.sum(D_g_arr[bin_map] * n_p_arr[bin_map])
 
         for i in range(yp_left_arr.shape[0]):
-            bin_map: np.ndarray = yp_floc_arr >= yp_left_arr[i] & yp_floc_arr > yp_left_arr[i]
+            bin_map: np.ndarray = (yp_floc_arr >= yp_left_arr[i]) & (
+                yp_floc_arr > yp_left_arr[i]
+            )
             inner_N_flocs_bin[i] += np.sum(bin_map)
-            inner_tot_n_p_arr[i] += np.sum(n_p_arr[bin_map])
+            inner_mass_bin[i] += np.sum(n_p_arr[bin_map])
             inner_tot_D_f_arr[i] += np.sum(D_f_arr[bin_map])
             inner_tot_D_g_arr[i] += np.sum(D_g_arr[bin_map])
-            inner_tot_Vol_arr[i] += np.sum(n_p_arr[bin_map] * 4.0/3.0 * np.pi *r_p**3)
+            inner_tot_mass_D_f_arr[i] += np.sum(D_f_arr[bin_map] * n_p_arr[bin_map])
+            inner_tot_mass_D_g_arr[i] += np.sum(D_g_arr[bin_map] * n_p_arr[bin_map])
 
             # y_floc_arr = y_floc_arr[not bin_map]
             # n_p_arr = n_p_arr[not bin_map]
@@ -412,23 +426,63 @@ def CalcAvgDiam(
             # D_g_arr = D_g_arr[not bin_map]
 
     results: Dict[str, Union[int, float, np.ndarray]] = {
-        "d": 2*r_p,
+        "d": 2 * r_p,
         "nbins": n_bins,
         "N_flocs": N_flocs_bin,
         "y_left": y_left_arr,
         "y_right": y_right_arr,
-        "y_center": (y_left_arr + y_right_arr)/2,
+        "y_center": (y_left_arr + y_right_arr) / 2,
         "yp_left": yp_left_arr,
         "yp_right": yp_right_arr,
-        "yp_center": (yp_left_arr + yp_right_arr)/2,
-        "n_p_avg": tot_n_p_arr / N_flocs_bin,
-        "D_f_avg": tot_D_f_arr / N_flocs_bin,
-        "D_g_avg": tot_D_g_arr / N_flocs_bin,
-        "Vol_avg": tot_Vol_arr / N_flocs_bin,
-        "inner_n_p_avg": inner_tot_n_p_arr / inner_N_flocs_bin,
-        "inner_D_f_avg": inner_tot_D_f_arr / inner_N_flocs_bin,
-        "inner_D_g_avg": inner_tot_D_g_arr / inner_N_flocs_bin,
-        "inner_Vol_avg": inner_tot_Vol_arr / inner_N_flocs_bin,
+        "yp_center": (yp_left_arr + yp_right_arr) / 2,
+        "D_f_avg": np.divide(
+            tot_D_f_arr,
+            N_flocs_bin,
+            out=np.full_like(tot_D_f_arr, np.nan),
+            where=N_flocs_bin != 0,
+        ),
+        "D_g_avg": np.divide(
+            tot_D_g_arr,
+            N_flocs_bin,
+            out=np.full_like(tot_D_g_arr, np.nan),
+            where=N_flocs_bin != 0,
+        ),
+        "D_f_mass_avg": np.divide(
+            tot_mass_D_f_arr,
+            mass_bin,
+            out=np.full_like(tot_mass_D_f_arr, np.nan),
+            where=mass_bin != 0,
+        ),
+        "D_g_mass_avg": np.divide(
+            tot_mass_D_g_arr,
+            mass_bin,
+            out=np.full_like(tot_mass_D_g_arr, np.nan),
+            where=mass_bin != 0,
+        ),
+        "inner_D_f_avg": np.divide(
+            inner_tot_D_f_arr,
+            inner_N_flocs_bin,
+            out=np.full_like(inner_tot_D_f_arr, np.nan),
+            where=N_flocs_bin != 0,
+        ),
+        "inner_D_g_avg": np.divide(
+            inner_tot_D_g_arr,
+            inner_N_flocs_bin,
+            out=np.full_like(inner_tot_D_g_arr, np.nan),
+            where=N_flocs_bin != 0,
+        ),
+        "inner_D_f_mass_avg": np.divide(
+            inner_tot_mass_D_f_arr,
+            inner_mass_bin,
+            out=np.full_like(inner_tot_mass_D_f_arr, np.nan),
+            where=inner_mass_bin != 0,
+        ),
+        "inner_D_g_mass_avg": np.divide(
+            inner_tot_mass_D_g_arr,
+            inner_mass_bin,
+            out=np.full_like(inner_tot_mass_D_g_arr, np.nan),
+            where=inner_mass_bin != 0,
+        ),
     }
 
     myio.save_to_h5(Path(output_dir) / "avg_floc_diam.h5", results)

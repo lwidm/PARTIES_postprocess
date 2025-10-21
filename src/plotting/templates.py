@@ -202,7 +202,7 @@ def _pdf(
     ylabel: str,
     xmin: float,
     xmax: float,
-    ymin: float
+    ymin: float,
 ) -> None:
     out_path = Path(output_dir) / f"{name}.png"
     generic_plot(
@@ -224,8 +224,85 @@ def n_p_pdf(output_dir: Union[str, Path], series_list):
 
 
 def D_f_pdf(output_dir: Union[str, Path], series_list):
-    _pdf(output_dir, series_list, r"PDF_D_f", r"$D_f / D_p$", r"$PDF(D_f)$", 0.0, 20, 1e-6)
+    _pdf(
+        output_dir,
+        series_list,
+        r"PDF_D_f",
+        r"$D_f / D_p$",
+        r"$PDF(D_f)$",
+        0.0,
+        20,
+        1e-6,
+    )
 
 
 def D_g_pdf(output_dir: Union[str, Path], series_list):
-    _pdf(output_dir, series_list, r"PDF_D_g", r"$D_g / D_p$", r"$PDF(D_g)$", 0.0, 20, 1e-6)
+    _pdf(
+        output_dir,
+        series_list,
+        r"PDF_D_g",
+        r"$D_g / D_p$",
+        r"$PDF(D_g)$",
+        0.0,
+        20,
+        1e-6,
+    )
+
+
+def _avg_floc_dir(
+    output_dir: Union[str, Path], series_list, name: str, ylabel: str, inner_units: bool
+) -> None:
+    xlabel: str = r"$y$"
+    if inner_units:
+        xlabel: str = r"$y^+$"
+    out_path = Path(output_dir) / f"{name}.png"
+    generic_plot(
+        out_path,
+        list(series_list),
+        xlabel=xlabel,
+        ylabel=ylabel,
+        figsize=(6.5, 5.5),
+        legend_loc="lower right",
+        legend_bbox=(1.0, 0.80),
+        dpi=150,
+    )
+
+
+def avg_D_f(
+    output_dir: Union[str, Path], series_list: List[PlotSeries], inner_units: bool
+):
+    _avg_floc_dir(
+        output_dir, series_list, r"avg_D_f", r"$\langle D_f \rangle$", inner_units
+    )
+
+
+def avg_D_g(
+    output_dir: Union[str, Path], series_list: List[PlotSeries], inner_units: bool
+):
+    _avg_floc_dir(
+        output_dir, series_list, r"avg_D_g", r"$\langle D_g \rangle$", inner_units
+    )
+
+
+def mass_avg_D_f(
+    output_dir: Union[str, Path], series_list: List[PlotSeries], inner_units: bool
+):
+    _avg_floc_dir(
+        output_dir,
+        series_list,
+        r"mass_avg_D_f",
+        r"$\langle D_f \rangle_\text{mass}$",
+        inner_units,
+    )
+
+
+def mass_avg_D_g(
+    output_dir: Union[str, Path], series_list: List[PlotSeries], inner_units: bool
+):
+    _avg_floc_dir(
+        output_dir,
+        series_list,
+        r"mass_avg_D_f",
+        r"$\langle D_g \rangle_\text{mass}$",
+        inner_units,
+    )

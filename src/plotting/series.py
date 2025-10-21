@@ -169,6 +169,64 @@ def floc_pdf(
     return s_n_p, s_D_f, s_D_g
 
 
+def floc_avg_dir(
+    floc_dir: Union[str, Path],
+    labels: List[Optional[str]],
+    colours: List[str],
+    linestyles: List[str],
+    markers: List[str],
+    inner_units: bool,
+) -> Tuple[PlotSeries, PlotSeries, PlotSeries, PlotSeries]:
+
+    x_data: np.ndarray
+    D_f_avg: np.ndarray
+    D_g_avg: np.ndarray
+    D_f_mass_avg: np.ndarray
+    D_g_mass_avg: np.ndarray
+    with h5py.File(Path(floc_dir) / "avg_floc_diam.h5", "r") as f:
+        if inner_units:
+            x_data = f["yp_center"][:]  # type: ignore
+            D_f_avg = f["inner_D_f_avg"][:]  # type: ignore
+            D_g_avg = f["inner_D_g_avg"][:]  # type: ignore
+            D_f_mass_avg = f["inner_D_f_mass_avg"][:]  # type: ignore
+            D_g_mass_avg = f["inner_D_g_mass_avg"][:]  # type: ignore
+        else:
+            x_data = f["y_center"][:]  # type: ignore
+            D_f_avg = f["D_f_avg"][:]  # type: ignore
+            D_g_avg = f["D_g_avg"][:]  # type: ignore
+            D_f_mass_avg = f["D_f_mass_avg"][:]  # type: ignore
+            D_g_mass_avg = f["D_g_mass_avg"][:]  # type: ignore
+
+    markeredgewidth: float = 0.5
+
+    def create_series(y_data: np.ndarray, idx: int) -> PlotSeries:
+
+        return PlotSeries(
+            # data={"edges": edges_n_p, "counts": probab_n_p},
+            data={"x": x_data, "y": y_data},
+            x_key="x",
+            y_key="y",
+            plot_method="plot",
+            kwargs={
+                "label": labels[idx],
+                "linestyle": linestyles[idx],
+                "marker": markers[idx],
+                "markerfacecolor": colours[idx],
+                "markeredgecolor": "k",
+                "markeredgewidth": markeredgewidth,
+                "color": "k",
+                "fillstyle": "full",
+            },
+        )
+
+    s_D_f_avg: PlotSeries = create_series(D_f_avg, 0)
+    s_D_g_avg: PlotSeries = create_series(D_g_avg, 1)
+    s_D_f_mass_avg: PlotSeries = create_series(D_f_mass_avg, 2)
+    s_D_g_mass_avg: PlotSeries = create_series(D_g_mass_avg, 3)
+
+    return s_D_f_avg, s_D_g_avg, s_D_f_mass_avg, s_D_g_mass_avg
+
+
 # ------------------------- u_plus_mean_wall series -------------------------
 
 

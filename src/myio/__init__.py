@@ -18,6 +18,7 @@ from .myio import (
     read_particle_data,
     combine_dicts,
     read_coh_range,
+    read_channel_half_height,
 )
 from .myio_torch import load_columns_from_txt_torch
 
@@ -32,4 +33,5 @@ __all__ = [
     "list_data_files",
     "read_particle_data",
     "combine_dicts",
+    "read_channel_half_height",
 ]

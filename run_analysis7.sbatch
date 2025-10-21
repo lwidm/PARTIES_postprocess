@@ -2,7 +2,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --mem-per-cpu=32G
-#SBATCH --time=1:00:00
+#SBATCH --time=5:00:00
 #SBATCH -J analysisRUN7
 #SBATCH -o log_ana7.o%j
 #SBATCH -e log_ana7.e%j
@@ -30,5 +30,5 @@ PYTHONPATH=. python ./main.py \
 	--utexas_data_dir="/home/x-lwidmer/Documents/PARTIES_postprocess/data" \
 	--parties_data_dir="/anvil/scratch/x-lwidmer/RUN7" \
 	--num_workers=8 \
-	--min_file_index=322 \
-	--max_file_index=371
+	--min_file_index=280 \
+	--max_file_index=None

@@ -14,7 +14,7 @@ import configparser
 import ast
 import sys
 import subprocess
-import tqdm # type: ignore
+import tqdm  # type: ignore
 import shlex
 
 sys.setrecursionlimit(int(1e9))
@@ -321,7 +321,9 @@ def streaming_data_files_generator(
     with ThreadPoolExecutor(max_workers=max(1, download_workers)) as ex:
         futures = [ex.submit(downlaod_and_return_local, p) for p in files_to_process]
 
-        for fut in tqdm.tqdm(futures, desc="Processing files", total=len(files_to_process)):
+        for fut in tqdm.tqdm(
+            futures, desc="Processing files", total=len(files_to_process)
+        ):
             local_path: Path = fut.result()
             yield local_path
 
@@ -345,7 +347,7 @@ def read_coh_range(
             return 0.1 * f["mobile/R"][0]  # type: ignore
 
 
-def read_Re(data_dir: Union[str, Path]) -> float:
+def read_Re(data_dir: MyPath) -> float:
     """Read the cohesive range from 'parties.inp' if not, return 0.05 * D_p."""
     data_dir = Path(data_dir)
     try:
@@ -354,6 +356,19 @@ def read_Re(data_dir: Union[str, Path]) -> float:
         )
         Re: float = params["Re"]  # type: ignore
         return Re
+    except KeyError:
+        raise KeyError(r"Either parties.inp not found, or Re not found in parties.inp")
+
+
+def read_channel_half_height(data_dir: MyPath) -> float:
+    data_dir = Path(data_dir)
+    try:
+        params: Dict[str, Union[np.ndarray, int, float]] = _read_inp(
+            data_dir / "parties.inp"
+        )
+        ymax: float = params["ymax"]  # type: ignore
+        ymin: float = params["ymin"]  # type: ignore
+        return (float(ymax) - float(ymin)) / 2.0
     except KeyError:
         raise KeyError(r"Either parties.inp not found, or Re not found in parties.inp")
 
@@ -516,6 +531,7 @@ def get_time_array(
             t_arr[i] = h5_file[key][()]  # type: ignore
 
     return t_arr
+
 
 def find_idx_from_time(
     file_prefix: str,
