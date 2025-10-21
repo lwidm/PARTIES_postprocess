@@ -73,7 +73,6 @@ def floc_pdf(
     floc_dir: Union[str, Path],
     labels: List[Optional[str]],
     colours: List[str],
-    linestyles: List[str],
     markers: List[str],
 ) -> Tuple[PlotSeries, PlotSeries, PlotSeries]:
 
@@ -118,7 +117,7 @@ def floc_pdf(
         plot_method="semilogy",
         kwargs={
             "label": labels[0],
-            "linestyle": linestyles[0],
+            "linestyle": "None",
             "marker": markers[0],
             "markerfacecolor": colours[0],
             "markeredgecolor": "k",
@@ -174,7 +173,6 @@ def floc_avg_dir(
     labels: List[Optional[str]],
     colours: List[str],
     linestyles: List[str],
-    markers: List[str],
     inner_units: bool,
 ) -> Tuple[PlotSeries, PlotSeries, PlotSeries, PlotSeries]:
 
@@ -210,7 +208,7 @@ def floc_avg_dir(
             kwargs={
                 "label": labels[idx],
                 "linestyle": linestyles[idx],
-                "marker": markers[idx],
+                "marker": "None",
                 "markerfacecolor": colours[idx],
                 "markeredgecolor": "k",
                 "markeredgewidth": markeredgewidth,

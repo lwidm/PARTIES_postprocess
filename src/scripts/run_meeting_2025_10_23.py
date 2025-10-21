@@ -98,56 +98,40 @@ def floc(plot_dir: MyPath):
     max_file_indices: List[Optional[int]] = [None, None, None, None]
     min_steady_indices: List[Optional[int]] = [inf["file_idx"] for inf in time_idx_info]
     max_steady_indices: List[Optional[int]] = [None, None, None, None]
+    parties_data_dirs: List[str] = [
+        "/media/usb/UCSB/data/phi1p5",
+        "/media/usb/UCSB/data/phi5p0",
+        "/media/usb/UCSB/data/phi5p0_co",
+    ]
+    output_dirs: List[str] = [
+        "/media/usb/UCSB/output/phi1p5",
+        "/media/usb/UCSB/output/phi5p0",
+        "/media/usb/UCSB/output/phi5p0_co",
+    ]
     compute: bool = True
     if compute:
-        scripts.run_floc_analysis.main(
-            parties_data_dir="/media/usb/UCSB/data/phi1p5",
-            output_dir="/media/usb/UCSB/output/phi1p5",
-            trn=False,
-            u_tau=0.0288051,
-            min_file_index=min_file_indices[0],
-            max_file_index=max_file_indices[0],
-            min_steady_index=min_steady_indices[0],
-            max_steady_index=max_steady_indices[0],
-            num_workers=6,
-        )
+        trn: List[bool] = [False, False, True]
+        Re_tau: List[float] = [80.6542800, 189.54087993838434, 80.6542800]
+        for i in range(len(parties_data_dirs)):
+            scripts.run_floc_analysis.main(
+                parties_data_dir=parties_data_dirs[i],
+                output_dir=output_dirs[i],
+                trn=trn[i],
+                Re_tau=Re_tau[i],
+                min_file_index=min_file_indices[i],
+                max_file_index=max_file_indices[i],
+                min_steady_index=min_steady_indices[i],
+                max_steady_index=max_steady_indices[i],
+                num_workers=6,
+            )
 
-        scripts.run_floc_analysis.main(
-            parties_data_dir="/media/usb/UCSB/data/phi5p0",
-            output_dir="/media/usb/UCSB/output/phi5p0",
-            trn=False,
-            u_tau=0.0288051,
-            min_file_index=min_file_indices[1],
-            max_file_index=max_file_indices[1],
-            min_steady_index=min_steady_indices[1],
-            max_steady_index=max_steady_indices[1],
-            num_workers=6,
-        )
-        scripts.run_floc_analysis.main(
-            parties_data_dir="/media/usb/UCSB/data/phi5p0_co",
-            output_dir="/media/usb/UCSB/output/phi5p0_co",
-            trn=True,
-            u_tau=0.0288051,
-            min_file_index=min_file_indices[2],
-            max_file_index=max_file_indices[2],
-            min_steady_index=min_steady_indices[2],
-            max_steady_index=max_steady_indices[2],
-            num_workers=6,
-        )
-
-    def get_plot_series_1(
+    def get_series_floc_evolution(
         output_dir: MyPath,
         colour: str,
         label: str,
-        marker: str,
         min_file_index: Optional[int],
         max_file_index: Optional[int],
-    ) -> Tuple[
-        PlotSeries,
-        PlotSeries,
-        PlotSeries,
-        PlotSeries,
-    ]:
+    ) -> PlotSeries:
         s: PlotSeries = plt_series.floc_count_evolution(
             output_dir,
             colour,
@@ -157,24 +141,33 @@ def floc(plot_dir: MyPath):
             normalised=True,
             reset_time=True,
         )
+        return s
+
+    def get_series_pdf(
+        output_dir: MyPath,
+        colour: str,
+        label: str,
+        marker: str,
+    ) -> Tuple[
+        PlotSeries,
+        PlotSeries,
+        PlotSeries,
+    ]:
         s_n_p_PDF, s_D_f_PDF, s_D_g_PDF = plt_series.floc_pdf(
             floc_dir=output_dir,
-            labels=[label, label, label],
-            colours=[colour, colour, colour],
-            markers=[marker, marker, marker],
-            linestyles=["None", "None", "None"],
+            labels=[label for _ in range(3)],
+            colours=[colour for _ in range(3)],
+            markers=[marker for _ in range(3)],
         )
 
         return (
-            s,
             s_n_p_PDF,
             s_D_f_PDF,
             s_D_g_PDF,
         )
 
-    def get_plot_series_2(
+    def get_series_avg(
         output_dir: MyPath,
-        colour: str,
         label: str,
         linestyle: str,
     ) -> Tuple[
@@ -185,10 +178,9 @@ def floc(plot_dir: MyPath):
     ]:
         s_D_f_avg, s_D_g_avg, s_D_f_mass_avg, s_D_g_mass_avg = plt_series.floc_avg_dir(
             floc_dir=output_dir,
-            labels=[label, label, label, label],
-            colours=[colour, colour, colour, colour],
-            markers=["None", "None", "None", "None"],
-            linestyles=[linestyle, linestyle, linestyle, linestyle],
+            labels=[label for _ in range(4)],
+            colours=["k" for _ in range(4)],
+            linestyles=[linestyle for _ in range(4)],
             inner_units=False,
         )
         return (
@@ -199,55 +191,71 @@ def floc(plot_dir: MyPath):
         )
 
     plot_dir.mkdir(parents=True, exist_ok=True)
-    tuple_s_1p5 = get_plot_series_1(
-        "/media/usb/UCSB/output/phi1p5/flocs",
-        "C0",
-        r"$\phi_{1.5\%}$",
-        "o",
-        min_file_indices[0],
-        max_file_indices[0],
-    )
-    tuple_s_5p0 = get_plot_series_1(
-        "/media/usb/UCSB/output/phi5p0/flocs",
-        "C1",
-        r"$\phi_{5\%}$ no cohesion",
-        "s",
-        min_file_indices[1],
-        max_file_indices[1],
-    )
-    tuple_s_5p0_co = get_plot_series_1(
-        "/media/usb/UCSB/output/phi5p0_co/flocs",
-        "C2",
-        r"$\phi_{5\%}$",
-        "^",
-        min_file_indices[2],
-        max_file_indices[2],
-    )
+    labels: List[str] = [r"$\phi_{1.5\%}$" r"$\phi_{5\%}$ no cohesion", r"$\phi_{5\%}$"]
+    colours: List[str] = ["C0", "C1", "C2"]
+    markers: List[str] = ["o", "s", "^"]
+    linestyles: List[str] = ["-", "--", "-."]
+    s_evo_list: List[PlotSeries] = []
+    s_pdf_np_list: List[PlotSeries] = []
+    s_pdf_Df_list: List[PlotSeries] = []
+    s_pdf_Dg_list: List[PlotSeries] = []
+    s_avg_Df_list: List[PlotSeries] = []
+    s_avg_Dg_list: List[PlotSeries] = []
+    s_mass_avg_Df_list: List[PlotSeries] = []
+    s_mass_avg_Dg_list: List[PlotSeries] = []
+    for i in range(3):
+        s_evo_list[i] = get_series_floc_evolution(
+            output_dirs[i],
+            colours[i],
+            labels[i],
+            min_file_indices[i],
+            max_file_indices[i],
+        )
+        s_np, s_Df, s_Dg= get_series_pdf(
+            output_dirs[i],
+            colours[i],
+            labels[i],
+            markers[i],
+        )
+        s_pdf_np_list[i] = s_np
+        s_pdf_Df_list[i] = s_Df
+        s_pdf_Dg_list[i] = s_Dg
+
+        s_avg_Df, s_avg_Dg, s_mass_avg_Df, s_mass_avg_Dg = get_series_avg(
+                output_dirs[i],
+                labels[i],
+                linestyles[i])
+        s_avg_Df_list[i] = s_avg_Df
+        s_avg_Dg_list[i] = s_avg_Dg
+        s_mass_avg_Df_list[i] = s_mass_avg_Df
+        s_mass_avg_Dg_list[i] = s_mass_avg_Dg
 
     plt_templ.floc_count_evolution(
-        plot_dir, [tuple_s_1p5[0], tuple_s_5p0[0], tuple_s_5p0_co[0]], normalised=True
+        plot_dir, s_evo_list, normalised=True
     )
-    plt_templ.n_p_pdf(plot_dir, [tuple_s_1p5[1], tuple_s_5p0[1], tuple_s_5p0_co[1]])
-    plt_templ.D_f_pdf(plot_dir, [tuple_s_1p5[2], tuple_s_5p0[2], tuple_s_5p0_co[2]])
-    plt_templ.D_g_pdf(plot_dir, [tuple_s_1p5[3], tuple_s_5p0[3], tuple_s_5p0_co[3]])
+    plt_templ.n_p_pdf(plot_dir, s_pdf_np_list)
+    plt_templ.D_f_pdf(plot_dir, s_pdf_Df_list)
+    plt_templ.D_g_pdf(plot_dir, s_pdf_Dg_list)
 
-    tuple_s_1p5_avg = get_plot_series_2(
-        "/media/usb/UCSB/output/phi1p5/flocs", "k", r"$\phi_{1.5\%}$", "-."
+    plt_templ.avg_D_f(
+        plot_dir,
+        s_avg_Df_list,
+        inner_units=False,
     )
-    tuple_s_5p0_avg = get_plot_series_2(
-        "/media/usb/UCSB/output/phi5p0/flocs", "k", r"$\phi_{5\%}$ no cohesion", "-"
+    plt_templ.avg_D_g(
+        plot_dir,
+        s_avg_Dg_list,
+        inner_units=False,
     )
-    tuple_s_5p0_co_avg = get_plot_series_2(
-        "/media/usb/UCSB/output/phi5p0_co/flocs", "k", r"$\phi_{5\%}$", "--"
-    )
-
-    plt_templ.avg_D_f(plot_dir, [tuple_s_1p5_avg[0], tuple_s_5p0_avg[0], tuple_s_5p0_co_avg[0]], inner_units=False)
-    plt_templ.avg_D_g(plot_dir, [tuple_s_1p5_avg[1], tuple_s_5p0_avg[1], tuple_s_5p0_co_avg[1]], inner_units=False)
     plt_templ.mass_avg_D_f(
-        plot_dir, [tuple_s_1p5_avg[2], tuple_s_5p0_avg[2], tuple_s_5p0_co_avg[2]], inner_units=False
+        plot_dir,
+        s_mass_avg_Df_list,
+        inner_units=False,
     )
     plt_templ.mass_avg_D_g(
-        plot_dir, [tuple_s_1p5_avg[3], tuple_s_5p0_avg[3], tuple_s_5p0_co_avg[3]], inner_units=False
+        plot_dir,
+        s_mass_avg_Dg_list,
+        inner_units=False,
     )
 
 

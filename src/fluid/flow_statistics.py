@@ -200,14 +200,15 @@ def process_fluctuations(
 
 def calc_friction_velocity(
     mean_results: Dict[str, Any], grid: Dict[str, np.ndarray], Re: float
-) -> Tuple[float, float]:
+) -> Tuple[float, float, float]:
     du_dy_0: float = (mean_results["U"][0] - (-mean_results["U"][0])) / (
         grid["yc"][0] * 2
     )
     tau_w: float = 1.0 / Re * du_dy_0
     u_tau: float = float(np.sqrt(tau_w))
+    Re_tau: float = u_tau * Re
 
-    return tau_w, u_tau
+    return tau_w, u_tau, Re_tau
 
 
 def get_wall_units(
@@ -286,4 +287,3 @@ def calc_tot_fluid_Ekin(fluid_file_path: Union[str, Path], Re: float) -> float:
     V_fluid: float = grid["xu"][-1] * grid["yv"][-1] * grid["zw"][-1] * (1 - phi)
     E_kin = Re / 2 * V_fluid * float(mean_u_squared)
     return E_kin
-

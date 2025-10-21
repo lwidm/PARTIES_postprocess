@@ -57,7 +57,7 @@ def compute_all_reynolds_stresses(
 
     tau_w: float
     u_tau: float
-    tau_w, u_tau = fstat.calc_friction_velocity(results, grid, Re)
+    tau_w, u_tau, Re_tau = fstat.calc_friction_velocity(results, grid, Re)
 
     results_wall: Dict[str, Union[np.ndarray, float]] = fstat.get_wall_units(
         results, grid, Re, tau_w, u_tau
@@ -65,7 +65,7 @@ def compute_all_reynolds_stresses(
 
     myio.save_to_h5(
         f"{output_dir}/reynolds_stresses.h5",
-        results | results_wall | {"Re": Re},
+        results | results_wall | {"Re": Re} | {"Re_tau": Re_tau},
         {
             "min_index": min_file_index,
             "max_index": max_file_index,
@@ -264,7 +264,9 @@ def main(
     all_stress_series: List[PlotSeries] = utexas_stress_series + parties_stress_series
     plotting.templates.normal_stress_wall(plot_dir, all_stress_series)
 
-    data_files: List[Path] = myio.list_data_files(parties_data_dir, "Data", min_file_index, max_file_index)
+    data_files: List[Path] = myio.list_data_files(
+        parties_data_dir, "Data", min_file_index, max_file_index
+    )
     data_file: Path = data_files[-1]
     phi: float = fstat.calc_tot_vol_frac(data_file)
     print(f"Total volume fraction is {phi*100} %")

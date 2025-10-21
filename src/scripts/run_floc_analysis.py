@@ -205,7 +205,7 @@ def main(
     parties_data_dir: Union[str, Path],
     output_dir: Union[str, Path],
     trn: bool,
-    u_tau: float,
+    Re_tau: float,
     min_file_index: Optional[int] = None,
     max_file_index: Optional[int] = None,
     min_steady_index: Optional[int] = None,
@@ -252,6 +252,7 @@ def main(
         use_threading=False,
     )
 
+    u_tau = Re_tau / Re
     floc_stat.CalcAvgDiam(
         output_dir=output_dir,
         floc_dir=output_dir,
