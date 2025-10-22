@@ -18,27 +18,28 @@ def fluid(utexas_dir: MyPath, plot_dir: MyPath):
     parties_processed_filename = "parties_reynolds.h5"
     utexas_wall_series: List[PlotSeries] = plt_series.u_plus_mean_wall_utexas(utexas_h5)
     # parties_wall_series_phi1p5: List[PlotSeries] = plt_series.u_plus_mean_wall_parties(
-    #     Path("/media/usb/UCSB/output/phi1p5") / parties_processed_filename,
+    #     Path("/media/usb/UCSB/output/phi1p5/fluid") / parties_processed_filename,
     #     label=r"$\phi_{1.5\%}$",
     #     colour="C0",
     # )
-    parties_wall_series_phi5p0: List[PlotSeries] = plt_series.u_plus_mean_wall_parties(
-        Path("/media/usb/UCSB/output/phi5p0") / parties_processed_filename,
-        label=r"$\phi_{5\%}$ no cohesion",
-        colour="C1",
-    )
-    # parties_wall_series_phi5p0_co: List[PlotSeries] = (
-    #     plt_series.u_plus_mean_wall_parties(
-    #         Path("/media/usb/UCSB/output/phi5p0_co") / parties_processed_filename,
-    #         label=r"\phi_{5\%}$",
-    #         colour="C2",
-    #     )
+    # parties_wall_series_phi5p0: List[PlotSeries] = plt_series.u_plus_mean_wall_parties(
+    #     Path("/media/usb/UCSB/output/phi5p0/fluid") / parties_processed_filename,
+    #     label=r"$\phi_{5\%}$ no cohesion",
+    #     colour="C1",
     # )
+    parties_wall_series_phi5p0_co: List[PlotSeries] = (
+        plt_series.u_plus_mean_wall_parties(
+            Path("/media/usb/UCSB/output/phi5p0_co/fluid") / parties_processed_filename,
+            label=r"$\phi_{5\%}$",
+            colour="k",
+            linestyles=("-", "--")
+        )
+    )
 
     all_wall_series: List[PlotSeries] = (
         utexas_wall_series
-        # + parties_wall_series_phi5p0_co
-        + parties_wall_series_phi5p0
+        + parties_wall_series_phi5p0_co
+        # + parties_wall_series_phi5p0
         # + parties_wall_series_phi1p5
     )
     plt_templ.velocity_profile_wall(plot_dir, all_wall_series)
@@ -48,29 +49,29 @@ def fluid(utexas_dir: MyPath, plot_dir: MyPath):
     )
     # parties_stress_series_phi1p5: List[PlotSeries] = (
     #     plt_series.normal_stress_wall_parties(
-    #         Path("/media/usb/UCSB/output/phi1p5") / parties_processed_filename,
+    #         Path("/media/usb/UCSB/output/phi1p5/fluid") / parties_processed_filename,
     #         label=r"$\phi_{1.5\%}$",
     #         colour="C0",
     #     )
     # )
-    parties_stress_series_phi5p0: List[PlotSeries] = (
-        plt_series.normal_stress_wall_parties(
-            Path("/media/usb/UCSB/output/phi5p0") / parties_processed_filename,
-            label=r"$\phi_{5\%}$ no cohesion",
-            colour="C1",
-        )
-    )
-    # parties_stress_series_phi5p0_co: List[PlotSeries] = (
+    # parties_stress_series_phi5p0: List[PlotSeries] = (
     #     plt_series.normal_stress_wall_parties(
-    #         Path("/media/usb/UCSB/output/phi5p0_co") / parties_processed_filename,
-    #         label=r"$\phi_{5\%}$",
-    #         colour="C2",
+    #         Path("/media/usb/UCSB/output/phi5p0/fluid") / parties_processed_filename,
+    #         label=r"$\phi_{5\%}$ no cohesion",
+    #         colour="C1",
     #     )
     # )
+    parties_stress_series_phi5p0_co: List[PlotSeries] = (
+        plt_series.normal_stress_wall_parties(
+            Path("/media/usb/UCSB/output/phi5p0_co/fluid") / parties_processed_filename,
+            label=r"$\phi_{5\%}$",
+            colour="k",
+        )
+    )
     all_stress_series: List[PlotSeries] = (
         utexas_stress_series
-        # + parties_stress_series_phi5p0_co
-        + parties_stress_series_phi5p0
+        + parties_stress_series_phi5p0_co
+        # + parties_stress_series_phi5p0
         # + parties_stress_series_phi1p5
     )
     plt_templ.normal_stress_wall(plot_dir, all_stress_series)
@@ -317,4 +318,4 @@ def floc(plot_dir: MyPath):
 def main() -> None:
     plot_dir: Path = Path("./output/plots")
     floc(plot_dir)
-    fluid("./data/", plot_dir)
+    fluid("/media/usb/UCSB/output", plot_dir)

@@ -103,4 +103,4 @@ if __name__ == "__main__":
         args.max_file_index,
     )
 
-    # scripts.run_meeting_2025_10_23.main()
+    scripts.run_meeting_2025_10_23.main()

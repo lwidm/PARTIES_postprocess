@@ -148,7 +148,7 @@ def normal_stress_wall(
         xlim = (xmin, min(xmax, 80.0))
 
     generic_plot(
-        output_dir,
+        Path(output_dir) / "wall_normal_stress.png",
         list(series_list),
         xlabel=r"$y^+$",
         ylabel="$\\left\\{\\langle u^\\prime u^\\prime \\rangle,\\; \\langle v^\\prime v^\\prime \\rangle,\\; \\langle w^\\prime w^\\prime \\rangle,\\; \\langle k \\rangle\\right\\}/u_\\tau^2$",
