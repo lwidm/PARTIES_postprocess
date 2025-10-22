@@ -9,6 +9,7 @@ from src.myio.myio import MyPath
 from src.plotting.tools import PlotSeries
 from src.plotting import series as plt_series
 from src.plotting import templates as plt_templ
+from src.scripts.run_floc_analysis import process_flocs
 
 
 def fluid(utexas_dir: MyPath, plot_dir: MyPath):
@@ -16,42 +17,42 @@ def fluid(utexas_dir: MyPath, plot_dir: MyPath):
     utexas_h5 = Path(utexas_dir) / "utexas.h5"
     parties_processed_filename = "parties_reynolds.h5"
     utexas_wall_series: List[PlotSeries] = plt_series.u_plus_mean_wall_utexas(utexas_h5)
-    parties_wall_series_phi1p5: List[PlotSeries] = plt_series.u_plus_mean_wall_parties(
-        Path("/media/usb/UCSB/output/phi1p5") / parties_processed_filename,
-        label=r"$\phi_{1.5\%}$",
-        colour="C0",
-    )
+    # parties_wall_series_phi1p5: List[PlotSeries] = plt_series.u_plus_mean_wall_parties(
+    #     Path("/media/usb/UCSB/output/phi1p5") / parties_processed_filename,
+    #     label=r"$\phi_{1.5\%}$",
+    #     colour="C0",
+    # )
     parties_wall_series_phi5p0: List[PlotSeries] = plt_series.u_plus_mean_wall_parties(
         Path("/media/usb/UCSB/output/phi5p0") / parties_processed_filename,
         label=r"$\phi_{5\%}$ no cohesion",
         colour="C1",
     )
-    parties_wall_series_phi5p0_co: List[PlotSeries] = (
-        plt_series.u_plus_mean_wall_parties(
-            Path("/media/usb/UCSB/output/phi5p0_co") / parties_processed_filename,
-            label=r"\phi_{5\%}$",
-            colour="C2",
-        )
-    )
+    # parties_wall_series_phi5p0_co: List[PlotSeries] = (
+    #     plt_series.u_plus_mean_wall_parties(
+    #         Path("/media/usb/UCSB/output/phi5p0_co") / parties_processed_filename,
+    #         label=r"\phi_{5\%}$",
+    #         colour="C2",
+    #     )
+    # )
 
     all_wall_series: List[PlotSeries] = (
         utexas_wall_series
-        + parties_wall_series_phi5p0_co
+        # + parties_wall_series_phi5p0_co
         + parties_wall_series_phi5p0
-        + parties_wall_series_phi1p5
+        # + parties_wall_series_phi1p5
     )
     plt_templ.velocity_profile_wall(plot_dir, all_wall_series)
 
     utexas_stress_series: List[PlotSeries] = plt_series.normal_stress_wall_utexas(
         utexas_h5
     )
-    parties_stress_series_phi1p5: List[PlotSeries] = (
-        plt_series.normal_stress_wall_parties(
-            Path("/media/usb/UCSB/output/phi1p5") / parties_processed_filename,
-            label=r"$\phi_{1.5\%}$",
-            colour="C0",
-        )
-    )
+    # parties_stress_series_phi1p5: List[PlotSeries] = (
+    #     plt_series.normal_stress_wall_parties(
+    #         Path("/media/usb/UCSB/output/phi1p5") / parties_processed_filename,
+    #         label=r"$\phi_{1.5\%}$",
+    #         colour="C0",
+    #     )
+    # )
     parties_stress_series_phi5p0: List[PlotSeries] = (
         plt_series.normal_stress_wall_parties(
             Path("/media/usb/UCSB/output/phi5p0") / parties_processed_filename,
@@ -59,18 +60,18 @@ def fluid(utexas_dir: MyPath, plot_dir: MyPath):
             colour="C1",
         )
     )
-    parties_stress_series_phi5p0_co: List[PlotSeries] = (
-        plt_series.normal_stress_wall_parties(
-            Path("/media/usb/UCSB/output/phi5p0_co") / parties_processed_filename,
-            label=r"$\phi_{5\%}$",
-            colour="C2",
-        )
-    )
+    # parties_stress_series_phi5p0_co: List[PlotSeries] = (
+    #     plt_series.normal_stress_wall_parties(
+    #         Path("/media/usb/UCSB/output/phi5p0_co") / parties_processed_filename,
+    #         label=r"$\phi_{5\%}$",
+    #         colour="C2",
+    #     )
+    # )
     all_stress_series: List[PlotSeries] = (
         utexas_stress_series
-        + parties_stress_series_phi5p0_co
+        # + parties_stress_series_phi5p0_co
         + parties_stress_series_phi5p0
-        + parties_stress_series_phi1p5
+        # + parties_stress_series_phi1p5
     )
     plt_templ.normal_stress_wall(plot_dir, all_stress_series)
 
@@ -93,7 +94,6 @@ def floc(plot_dir: MyPath):
         data_dir="/media/usb/UCSB/data/phi5p0_co",
         target_time=100.0,
     )
-    print(time_idx_info[0])
     min_file_indices: List[Optional[int]] = [None, 101, None, None]
     max_file_indices: List[Optional[int]] = [None, None, None, None]
     min_steady_indices: List[Optional[int]] = [inf["file_idx"] for inf in time_idx_info]
@@ -118,11 +118,13 @@ def floc(plot_dir: MyPath):
                 output_dir=output_dirs[i],
                 trn=trn[i],
                 Re_tau=Re_tau[i],
+                process_flocs = False,
                 min_file_index=min_file_indices[i],
                 max_file_index=max_file_indices[i],
                 min_steady_index=min_steady_indices[i],
                 max_steady_index=max_steady_indices[i],
                 num_workers=6,
+                use_threading=False,
             )
 
     def get_series_floc_evolution(
@@ -175,17 +177,27 @@ def floc(plot_dir: MyPath):
         )
 
     def get_series_avg(
-        output_dir: MyPath,
-        label: str,
-        colour: str,
-        marker: str
+        output_dir: MyPath, label: str, colour: str, marker: str
     ) -> Tuple[
         PlotSeries,
         PlotSeries,
         PlotSeries,
         PlotSeries,
+        PlotSeries,
+        PlotSeries,
+        PlotSeries,
+        PlotSeries,
     ]:
-        s_D_f_avg, s_D_g_avg, s_D_f_mass_avg, s_D_g_mass_avg = plt_series.floc_avg_dir(
+        (
+            s_D_f_avg,
+            s_D_g_avg,
+            s_D_f_mass_avg,
+            s_D_g_mass_avg,
+            s_D_f_err,
+            s_D_g_err,
+            s_D_f_mass_err,
+            s_D_g_mass_err,
+        ) = plt_series.floc_avg_dir(
             floc_dir=Path(output_dir) / "flocs",
             labels=[label for _ in range(4)],
             colours=[colour for _ in range(4)],
@@ -197,10 +209,18 @@ def floc(plot_dir: MyPath):
             s_D_g_avg,
             s_D_f_mass_avg,
             s_D_g_mass_avg,
+            s_D_f_err,
+            s_D_g_err,
+            s_D_f_mass_err,
+            s_D_g_mass_err,
         )
 
     plot_dir.mkdir(parents=True, exist_ok=True)
-    labels: List[str] = [r"$\phi_{1.5\%}$", r"$\phi_{5\%}$ no cohesion", r"$\phi_{5\%}$"]
+    labels: List[str] = [
+        r"$\phi_{1.5\%}$",
+        r"$\phi_{5\%}$ no cohesion",
+        r"$\phi_{5\%}$",
+    ]
     colours: List[str] = ["C0", "C1", "C2"]
     markers: List[str] = ["o", "s", "^"]
     linestyles: List[str] = ["-", "--", "-."]
@@ -215,6 +235,10 @@ def floc(plot_dir: MyPath):
     s_avg_Dg_list: List[PlotSeries] = []
     s_mass_avg_Df_list: List[PlotSeries] = []
     s_mass_avg_Dg_list: List[PlotSeries] = []
+    s_avg_Df_err_list: List[PlotSeries] = []
+    s_avg_Dg_err_list: List[PlotSeries] = []
+    s_mass_avg_Df_err_list: List[PlotSeries] = []
+    s_mass_avg_Dg_err_list: List[PlotSeries] = []
     for i in range(3):
         s_evo = get_series_floc_evolution(
             output_dirs[i],
@@ -237,19 +261,37 @@ def floc(plot_dir: MyPath):
         s_pdf_Df_err_list.append(s_Df_err)
         s_pdf_Dg_err_list.append(s_Dg_err)
 
-        s_avg_Df, s_avg_Dg, s_mass_avg_Df, s_mass_avg_Dg = get_series_avg(
-            output_dirs[i], labels[i], colours[i], markers[i]
-        )
+        (
+            s_avg_Df,
+            s_avg_Dg,
+            s_mass_avg_Df,
+            s_mass_avg_Dg,
+            s_err_Df,
+            s_err_Dg,
+            s_mass_err_Df,
+            s_mass_err_Dg,
+        ) = get_series_avg(output_dirs[i], labels[i], colours[i], markers[i])
         s_avg_Df_list.append(s_avg_Df)
         s_avg_Dg_list.append(s_avg_Dg)
         s_mass_avg_Df_list.append(s_mass_avg_Df)
         s_mass_avg_Dg_list.append(s_mass_avg_Dg)
+        s_avg_Df_err_list.append(s_err_Df)
+        s_avg_Dg_err_list.append(s_err_Dg)
+        s_mass_avg_Df_err_list.append(s_mass_err_Df)
+        s_mass_avg_Dg_err_list.append(s_mass_err_Dg)
 
     plt_templ.floc_count_evolution(plot_dir, s_evo_list, normalised=True)
     plt_templ.n_p_pdf(plot_dir, s_pdf_np_err_list + s_pdf_np_list)
     plt_templ.D_f_pdf(plot_dir, s_pdf_Df_err_list + s_pdf_Df_list)
     plt_templ.D_g_pdf(plot_dir, s_pdf_Dg_err_list + s_pdf_Dg_list)
 
+
+    if False:
+        s_avg_Df_list = s_avg_Df_err_list + s_avg_Df_list
+        s_avg_Dg_list = s_avg_Dg_err_list + s_avg_Dg_list
+        s_avg_Dg_list = s_avg_Dg_err_list + s_avg_Dg_list
+        s_mass_avg_Df_list = s_mass_avg_Df_err_list + s_mass_avg_Df_list
+        s_mass_avg_Dg_list = s_mass_avg_Dg_err_list + s_mass_avg_Dg_list
     plt_templ.avg_D_f(
         plot_dir,
         s_avg_Df_list,
@@ -275,3 +317,4 @@ def floc(plot_dir: MyPath):
 def main() -> None:
     plot_dir: Path = Path("./output/plots")
     floc(plot_dir)
+    fluid("./data/", plot_dir)

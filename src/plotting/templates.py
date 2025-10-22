@@ -302,7 +302,7 @@ def mass_avg_D_g(
     _avg_floc_dir(
         output_dir,
         series_list,
-        r"mass_avg_D_f",
+        r"mass_avg_D_g",
         r"$\langle D_g \rangle_\text{mass}$",
         inner_units,
     )

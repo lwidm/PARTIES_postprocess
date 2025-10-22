@@ -206,12 +206,13 @@ def main(
     output_dir: Union[str, Path],
     trn: bool,
     Re_tau: float,
-    min_file_index: Optional[int] = None,
-    max_file_index: Optional[int] = None,
-    min_steady_index: Optional[int] = None,
-    max_steady_index: Optional[int] = None,
-    num_workers: Optional[int] = None,
-    use_threading: bool = False,
+    process_flocs: bool,
+    min_file_index: Optional[int],
+    max_file_index: Optional[int],
+    min_steady_index: Optional[int],
+    max_steady_index: Optional[int],
+    num_workers: Optional[int],
+    use_threading: bool,
 ):
     # =============================================================================
     # CONFIGURATION AND CONSTANTS
@@ -233,14 +234,15 @@ def main(
     if trn:
         parties_data_dir = Path(parties_data_dir) / "trn"
 
-    # process_all_flocs(
-    #     parties_data_dir,
-    #     output_dir,
-    #     min_file_index,
-    #     max_file_index,
-    #     num_workers,
-    #     use_threading,
-    # )
+    if process_flocs:
+        process_all_flocs(
+            parties_data_dir,
+            output_dir,
+            min_file_index,
+            max_file_index,
+            num_workers,
+            use_threading,
+        )
 
     floc_stat.calc_PDF(
         output_dir=output_dir,

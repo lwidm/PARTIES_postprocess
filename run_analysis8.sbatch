@@ -26,8 +26,8 @@ conda activate PARTIES_postprocess_anvil
 # 	# --use_threading
 
 PYTHONPATH=. python ./main.py \
-	--output_dir="/home/x-lwidmer/Documents/PARTIES_postprocess/output/RUN7" \
+	--output_dir="/home/x-lwidmer/Documents/PARTIES_postprocess/output/RUN8" \
 	--utexas_data_dir="/home/x-lwidmer/Documents/PARTIES_postprocess/data" \
-	--parties_data_dir="/anvil/scratch/x-lwidmer/RUN7" \
+	--parties_data_dir="/anvil/scratch/x-lwidmer/RUN8" \
 	--num_workers=8 \
-	--min_file_index=280
+	--min_file_index=101

@@ -151,32 +151,55 @@ def floc_avg_dir(
     colours: List[str],
     markers: List[str],
     inner_units: bool,
-) -> Tuple[PlotSeries, PlotSeries, PlotSeries, PlotSeries]:
+) -> Tuple[
+    PlotSeries,
+    PlotSeries,
+    PlotSeries,
+    PlotSeries,
+    PlotSeries,
+    PlotSeries,
+    PlotSeries,
+    PlotSeries,
+]:
 
     x_data: np.ndarray
     D_f_avg: np.ndarray
     D_g_avg: np.ndarray
     D_f_mass_avg: np.ndarray
     D_g_mass_avg: np.ndarray
+    stds_D_f: np.ndarray
+    stds_D_g: np.ndarray
+    stds_D_f_mass: np.ndarray
+    stds_D_g_mass: np.ndarray
     with h5py.File(Path(floc_dir) / "avg_floc_diam.h5", "r") as f:
         if inner_units:
-            x_data = f["yp_center"][:]  # type: ignore
+            x_data = f["yp_mean"][:]  # type: ignore
             D_f_avg = f["inner_D_f_avg"][:]  # type: ignore
             D_g_avg = f["inner_D_g_avg"][:]  # type: ignore
             D_f_mass_avg = f["inner_D_f_mass_avg"][:]  # type: ignore
             D_g_mass_avg = f["inner_D_g_mass_avg"][:]  # type: ignore
+            stds_D_f = f["inner_stds_D_f"][:]  # type: ignore
+            stds_D_g = f["inner_stds_D_g"][:]  # type: ignore
+            stds_D_f_mass = f["inner_stds_D_f_mass"][:]  # type: ignore
+            stds_D_g_mass = f["inner_stds_D_g_mass"][:]  # type: ignore
         else:
-            x_data = f["y_center"][:]  # type: ignore
+            x_data = f["y_mean"][:]  # type: ignore
             D_f_avg = f["D_f_avg"][:]  # type: ignore
             D_g_avg = f["D_g_avg"][:]  # type: ignore
             D_f_mass_avg = f["D_f_mass_avg"][:]  # type: ignore
             D_g_mass_avg = f["D_g_mass_avg"][:]  # type: ignore
+            stds_D_f = f["stds_D_f"][:]  # type: ignore
+            stds_D_g = f["stds_D_g"][:]  # type: ignore
+            stds_D_f_mass = f["stds_D_f_mass"][:]  # type: ignore
+            stds_D_g_mass = f["stds_D_g_mass"][:]  # type: ignore
 
     markeredgewidth: float = 0.5
 
-    def create_series(y_data: np.ndarray, idx: int) -> PlotSeries:
+    def create_series(
+        y_data: np.ndarray, std_data: np.ndarray, idx: int
+    ) -> Tuple[PlotSeries, PlotSeries]:
 
-        return PlotSeries(
+        s: PlotSeries = PlotSeries(
             # data={"edges": edges_n_p, "counts": probab_n_p},
             data={"x": x_data, "y": y_data},
             x_key="x",
@@ -194,12 +217,43 @@ def floc_avg_dir(
             },
         )
 
-    s_D_f_avg: PlotSeries = create_series(D_f_avg, 0)
-    s_D_g_avg: PlotSeries = create_series(D_g_avg, 1)
-    s_D_f_mass_avg: PlotSeries = create_series(D_f_mass_avg, 2)
-    s_D_g_mass_avg: PlotSeries = create_series(D_g_mass_avg, 3)
+        s_err: PlotSeries = PlotSeries(
+            data={
+                "x": x_data,
+                "y": y_data,
+                "y_err": std_data,
+            },
+            x_key="x",
+            y_key="y",
+            plot_method="err_plot",
+            kwargs={
+                "color": "k",
+                "linestyle": "None",
+                "fmt": "None",
+                "ecolor": "k",
+                "elinewidth": 0.6,
+                "capsize": 2,
+                "capthick": 0.8,
+                "barsabove": True,
+            },
+        )
+        return s, s_err
 
-    return s_D_f_avg, s_D_g_avg, s_D_f_mass_avg, s_D_g_mass_avg
+    s_D_f_avg, s_D_f_err = create_series(D_f_avg, stds_D_f, 0)
+    s_D_g_avg, s_D_g_err = create_series(D_g_avg, stds_D_g, 1)
+    s_D_f_mass_avg, s_D_f_mass_err = create_series(D_f_mass_avg, stds_D_f_mass, 2)
+    s_D_g_mass_avg, s_D_g_mass_err = create_series(D_g_mass_avg, stds_D_g_mass, 3)
+
+    return (
+        s_D_f_avg,
+        s_D_g_avg,
+        s_D_f_mass_avg,
+        s_D_g_mass_avg,
+        s_D_f_err,
+        s_D_g_err,
+        s_D_f_mass_err,
+        s_D_g_mass_err,
+    )
 
 
 # ------------------------- u_plus_mean_wall series -------------------------
