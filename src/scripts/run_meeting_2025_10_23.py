@@ -1,8 +1,6 @@
 from typing import Optional, Tuple, List
 from pathlib import Path
 
-from numpy import inner
-
 from src import scripts
 from src.myio import myio
 from src.myio.myio import MyPath
@@ -22,11 +20,6 @@ def fluid(utexas_dir: MyPath, plot_dir: MyPath):
     #     label=r"$\phi_{1.5\%}$",
     #     colour="C0",
     # )
-    # parties_wall_series_phi5p0: List[PlotSeries] = plt_series.u_plus_mean_wall_parties(
-    #     Path("/media/usb/UCSB/output/phi5p0/fluid") / parties_processed_filename,
-    #     label=r"$\phi_{5\%}$ no cohesion",
-    #     colour="C1",
-    # )
     parties_wall_series_phi5p0_co: List[PlotSeries] = (
         plt_series.u_plus_mean_wall_parties(
             Path("/media/usb/UCSB/output/phi5p0_co/fluid") / parties_processed_filename,
@@ -39,7 +32,6 @@ def fluid(utexas_dir: MyPath, plot_dir: MyPath):
     all_wall_series: List[PlotSeries] = (
         utexas_wall_series
         + parties_wall_series_phi5p0_co
-        # + parties_wall_series_phi5p0
         # + parties_wall_series_phi1p5
     )
     plt_templ.velocity_profile_wall(plot_dir, all_wall_series)
@@ -54,13 +46,6 @@ def fluid(utexas_dir: MyPath, plot_dir: MyPath):
     #         colour="C0",
     #     )
     # )
-    # parties_stress_series_phi5p0: List[PlotSeries] = (
-    #     plt_series.normal_stress_wall_parties(
-    #         Path("/media/usb/UCSB/output/phi5p0/fluid") / parties_processed_filename,
-    #         label=r"$\phi_{5\%}$ no cohesion",
-    #         colour="C1",
-    #     )
-    # )
     parties_stress_series_phi5p0_co: List[PlotSeries] = (
         plt_series.normal_stress_wall_parties(
             Path("/media/usb/UCSB/output/phi5p0_co/fluid") / parties_processed_filename,
@@ -71,7 +56,6 @@ def fluid(utexas_dir: MyPath, plot_dir: MyPath):
     all_stress_series: List[PlotSeries] = (
         utexas_stress_series
         + parties_stress_series_phi5p0_co
-        # + parties_stress_series_phi5p0
         # + parties_stress_series_phi1p5
     )
     plt_templ.normal_stress_wall(plot_dir, all_stress_series)
@@ -79,40 +63,53 @@ def fluid(utexas_dir: MyPath, plot_dir: MyPath):
 
 def floc(plot_dir: MyPath):
     plot_dir = Path(plot_dir)
-    time_idx_info: List[dict] = [{}, {}, {}]
+    time_idx_info: List[dict] = [
+        {},
+        # {}
+    ]
     time_idx_info[0] = myio.find_idx_from_time(
         file_prefix="Particle",
         data_dir="/media/usb/UCSB/data/phi1p5",
         target_time=200.0,
     )
-    time_idx_info[1] = myio.find_idx_from_time(
-        file_prefix="Particle",
-        data_dir="/media/usb/UCSB/data/phi5p0",
-        target_time=30.0,
-    )
-    time_idx_info[2] = myio.find_idx_from_time(
-        file_prefix="Particle",
-        data_dir="/media/usb/UCSB/data/phi5p0_co",
-        target_time=100.0,
-    )
-    min_file_indices: List[Optional[int]] = [None, 101, None, None]
-    max_file_indices: List[Optional[int]] = [None, None, None, None]
+    # time_idx_info[2] = myio.find_idx_from_time(
+    #     file_prefix="Particle",
+    #     data_dir="/media/usb/UCSB/data/phi5p0_co",
+    #     target_time=100.0,
+    # )
+    min_file_indices: List[Optional[int]] = [
+        None,
+        101,
+    ]
+    max_file_indices: List[Optional[int]] = [
+        None,
+        None,
+    ]
     min_steady_indices: List[Optional[int]] = [inf["file_idx"] for inf in time_idx_info]
-    max_steady_indices: List[Optional[int]] = [None, None, None, None]
+    min_steady_indices.append(101)
+    max_steady_indices: List[Optional[int]] = [
+        None,
+        None
+    ]
     parties_data_dirs: List[str] = [
         "/media/usb/UCSB/data/phi1p5",
-        "/media/usb/UCSB/data/phi5p0",
         "/media/usb/UCSB/data/phi5p0_co",
     ]
     output_dirs: List[str] = [
         "/media/usb/UCSB/output/phi1p5",
-        "/media/usb/UCSB/output/phi5p0",
         "/media/usb/UCSB/output/phi5p0_co",
     ]
+
     compute: bool = True
     if compute:
-        trn: List[bool] = [False, False, True]
-        Re_tau: List[float] = [80.6542800, 189.54087993838434, 80.6542800]
+        trn: List[bool] = [
+            False,
+            True
+        ]
+        Re_tau: List[float] = [
+            189.54087993838434,
+            180,
+        ]
         for i in range(len(parties_data_dirs)):
             scripts.run_floc_analysis.main(
                 parties_data_dir=parties_data_dirs[i],
@@ -219,7 +216,6 @@ def floc(plot_dir: MyPath):
     plot_dir.mkdir(parents=True, exist_ok=True)
     labels: List[str] = [
         r"$\phi_{1.5\%}$",
-        r"$\phi_{5\%}$ no cohesion",
         r"$\phi_{5\%}$",
     ]
     colours: List[str] = ["C0", "C1", "C2"]
@@ -240,7 +236,7 @@ def floc(plot_dir: MyPath):
     s_avg_Dg_err_list: List[PlotSeries] = []
     s_mass_avg_Df_err_list: List[PlotSeries] = []
     s_mass_avg_Dg_err_list: List[PlotSeries] = []
-    for i in range(3):
+    for i in range(len(output_dirs)):
         s_evo = get_series_floc_evolution(
             output_dirs[i],
             colours[i],
