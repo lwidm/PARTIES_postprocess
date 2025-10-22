@@ -165,13 +165,13 @@ def floc_count_evolution(
     output_dir: Path, series_list: Sequence[PlotSeries], normalised: bool
 ) -> None:
     out_path = Path(output_dir) / "floc_count_evolution.png"
-    ylabel: str = r"\# Flocs"
+    ylabel: str = r"\#Flocs"
     if normalised:
-        ylabel = r"(\# Flocs) / (\# Particles)"
+        ylabel = r"(\#Flocs) / (\#Particles)"
     generic_plot(
         out_path,
         list(series_list),
-        xlabel="time [-]",
+        xlabel=r"Dimensionless time, $\tau = L/U$ [-]",
         ylabel=ylabel,
         figsize=(6.5, 5.5),
         legend_loc="lower right",
@@ -185,8 +185,8 @@ def fluid_Ekin_evolution(output_dir: Union[str, Path], series_list) -> None:
     generic_plot(
         out_path,
         list(series_list),
-        xlabel="time [-]",
-        ylabel=r"E_kin [-]",
+        xlabel=r"Dimensionless time, $\tau = L/U$ [-]",
+        ylabel=r"Dimensionless energy, $E_{kin}$ [-]",
         figsize=(6.5, 5.5),
         legend_loc="lower right",
         legend_bbox=(1.0, 0.80),
@@ -220,7 +220,7 @@ def _pdf(
 
 
 def n_p_pdf(output_dir: Union[str, Path], series_list):
-    _pdf(output_dir, series_list, r"PDF_n_p", r"$n_p$", r"$PDF(n_p)$", 0.9, 4.5, 1e-3)
+    _pdf(output_dir, series_list, r"PDF_n_p", r"\#Particles in floc, $n_p$", r"$PDF(n_p)$", 0.9, 4.5, 1e-3)
 
 
 def D_f_pdf(output_dir: Union[str, Path], series_list):
@@ -252,7 +252,7 @@ def D_g_pdf(output_dir: Union[str, Path], series_list):
 def _avg_floc_dir(
     output_dir: Union[str, Path], series_list, name: str, ylabel: str, inner_units: bool
 ) -> None:
-    xlabel: str = r"$y$"
+    xlabel: str = r"$y = \tilde y/L$ [-]"
     if inner_units:
         xlabel: str = r"$y^+$"
     out_path = Path(output_dir) / f"{name}.png"
