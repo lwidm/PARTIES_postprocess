@@ -20,9 +20,9 @@ def fluid(utexas_dir: MyPath, plot_dir: MyPath):
     #     label=r"$\phi_{1.5\%}$",
     #     colour="C0",
     # )
-    parties_wall_series_phi5p0_co: List[PlotSeries] = (
+    parties_wall_series_phi5p0: List[PlotSeries] = (
         plt_series.u_plus_mean_wall_parties(
-            Path("/media/usb/UCSB/output/phi5p0_co/fluid") / parties_processed_filename,
+            Path("/media/usb/UCSB/output/phi5p0/fluid") / parties_processed_filename,
             label=r"$\phi_{5\%}$",
             colour="k",
             linestyles=("-", "--")
@@ -31,7 +31,7 @@ def fluid(utexas_dir: MyPath, plot_dir: MyPath):
 
     all_wall_series: List[PlotSeries] = (
         utexas_wall_series
-        + parties_wall_series_phi5p0_co
+        + parties_wall_series_phi5p0
         # + parties_wall_series_phi1p5
     )
     plt_templ.velocity_profile_wall(plot_dir, all_wall_series)
@@ -46,16 +46,16 @@ def fluid(utexas_dir: MyPath, plot_dir: MyPath):
     #         colour="C0",
     #     )
     # )
-    parties_stress_series_phi5p0_co: List[PlotSeries] = (
+    parties_stress_series_phi5p0: List[PlotSeries] = (
         plt_series.normal_stress_wall_parties(
-            Path("/media/usb/UCSB/output/phi5p0_co/fluid") / parties_processed_filename,
+            Path("/media/usb/UCSB/output/phi5p0/fluid") / parties_processed_filename,
             label=r"$\phi_{5\%}$",
             colour="k",
         )
     )
     all_stress_series: List[PlotSeries] = (
         utexas_stress_series
-        + parties_stress_series_phi5p0_co
+        + parties_stress_series_phi5p0
         # + parties_stress_series_phi1p5
     )
     plt_templ.normal_stress_wall(plot_dir, all_stress_series)
@@ -74,7 +74,7 @@ def floc(plot_dir: MyPath):
     )
     # time_idx_info[2] = myio.find_idx_from_time(
     #     file_prefix="Particle",
-    #     data_dir="/media/usb/UCSB/data/phi5p0_co",
+    #     data_dir="/media/usb/UCSB/data/phi5p0",
     #     target_time=100.0,
     # )
     min_file_indices: List[Optional[int]] = [
@@ -93,11 +93,11 @@ def floc(plot_dir: MyPath):
     ]
     parties_data_dirs: List[str] = [
         "/media/usb/UCSB/data/phi1p5",
-        "/media/usb/UCSB/data/phi5p0_co",
+        "/media/usb/UCSB/data/phi5p0",
     ]
     output_dirs: List[str] = [
         "/media/usb/UCSB/output/phi1p5",
-        "/media/usb/UCSB/output/phi5p0_co",
+        "/media/usb/UCSB/output/phi5p0",
     ]
 
     compute: bool = True
