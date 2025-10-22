@@ -4,8 +4,8 @@
 #SBATCH --mem-per-cpu=32G
 #SBATCH --time=5:00:00
 #SBATCH -J analysisRUN7
-#SBATCH -o log_ana7.o%j
-#SBATCH -e log_ana7.e%j
+#SBATCH -o log_ana8.o%j
+#SBATCH -e log_ana8.e%j
 #SBATCH -p shared
 #SBATCH --mail-user=lukwidmer@ucsb.edu
 #SBATCH --mail-type=NONE
