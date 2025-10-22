@@ -63,17 +63,7 @@ def compute_all_reynolds_stresses(
         results, grid, Re, tau_w, u_tau
     )
 
-    myio.save_to_h5(
-        f"{output_dir}/reynolds_stresses.h5",
-        results | results_wall | {"Re": Re} | {"Re_tau": Re_tau},
-        {
-            "min_index": min_file_index,
-            "max_index": max_file_index,
-            "num_files_processed": len(data_files),
-        },
-    )
-
-    return results | results_wall | {"Re": Re}
+    return results | results_wall | {"Re": Re} | {"Re_tau": Re_tau}
 
 
 def compute_and_save_utexas(
