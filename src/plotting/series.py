@@ -202,10 +202,10 @@ def floc_avg_dir(
     D_g_avg: np.ndarray
     D_f_mass_avg: np.ndarray
     D_g_mass_avg: np.ndarray
-    stds_D_f: np.ndarray
-    stds_D_g: np.ndarray
-    stds_D_f_mass: np.ndarray
-    stds_D_g_mass: np.ndarray
+    std_D_f_avg: np.ndarray
+    std_D_g_avg: np.ndarray
+    std_D_f_mass_avg: np.ndarray
+    std_D_g_mass_avg: np.ndarray
     with h5py.File(Path(floc_dir) / "avg_floc_diam.h5", "r") as f:
         if inner_units:
             x_data = f["yp_mean"][:]  # type: ignore
@@ -213,20 +213,20 @@ def floc_avg_dir(
             D_g_avg = f["inner_D_g_avg"][:]  # type: ignore
             D_f_mass_avg = f["inner_D_f_mass_avg"][:]  # type: ignore
             D_g_mass_avg = f["inner_D_g_mass_avg"][:]  # type: ignore
-            stds_D_f = f["inner_stds_D_f"][:]  # type: ignore
-            stds_D_g = f["inner_stds_D_g"][:]  # type: ignore
-            stds_D_f_mass = f["inner_stds_D_f_mass"][:]  # type: ignore
-            stds_D_g_mass = f["inner_stds_D_g_mass"][:]  # type: ignore
+            std_D_f_avg = f["inner_std_D_f_avg"][:]  # type: ignore
+            std_D_g_avg = f["inner_std_D_g_avg"][:]  # type: ignore
+            std_D_f_mass_avg = f["inner_std_D_f_mass_avg"][:]  # type: ignore
+            std_D_g_mass_avg = f["inner_std_D_g_mass_avg"][:]  # type: ignore
         else:
             x_data = f["y_mean"][:]  # type: ignore
             D_f_avg = f["D_f_avg"][:]  # type: ignore
             D_g_avg = f["D_g_avg"][:]  # type: ignore
             D_f_mass_avg = f["D_f_mass_avg"][:]  # type: ignore
             D_g_mass_avg = f["D_g_mass_avg"][:]  # type: ignore
-            stds_D_f = f["stds_D_f"][:]  # type: ignore
-            stds_D_g = f["stds_D_g"][:]  # type: ignore
-            stds_D_f_mass = f["stds_D_f_mass"][:]  # type: ignore
-            stds_D_g_mass = f["stds_D_g_mass"][:]  # type: ignore
+            std_D_f_avg = f["std_D_f_avg"][:]  # type: ignore
+            std_D_g_avg = f["std_D_g_avg"][:]  # type: ignore
+            std_D_f_mass_avg = f["std_D_f_mass_avg"][:]  # type: ignore
+            std_D_g_mass_avg = f["std_D_g_mass_avg"][:]  # type: ignore
 
     markeredgewidth: float = 0.5
 
@@ -274,10 +274,10 @@ def floc_avg_dir(
         )
         return s, s_err
 
-    s_D_f_avg, s_D_f_err = create_series(D_f_avg, stds_D_f, 0)
-    s_D_g_avg, s_D_g_err = create_series(D_g_avg, stds_D_g, 1)
-    s_D_f_mass_avg, s_D_f_mass_err = create_series(D_f_mass_avg, stds_D_f_mass, 2)
-    s_D_g_mass_avg, s_D_g_mass_err = create_series(D_g_mass_avg, stds_D_g_mass, 3)
+    s_D_f_avg, s_D_f_err = create_series(D_f_avg, std_D_f_avg, 0)
+    s_D_g_avg, s_D_g_err = create_series(D_g_avg, std_D_g_avg, 1)
+    s_D_f_mass_avg, s_D_f_mass_err = create_series(D_f_mass_avg, std_D_f_mass_avg, 2)
+    s_D_g_mass_avg, s_D_g_mass_err = create_series(D_g_mass_avg, std_D_g_mass_avg, 3)
 
     return (
         s_D_f_avg,

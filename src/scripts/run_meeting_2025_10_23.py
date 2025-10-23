@@ -362,7 +362,7 @@ def floc(plot_dir: MyPath):
     plt_templ.D_f_mass_pdf(plot_dir, s_pdf_Df_mass_err_list + s_pdf_Df_mass_list)
     plt_templ.D_g_mass_pdf(plot_dir, s_pdf_Dg_mass_err_list + s_pdf_Dg_mass_list)
 
-    if False:
+    if True:
         s_avg_Df_list = s_avg_Df_err_list + s_avg_Df_list
         s_avg_Dg_list = s_avg_Dg_err_list + s_avg_Dg_list
         s_avg_Dg_list = s_avg_Dg_err_list + s_avg_Dg_list

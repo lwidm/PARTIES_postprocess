@@ -429,11 +429,9 @@ def calc_PDF(
         for idx, arr in enumerate(mean_stats[key]):
             if key in ["means", "medians", "mass_means"]:
                 valid_count = valid_counts[key][idx]
-                with np.errstate(divide='ignore', invalid='ignore'):
+                with np.errstate(divide="ignore", invalid="ignore"):
                     new_array: np.ndarray = np.where(
-                        valid_count > 0, 
-                        arr / valid_count, 
-                        np.nan
+                        valid_count > 0, arr / valid_count, np.nan
                     )
             else:
                 new_array: np.ndarray = arr / len(floc_files)
@@ -459,7 +457,7 @@ def calc_PDF(
                 if key in ["means", "medians", "mass_means"]:
                     if not np.isnan(all_stats[key][i][j]).all():
                         diff_clean = np.nan_to_num(diff_stats[key][i][j], nan=0.0)
-                        squared_array: np.ndarray = diff_clean ** 2
+                        squared_array: np.ndarray = diff_clean**2
                         squared_diffs.append(squared_array)
                 else:
                     squared_array: np.ndarray = diff_stats[key][i][j] ** 2
@@ -471,8 +469,10 @@ def calc_PDF(
                     sum_squared += sq_arr
                 if key in ["means", "medians", "mass_means"]:
                     valid_count = valid_counts[key][j]
-                    with np.errstate(divide='ignore', invalid='ignore'):
-                        mean_squared = np.where(valid_count > 0, sum_squared / valid_count, np.nan)
+                    with np.errstate(divide="ignore", invalid="ignore"):
+                        mean_squared = np.where(
+                            valid_count > 0, sum_squared / valid_count, np.nan
+                        )
                 else:
                     mean_squared = sum_squared / len(floc_files)
                 std_arr: np.ndarray = np.sqrt(mean_squared)
@@ -581,30 +581,20 @@ def CalcAvgDiam(
     y_right_arr: np.ndarray = y[1:]
     yp_left_arr: np.ndarray = yp[:-1]
     yp_right_arr: np.ndarray = yp[1:]
-    tot_y_mean: np.ndarray = np.zeros_like(y_left_arr)
-    tot_yp_mean: np.ndarray = np.zeros_like(yp_left_arr)
-    N_flocs_bin: np.ndarray = np.zeros_like(
-        y_left_arr
-    )  # total number of flocs in each bin
-    mass_bin: np.ndarray = np.zeros_like(y_left_arr)  # total floc_mass in each bin
-    inner_N_flocs_bin: np.ndarray = np.zeros_like(yp_left_arr)
-    inner_mass_bin: np.ndarray = np.zeros_like(yp_left_arr)
-    tot_D_f_arr = np.zeros_like(y_left_arr)
-    tot_D_g_arr = np.zeros_like(y_left_arr)
-    tot_D_f_sq_arr = np.zeros_like(y_left_arr)
-    tot_D_g_sq_arr = np.zeros_like(y_left_arr)
-    inner_tot_D_f_arr = np.zeros_like(yp_left_arr)
-    inner_tot_D_g_arr = np.zeros_like(yp_left_arr)
-    inner_tot_D_f_sq_arr = np.zeros_like(yp_left_arr)
-    inner_tot_D_g_sq_arr = np.zeros_like(yp_left_arr)
-    tot_mass_D_f_arr = np.zeros_like(y_left_arr)
-    tot_mass_D_g_arr = np.zeros_like(y_left_arr)
-    tot_mass_D_f_sq_arr = np.zeros_like(y_left_arr)
-    tot_mass_D_g_sq_arr = np.zeros_like(y_left_arr)
-    inner_tot_mass_D_f_arr = np.zeros_like(yp_left_arr)
-    inner_tot_mass_D_g_arr = np.zeros_like(yp_left_arr)
-    inner_tot_mass_D_f_sq_arr = np.zeros_like(yp_left_arr)
-    inner_tot_mass_D_g_sq_arr = np.zeros_like(yp_left_arr)
+
+    y_center: np.ndarray = (y_left_arr + y_right_arr) / 2
+    yp_center: np.ndarray = (yp_left_arr + yp_right_arr) / 2
+
+    all_D_f_avg: List[np.ndarray] = []
+    all_D_g_avg: List[np.ndarray] = []
+    all_D_f_mass_avg: List[np.ndarray] = []
+    all_D_g_mass_avg: List[np.ndarray] = []
+    all_inner_D_f_avg: List[np.ndarray] = []
+    all_inner_D_g_avg: List[np.ndarray] = []
+    all_inner_D_f_mass_avg: List[np.ndarray] = []
+    all_inner_D_g_mass_avg: List[np.ndarray] = []
+    all_y_mean: List[np.ndarray] = []
+    all_yp_mean: List[np.ndarray] = []
 
     for floc_file in tqdm(
         floc_files, desc="Processing average diameter", total=len(floc_files)
@@ -623,101 +613,125 @@ def CalcAvgDiam(
             D_f_arr = f["flocs/D_f"][first_indices]  # type: ignore
             D_g_arr = f["flocs/D_g"][first_indices]  # type: ignore
 
+        D_f_avg_file: np.ndarray = np.full_like(y_left_arr, np.nan)
+        D_g_avg_file: np.ndarray = np.full_like(y_left_arr, np.nan)
+        D_f_mass_avg_file: np.ndarray = np.full_like(y_left_arr, np.nan)
+        D_g_mass_avg_file: np.ndarray = np.full_like(y_left_arr, np.nan)
+
+        inner_D_f_avg_file: np.ndarray = np.full_like(yp_left_arr, np.nan)
+        inner_D_g_avg_file: np.ndarray = np.full_like(yp_left_arr, np.nan)
+        inner_D_f_mass_avg_file: np.ndarray = np.full_like(yp_left_arr, np.nan)
+        inner_D_g_mass_avg_file: np.ndarray = np.full_like(yp_left_arr, np.nan)
+
+        y_mean_file: np.ndarray = np.full_like(y_left_arr, np.nan)
+        yp_mean_file: np.ndarray = np.full_like(yp_left_arr, np.nan)
+
         for i in range(y_left_arr.shape[0]):
-            bin_map: np.ndarray = (y_floc_arr >= y_left_arr[i]) & (
+            bin_mask: np.ndarray = (y_floc_arr >= y_left_arr[i]) & (
                 y_floc_arr < y_right_arr[i]
             )
-            tot_y_mean[i] += np.sum(y_floc_arr[bin_map])
-            N_flocs_bin[i] += np.sum(bin_map)
-            mass_bin[i] += np.sum(n_p_arr[bin_map])
-            tot_D_f_arr[i] += np.sum(D_f_arr[bin_map])
-            tot_D_g_arr[i] += np.sum(D_g_arr[bin_map])
-            tot_mass_D_f_arr[i] += np.sum(D_f_arr[bin_map] * n_p_arr[bin_map])
-            tot_mass_D_g_arr[i] += np.sum(D_g_arr[bin_map] * n_p_arr[bin_map])
-            tot_D_f_sq_arr[i] += np.sum(D_f_arr[bin_map] * D_f_arr[bin_map])
-            tot_D_g_sq_arr[i] += np.sum(D_g_arr[bin_map] * D_g_arr[bin_map])
-            tot_mass_D_f_sq_arr[i] += np.sum(
-                D_f_arr[bin_map] * D_f_arr[bin_map] * n_p_arr[bin_map]
-            )
-            tot_mass_D_g_sq_arr[i] += np.sum(
-                D_g_arr[bin_map] * D_g_arr[bin_map] * n_p_arr[bin_map]
-            )
+
+            if np.sum(bin_mask) > 0:
+                D_f_avg_file[i] = np.mean(D_f_arr[bin_mask])
+                D_g_avg_file[i] = np.mean(D_g_arr[bin_mask])
+                y_mean_file[i] = np.mean(y_floc_arr[bin_mask])
+
+                if np.sum(n_p_arr[bin_mask]) > 0:
+                    D_f_mass_avg_file[i] = np.average(
+                        D_f_arr[bin_mask], weights=n_p_arr[bin_mask]
+                    )
+                    D_g_mass_avg_file[i] = np.average(
+                        D_g_arr[bin_mask], weights=n_p_arr[bin_mask]
+                    )
 
         for i in range(yp_left_arr.shape[0]):
-            bin_map: np.ndarray = (yp_floc_arr >= yp_left_arr[i]) & (
+            bin_mask: np.ndarray = (yp_floc_arr >= yp_left_arr[i]) & (
                 yp_floc_arr < yp_right_arr[i]
             )
-            tot_yp_mean[i] += np.sum(yp_floc_arr[bin_map])
-            inner_N_flocs_bin[i] += np.sum(bin_map)
-            inner_mass_bin[i] += np.sum(n_p_arr[bin_map])
-            inner_tot_D_f_arr[i] += np.sum(D_f_arr[bin_map])
-            inner_tot_D_g_arr[i] += np.sum(D_g_arr[bin_map])
-            inner_tot_mass_D_f_arr[i] += np.sum(D_f_arr[bin_map] * n_p_arr[bin_map])
-            inner_tot_mass_D_g_arr[i] += np.sum(D_g_arr[bin_map] * n_p_arr[bin_map])
-            inner_tot_D_f_sq_arr[i] += np.sum(D_f_arr[bin_map] * D_f_arr[bin_map])
-            inner_tot_D_g_sq_arr[i] += np.sum(D_g_arr[bin_map] * D_g_arr[bin_map])
-            inner_tot_mass_D_f_sq_arr[i] += np.sum(
-                D_f_arr[bin_map] * D_f_arr[bin_map] * n_p_arr[bin_map]
+
+            if np.sum(bin_mask) > 0:
+                inner_D_f_avg_file[i] = np.mean(D_f_arr[bin_mask])
+                inner_D_g_avg_file[i] = np.mean(D_g_arr[bin_mask])
+                yp_mean_file[i] = np.mean(yp_floc_arr[bin_mask])
+
+                if np.sum(n_p_arr[bin_mask]) > 0:
+                    inner_D_f_mass_avg_file[i] = np.average(
+                        D_f_arr[bin_mask], weights=n_p_arr[bin_mask]
+                    )
+                    inner_D_g_mass_avg_file[i] = np.average(
+                        D_g_arr[bin_mask], weights=n_p_arr[bin_mask]
+                    )
+
+        all_D_f_avg.append(D_f_avg_file)
+        all_D_g_avg.append(D_g_avg_file)
+        all_D_f_mass_avg.append(D_f_mass_avg_file)
+        all_D_g_mass_avg.append(D_g_mass_avg_file)
+        all_inner_D_f_avg.append(inner_D_f_avg_file)
+        all_inner_D_g_avg.append(inner_D_g_avg_file)
+        all_inner_D_f_mass_avg.append(inner_D_f_mass_avg_file)
+        all_inner_D_g_mass_avg.append(inner_D_g_mass_avg_file)
+        all_y_mean.append(y_mean_file)
+        all_yp_mean.append(yp_mean_file)
+
+    all_D_f_avg_arr = np.array(all_D_f_avg)
+    all_D_g_avg_arr = np.array(all_D_g_avg)
+    all_D_f_mass_avg_arr = np.array(all_D_f_mass_avg)
+    all_D_g_mass_avg_arr = np.array(all_D_g_mass_avg)
+    all_inner_D_f_avg_arr = np.array(all_inner_D_f_avg)
+    all_inner_D_g_avg_arr = np.array(all_inner_D_g_avg)
+    all_inner_D_f_mass_avg_arr = np.array(all_inner_D_f_mass_avg)
+    all_inner_D_g_mass_avg_arr = np.array(all_inner_D_g_mass_avg)
+    all_y_mean_arr = np.array(all_y_mean)
+    all_yp_mean_arr = np.array(all_yp_mean)
+
+    D_f_avg: np.ndarray = np.nanmean(all_D_f_avg_arr, axis=0)
+    D_g_avg: np.ndarray = np.nanmean(all_D_g_avg_arr, axis=0)
+    D_f_mass_avg: np.ndarray = np.nanmean(all_D_f_mass_avg_arr, axis=0)
+    D_g_mass_avg: np.ndarray = np.nanmean(all_D_g_mass_avg_arr, axis=0)
+    inner_D_f_avg: np.ndarray = np.nanmean(all_inner_D_f_avg_arr, axis=0)
+    inner_D_g_avg: np.ndarray = np.nanmean(all_inner_D_g_avg_arr, axis=0)
+    inner_D_f_mass_avg: np.ndarray = np.nanmean(all_inner_D_f_mass_avg_arr, axis=0)
+    inner_D_g_mass_avg: np.ndarray = np.nanmean(all_inner_D_g_mass_avg_arr, axis=0)
+    y_mean: np.ndarray = np.nanmean(all_y_mean_arr, axis=0)
+    yp_mean: np.ndarray = np.nanmean(all_yp_mean_arr, axis=0)
+
+    std_D_f_avg: np.ndarray = np.nanstd(all_D_f_avg_arr, axis=0)
+    std_D_g_avg: np.ndarray = np.nanstd(all_D_g_avg_arr, axis=0)
+    std_D_f_mass_avg: np.ndarray = np.nanstd(all_D_f_mass_avg_arr, axis=0)
+    std_D_g_mass_avg: np.ndarray = np.nanstd(all_D_g_mass_avg_arr, axis=0)
+    inner_std_D_f_avg: np.ndarray = np.nanstd(all_inner_D_f_avg_arr, axis=0)
+    inner_std_D_g_avg: np.ndarray = np.nanstd(all_inner_D_g_avg_arr, axis=0)
+    inner_std_D_f_mass_avg: np.ndarray = np.nanstd(all_inner_D_f_mass_avg_arr, axis=0)
+    inner_std_D_g_mass_avg: np.ndarray = np.nanstd(all_inner_D_g_mass_avg_arr, axis=0)
+    std_y_mean: np.ndarray = np.nanstd(all_y_mean_arr, axis=0)
+    std_yp_mean: np.ndarray = np.nanstd(all_yp_mean_arr, axis=0)
+
+    N_flocs_bin: np.ndarray = np.zeros_like(y_left_arr)
+    mass_bin: np.ndarray = np.zeros_like(y_left_arr)
+    inner_N_flocs_bin: np.ndarray = np.zeros_like(yp_left_arr)
+    inner_mass_bin: np.ndarray = np.zeros_like(yp_left_arr)
+
+    for floc_file in floc_files:
+        with h5py.File(floc_file, "r") as f:
+            floc_ids: np.ndarray = f["flocs/floc_id"][:]  # type: ignore
+            _, first_indices = np.unique(floc_ids, return_index=True)
+            y_floc_arr = f["flocs/y"][first_indices]  # type: ignore
+            yp_floc_arr = to_wall_units(y_floc_arr)
+            n_p_arr = f["flocs/n_p"][first_indices]  # type: ignore
+
+        for i in range(y_left_arr.shape[0]):
+            bin_mask: np.ndarray = (y_floc_arr >= y_left_arr[i]) & (
+                y_floc_arr < y_right_arr[i]
             )
-            inner_tot_mass_D_g_sq_arr[i] += np.sum(
-                D_g_arr[bin_map] * D_g_arr[bin_map] * n_p_arr[bin_map]
+            N_flocs_bin[i] += np.sum(bin_mask)
+            mass_bin[i] += np.sum(n_p_arr[bin_mask])
+
+        for i in range(yp_left_arr.shape[0]):
+            bin_mask: np.ndarray = (yp_floc_arr >= yp_left_arr[i]) & (
+                yp_floc_arr < yp_right_arr[i]
             )
-
-            # y_floc_arr = y_floc_arr[not bin_map]
-            # n_p_arr = n_p_arr[not bin_map]
-            # D_f_arr = D_f_arr[not bin_map]
-            # D_g_arr = D_g_arr[not bin_map]
-
-    y_center: np.ndarray = (y_left_arr + y_right_arr) / 2
-    yp_center: np.ndarray = (yp_left_arr + yp_right_arr) / 2
-
-    def calc_avg(numerator: np.ndarray, denominator: np.ndarray) -> np.ndarray:
-        return np.divide(
-            numerator,
-            denominator,
-            out=np.full_like(numerator, np.nan),
-            where=denominator != 0,
-        )
-
-    y_mean: np.ndarray = calc_avg(tot_y_mean, N_flocs_bin)
-    tot_yp_mean: np.ndarray = calc_avg(tot_yp_mean, inner_N_flocs_bin)
-    D_f_avg: np.ndarray = calc_avg(tot_D_f_arr, N_flocs_bin)
-    D_g_avg: np.ndarray = calc_avg(tot_D_g_arr, N_flocs_bin)
-    D_f_mass_avg: np.ndarray = calc_avg(tot_mass_D_f_arr, mass_bin)
-    D_g_mass_avg: np.ndarray = calc_avg(tot_mass_D_g_arr, mass_bin)
-    inner_D_f_avg: np.ndarray = calc_avg(inner_tot_D_f_arr, inner_N_flocs_bin)
-    inner_D_g_avg: np.ndarray = calc_avg(inner_tot_D_g_arr, inner_N_flocs_bin)
-    inner_D_f_mass_avg: np.ndarray = calc_avg(inner_tot_mass_D_f_arr, inner_mass_bin)
-    inner_D_g_mass_avg: np.ndarray = calc_avg(inner_tot_mass_D_g_arr, inner_mass_bin)
-
-    def calc_std(upup: np.ndarray, u: np.ndarray, total: np.ndarray) -> np.ndarray:
-        var: np.ndarray = (
-            np.divide(
-                upup,
-                total,
-                out=np.full_like(upup, np.nan),
-                where=total != 0,
-            )
-            - u * u
-        )
-        return np.sqrt(var)
-
-    std_D_f: np.ndarray = calc_std(tot_D_f_sq_arr, D_f_avg, N_flocs_bin)
-    std_D_g: np.ndarray = calc_std(tot_D_g_sq_arr, D_g_avg, N_flocs_bin)
-    std_D_f_mass: np.ndarray = calc_std(tot_mass_D_f_sq_arr, D_f_mass_avg, mass_bin)
-    std_D_g_mass: np.ndarray = calc_std(tot_mass_D_g_sq_arr, D_g_mass_avg, mass_bin)
-    inner_std_D_f: np.ndarray = calc_std(
-        inner_tot_D_f_sq_arr, inner_D_f_avg, inner_N_flocs_bin
-    )
-    inner_std_D_g: np.ndarray = calc_std(
-        inner_tot_D_g_sq_arr, inner_D_g_avg, inner_N_flocs_bin
-    )
-    inner_std_D_f_mass: np.ndarray = calc_std(
-        inner_tot_mass_D_f_sq_arr, inner_D_f_mass_avg, inner_mass_bin
-    )
-    inner_std_D_g_mass: np.ndarray = calc_std(
-        inner_tot_mass_D_g_sq_arr, inner_D_g_mass_avg, inner_mass_bin
-    )
+            inner_N_flocs_bin[i] += np.sum(bin_mask)
+            inner_mass_bin[i] += np.sum(n_p_arr[bin_mask])
 
     results: Dict[str, Union[int, float, np.ndarray]] = {
         "d": 2 * r_p,
@@ -730,7 +744,7 @@ def CalcAvgDiam(
         "yp_left": yp_left_arr,
         "yp_right": yp_right_arr,
         "yp_center": yp_center,
-        "yp_mean": tot_yp_mean,
+        "yp_mean": yp_mean,
         "D_f_avg": D_f_avg,
         "D_g_avg": D_g_avg,
         "D_f_mass_avg": D_f_mass_avg,
@@ -739,14 +753,16 @@ def CalcAvgDiam(
         "inner_D_g_avg": inner_D_g_avg,
         "inner_D_f_mass_avg": inner_D_f_mass_avg,
         "inner_D_g_mass_avg": inner_D_g_mass_avg,
-        "stds_D_f": std_D_f,
-        "stds_D_g": std_D_g,
-        "stds_D_f_mass": std_D_f_mass,
-        "stds_D_g_mass": std_D_g_mass,
-        "inner_stds_D_f": inner_std_D_f,
-        "inner_stds_D_g": inner_std_D_g,
-        "inner_stds_D_f_mass": inner_std_D_f_mass,
-        "inner_stds_D_g_mass": inner_std_D_g_mass,
+        "std_D_f_avg": std_D_f_avg,
+        "std_D_g_avg": std_D_g_avg,
+        "std_D_f_mass_avg": std_D_f_mass_avg,
+        "std_D_g_mass_avg": std_D_g_mass_avg,
+        "inner_std_D_f_avg": inner_std_D_f_avg,
+        "inner_std_D_g_avg": inner_std_D_g_avg,
+        "inner_std_D_f_mass_avg": inner_std_D_f_mass_avg,
+        "inner_std_D_g_mass_avg": inner_std_D_g_mass_avg,
+        "std_y_mean": std_y_mean,
+        "std_yp_mean": std_yp_mean,
     }
 
     myio.save_to_h5(Path(output_dir) / "avg_floc_diam.h5", results)
