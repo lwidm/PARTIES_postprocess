@@ -248,6 +248,34 @@ def D_g_pdf(output_dir: Union[str, Path], series_list):
         1e-6,
     )
 
+def n_p_mass_pdf(output_dir: Union[str, Path], series_list):
+    _pdf(output_dir, series_list, r"PDF_n_p_mass", r"\#Particles in floc, $n_p$", r"Mass-weighted $PDF(n_p)$", 0.9, 4.5, 1e-3)
+
+
+def D_f_mass_pdf(output_dir: Union[str, Path], series_list):
+    _pdf(
+        output_dir,
+        series_list,
+        r"PDF_D_f_mass",
+        r"$D_f / D_p$",
+        r"Mass-weighted $PDF(D_f)$",
+        0.0,
+        20,
+        1e-6,
+    )
+
+
+def D_g_mass_pdf(output_dir: Union[str, Path], series_list):
+    _pdf(
+        output_dir,
+        series_list,
+        r"PDF_D_g",
+        r"$D_g / D_p$",
+        r"Mass-weighted $PDF(D_g)$",
+        0.0,
+        20,
+        1e-6,
+    )
 
 def _avg_floc_dir(
     output_dir: Union[str, Path], series_list, name: str, ylabel: str, inner_units: bool

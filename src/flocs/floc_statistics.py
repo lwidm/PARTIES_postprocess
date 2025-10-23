@@ -6,10 +6,11 @@ import numpy as np
 from typing import Dict, Union, Tuple, Optional, List
 from tqdm import tqdm  # type: ignore
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
-import scipy.stats # type: ignore
+import scipy.stats  # type: ignore
 
 
 from src.myio import myio
+from src.myio.myio import MyPath
 
 
 def calc_CoM(
@@ -194,25 +195,92 @@ def calc_theta(orientation: np.ndarray, N_particles: int) -> np.ndarray:
     return np.arccos(orientation / np.linalg.norm(orientation))
 
 
-def _count_floc_PDF_occurences(
-    h5_file: Union[str, Path],
-) -> Tuple[List[int], List[float], List[float], int]:
-    floc_ids: np.ndarray
-    n_p: np.ndarray
-    D_f: np.ndarray
-    D_g: np.ndarray
-    with h5py.File(h5_file, "r") as f:
-        floc_ids = f["flocs/floc_id"][:]  # type: ignore
-        n_p = f["flocs/n_p"][:]  # type: ignore
-        D_f = f["flocs/D_f"][:]  # type: ignore
-        D_g = f["flocs/D_g"][:]  # type: ignore
-    unique_vals, first_indices = np.unique(floc_ids, return_index=True)
-    N_flocs_local: int = len(unique_vals)
-    n_p_list: List[int] = n_p[first_indices].tolist()
-    D_f_list: List[float] = D_f[first_indices].tolist()
-    D_g_list: List[float] = D_g[first_indices].tolist()
+def _process_single_pdf(
+    edges_list: List[np.ndarray],
+    n_p_arr: np.ndarray,
+    D_f_arr: np.ndarray,
+    D_g_arr: np.ndarray,
+    N_flocs: int,
+    tot_mass_local: float,
+) -> Tuple[
+    List[np.ndarray],
+    List[np.ndarray],
+    List[np.ndarray],
+    List[np.ndarray],
+    List[np.ndarray],
+    List[np.ndarray],
+    List[np.ndarray],
+]:
 
-    return n_p_list, D_f_list, D_g_list, N_flocs_local
+    means_list: List[np.ndarray] = []
+    medians_list: List[np.ndarray] = []
+    counts_list: List[np.ndarray] = []
+    probabs_list: List[np.ndarray] = []
+
+    mass_means_list: List[np.ndarray] = []
+    masses_list: List[np.ndarray] = []
+    mass_probabs_list: List[np.ndarray] = []
+
+    for i, vals in enumerate([n_p_arr, D_f_arr, D_g_arr]):
+        bin_indices: np.ndarray = np.digitize(vals, edges_list[i])
+
+        means: np.ndarray = np.full_like(edges_list[i][:-1], np.nan, dtype=float)
+        medians: np.ndarray = np.full_like(edges_list[i][:-1], np.nan, dtype=float)
+        counts: np.ndarray = np.zeros_like(edges_list[i][:-1], dtype=float)
+        probabs: np.ndarray = np.zeros_like(edges_list[i][:-1], dtype=float)
+
+        mass_means: np.ndarray = np.full_like(edges_list[i][:-1], np.nan, dtype=float)
+        masses: np.ndarray = np.zeros_like(edges_list[i][:-1], dtype=float)
+        mass_probabs: np.ndarray = np.zeros_like(edges_list[i][:-1], dtype=float)
+
+        for j in np.arange(1, len(edges_list[i])):
+            array_index = j - 1
+
+            mask: np.ndarray = bin_indices == j
+            binned_vals: np.ndarray = vals[mask]
+            binned_n_p: np.ndarray = n_p_arr[mask]
+
+            if binned_vals.size > 0:
+                means[array_index] = np.mean(binned_vals)
+                medians[array_index] = np.median(binned_vals)
+                counts[array_index] = binned_vals.size
+                probabs[array_index] = (
+                    counts[array_index] / float(N_flocs) if N_flocs > 0 else 0.0
+                )
+            else:
+                means[array_index] = np.nan
+                medians[array_index] = np.nan
+                counts[array_index] = 0
+                probabs[array_index] = 0.0
+
+            if binned_vals.size > 0 and np.sum(binned_n_p) > 0:
+                mass_means[array_index] = np.average(binned_vals, weights=binned_n_p)
+            else:
+                mass_means[array_index] = np.nan
+
+            masses[array_index] = np.sum(binned_n_p)
+            mass_probabs[array_index] = (
+                masses[array_index] / tot_mass_local if tot_mass_local > 0 else 0.0
+            )
+
+        means_list.append(means)
+        medians_list.append(medians)
+        counts_list.append(counts)
+        probabs_list.append(probabs)
+
+        mass_means_list.append(mass_means)
+        masses_list.append(masses)
+        mass_probabs_list.append(mass_probabs)
+
+    return (
+        means_list,
+        medians_list,
+        counts_list,
+        probabs_list,
+        mass_means_list,
+        masses_list,
+        mass_probabs_list,
+    )
 
 
 def calc_PDF(
@@ -232,99 +300,149 @@ def calc_PDF(
         max_file_index,
     )
 
-    N_flocs: int = 0
-    n_p_list: List[int] = []
-    D_f_list: List[float] = []
-    D_g_list: List[float] = []
-    if num_workers is not None:
-        if use_threading:
-            executor = ThreadPoolExecutor
-        else:
-            executor = ProcessPoolExecutor
-        with executor(max_workers=num_workers) as ex:
-            futures = [
-                ex.submit(_count_floc_PDF_occurences, h5_file) for h5_file in floc_files
-            ]
-
-            for f in tqdm(
-                as_completed(futures),
-                total=len(futures),
-                desc="Processing flocs for PDF generation",
-            ):
-                _n_p_list, _D_f_list, _D_g_list, _N_flocs = f.result()
-                N_flocs += _N_flocs
-                n_p_list += _n_p_list
-                D_f_list += _D_f_list
-                D_g_list += _D_g_list
-
-    else:
-        N_flocs: int = 0
-        n_p_list: List[int] = []
-        D_f_list: List[float] = []
-        D_g_list: List[float] = []
-        for h5_file in tqdm(
-            floc_files,
-            total=len(floc_files),
-            desc="Processing flocs for PDF generation",
-        ):
-            _n_p_list, _D_f_list, _D_g_list, _N_flocs = _count_floc_PDF_occurences(
-                h5_file
-            )
-            N_flocs += _N_flocs
-            n_p_list += _n_p_list
-            D_f_list += _D_f_list
-            D_g_list += _D_g_list
-
-    if N_flocs == 0:
-        raise ValueError("No flocs found (N_flocs == 0)")
-
     d: float
     with h5py.File(floc_files[0], "r") as f:
         d = f["particles/r"][0] * 2  # type: ignore
 
-    n_p_arr: np.ndarray = np.array(n_p_list)
-    D_f_arr: np.ndarray = np.array(D_f_list) / d
-    D_g_arr: np.ndarray = np.array(D_g_list) / d
+    N_flocs_total: int = 0
+    N_flocs_list: List[int] = []
+    mass_total: float = 0
+    mass_list: List[float] = []
+    n_p_list: List[np.ndarray] = []
+    D_f_list: List[np.ndarray] = []
+    D_g_list: List[np.ndarray] = []
 
-    def edges_from_width(data: np.ndarray, width: float) -> np.ndarray:
-        min_val, max_val = min(data) - width / 2, max(data) - width / 2
-        num_bins = int(np.ceil((max_val - min_val) / width))
-        return np.linspace(min_val, min_val + num_bins * width, num_bins + 1)
+    for h5_file in tqdm(
+        floc_files,
+        total=len(floc_files),
+        desc="Generating eges lists for pdfs",
+    ):
+        with h5py.File(h5_file, "r") as f:
+            floc_ids: np.ndarray = np.asarray(f["flocs/floc_id"][:])  # type: ignore
+            n_p: np.ndarray = np.asarray(f["flocs/n_p"][:])  # type: ignore
+            D_f: np.ndarray = np.asarray(f["flocs/D_f"][:]) / d  # type: ignore
+            D_g: np.ndarray = np.asarray(f["flocs/D_g"][:]) / d  # type: ignore
+
+        unique_vals, first_indices = np.unique(floc_ids, return_index=True)
+        N_flocs_list.append(len(unique_vals))
+        N_flocs_total += N_flocs_list[-1]
+        n_p_list.append(n_p[first_indices])
+        D_f_list.append(D_f[first_indices])
+        D_g_list.append(D_g[first_indices])
+        mass_list.append(np.sum(n_p_list[-1]))
+        mass_total += mass_list[-1]
 
     edges_list: List[np.ndarray] = []
     centers_list: List[np.ndarray] = []
-    means_list: List[np.ndarray] = []
-    medians_list: List[np.ndarray] = []
-    stds_list: List[np.ndarray] = []
-    counts_list: List[np.ndarray] = []
-    probabs_list: List[np.ndarray] = []
-    for i, vals in enumerate([n_p_arr, D_f_arr, D_g_arr]):
-        edges: np.ndarray = edges_from_width(vals, bin_widths[0])
+
+    for i, vals in enumerate([n_p_list, D_f_list, D_g_list]):
+        min_val = (
+            np.min([np.min(local_data) for local_data in vals]) - bin_widths[i] / 2
+        )
+        max_val = (
+            np.max([np.max(local_data) for local_data in vals]) - bin_widths[i] / 2
+        )
+        num_bins = int(np.ceil((max_val - min_val) / bin_widths[i]))
+        edges: np.ndarray = np.linspace(
+            min_val, min_val + num_bins * bin_widths[i], num_bins + 1
+        )
         edges_list.append(edges)
-        centers: np.ndarray = (edges_list[i][:-1] + edges_list[i][1:]) / 2.0
-        centers_list.append(centers)
-        means, _, _ = scipy.stats.binned_statistic(
-            vals, vals, statistic="mean", bins=edges_list[i].tolist()
+        centers_list.append(edges[:-1] - edges[1:])
+
+    all_stats: Dict[str, List[List[np.ndarray]]] = {
+        key: []
+        for key in [
+            "means",
+            "medians",
+            "counts",
+            "probabs",
+            "mass_means",
+            "masses",
+            "mass_probabs",
+        ]
+    }
+    mean_stats: Optional[Dict[str, List[np.ndarray]]] = None
+
+    for i in tqdm(
+        range(len(floc_files)),
+        total=len(floc_files),
+        desc="averaging pdf between snapshots",
+    ):
+        processed_results: Tuple[
+            List[np.ndarray],
+            List[np.ndarray],
+            List[np.ndarray],
+            List[np.ndarray],
+            List[np.ndarray],
+            List[np.ndarray],
+            List[np.ndarray],
+        ] = _process_single_pdf(
+            edges_list,
+            n_p_list[i],
+            D_f_list[i],
+            D_g_list[i],
+            N_flocs_list[i],
+            mass_list[i],
         )
-        means_list.append(means)
-        medians, _, _ = scipy.stats.binned_statistic(
-            vals, vals, statistic="median", bins=edges_list[i].tolist()
-        )
-        medians_list.append(medians)
-        stds, _, _ = scipy.stats.binned_statistic(
-            vals, vals, statistic="std", bins=edges_list[i].tolist()
-        )
-        stds_list.append(stds)
-        counts, _, _ = scipy.stats.binned_statistic(
-            vals, vals, statistic="count", bins=edges_list[i].tolist()
-        )
-        counts_list.append(counts)
-        probabs = counts_list[i].astype(float) / float(N_flocs)
-        probabs_list.append(probabs)
+        current: Dict[str, List[np.ndarray]] = {}
+        for idx, key in enumerate(list(all_stats.keys())):
+            current[key] = processed_results[idx]
+            all_stats[key].append(current[key])
+
+        if mean_stats is None:
+            mean_stats = {}
+            for key in current.keys():
+                mean_stats[key] = current[key].copy()
+        else:
+            new_mean_stats: Dict[str, List[np.ndarray]] = {}
+            for key in mean_stats.keys():
+                new_arrays: List[np.ndarray] = []
+                for idx in range(len(current[key])):
+                    new_array: np.ndarray = mean_stats[key][idx] + current[key][idx]
+                    new_arrays.append(new_array)
+                new_mean_stats[key] = new_arrays
+            mean_stats = new_mean_stats
+
+    if mean_stats is None:
+        raise ValueError("no mean stats computed")
+
+    for key in mean_stats.keys():
+        new_arrays: List[np.ndarray] = []
+        for arr in mean_stats[key]:
+            new_array: np.ndarray = arr / len(floc_files)
+            new_arrays.append(new_array)
+        mean_stats[key] = new_arrays
+
+    diff_stats: Dict[str, List[List[np.ndarray]]] = {}
+    for key in all_stats:
+        diff_stats[key] = []
+        for i in range(len(floc_files)):
+            snapshot_diffs: List[np.ndarray] = []
+            for j in range(len(all_stats[key][i])):
+                diff_array: np.ndarray = all_stats[key][i][j] - mean_stats[key][j]
+                snapshot_diffs.append(diff_array)
+            diff_stats[key].append(snapshot_diffs)
+
+    std_stats: Dict[str, List[np.ndarray]] = {}
+    for key in mean_stats:
+        std_stats[key] = []
+        for j in range(len(mean_stats[key])):
+            squared_diffs: List[np.ndarray] = []
+            for i in range(len(floc_files)):
+                squared_array: np.ndarray = diff_stats[key][i][j] ** 2
+                squared_diffs.append(squared_array)
+
+            sum_squared: np.ndarray = np.zeros_like(squared_diffs[0])
+            for sq_arr in squared_diffs:
+                sum_squared += sq_arr
+            mean_squared = sum_squared / len(floc_files)
+
+            std_arr: np.ndarray = np.sqrt(mean_squared)
+            std_stats[key].append(std_arr)
 
     results: Dict[str, Union[float, np.ndarray]] = {
         "d": d,
-        "N_flocs": N_flocs,
+        "N_flocs": N_flocs_total,
         "bin_width_n_p": bin_widths[0],
         "bin_width_D_f": bin_widths[1],
         "bin_width_D_g": bin_widths[2],
@@ -334,21 +452,52 @@ def calc_PDF(
         "centers_n_p": centers_list[0],
         "centers_D_f": centers_list[1],
         "centers_D_g": centers_list[2],
-        "means_n_p": means_list[0],
-        "means_D_f": means_list[1],
-        "means_D_g": means_list[2],
-        "medians_n_p": medians_list[0],
-        "medians_D_f": medians_list[1],
-        "medians_D_g": medians_list[2],
-        "stds_n_p": stds_list[0],
-        "stds_D_f": stds_list[1],
-        "stds_D_g": stds_list[2],
-        "counts_n_p": counts_list[0],
-        "counts_D_f": counts_list[1],
-        "counts_D_g": counts_list[2],
-        "probab_n_p": probabs_list[0],
-        "probab_D_f": probabs_list[1],
-        "probab_D_g": probabs_list[2],
+        # Mean statistics
+        "means_n_p": mean_stats["means"][0],
+        "means_D_f": mean_stats["means"][1],
+        "means_D_g": mean_stats["means"][2],
+        "medians_n_p": mean_stats["medians"][0],
+        "medians_D_f": mean_stats["medians"][1],
+        "medians_D_g": mean_stats["medians"][2],
+        "counts_n_p": mean_stats["counts"][0],
+        "counts_D_f": mean_stats["counts"][1],
+        "counts_D_g": mean_stats["counts"][2],
+        "probab_n_p": mean_stats["probabs"][0],
+        "probab_D_f": mean_stats["probabs"][1],
+        "probab_D_g": mean_stats["probabs"][2],
+        # Mass-weighted mean statistics
+        "mass_means_n_p": mean_stats["mass_means"][0],
+        "mass_means_D_f": mean_stats["mass_means"][1],
+        "mass_means_D_g": mean_stats["mass_means"][2],
+        "mass_counts_n_p": mean_stats["masses"][0],
+        "mass_counts_D_f": mean_stats["masses"][1],
+        "mass_counts_D_g": mean_stats["masses"][2],
+        "mass_probab_n_p": mean_stats["mass_probabs"][0],
+        "mass_probab_D_f": mean_stats["mass_probabs"][1],
+        "mass_probab_D_g": mean_stats["mass_probabs"][2],
+        # Standard deviations
+        "std_means_n_p": std_stats["means"][0],
+        "std_means_D_f": std_stats["means"][1],
+        "std_means_D_g": std_stats["means"][2],
+        "std_medians_n_p": std_stats["medians"][0],
+        "std_medians_D_f": std_stats["medians"][1],
+        "std_medians_D_g": std_stats["medians"][2],
+        "std_counts_n_p": std_stats["counts"][0],
+        "std_counts_D_f": std_stats["counts"][1],
+        "std_counts_D_g": std_stats["counts"][2],
+        "std_probab_n_p": std_stats["probabs"][0],
+        "std_probab_D_f": std_stats["probabs"][1],
+        "std_probab_D_g": std_stats["probabs"][2],
+        # Mass-weighted standard deviations
+        "std_mass_means_n_p": std_stats["mass_means"][0],
+        "std_mass_means_D_f": std_stats["mass_means"][1],
+        "std_mass_means_D_g": std_stats["mass_means"][2],
+        "std_mass_counts_n_p": std_stats["masses"][0],
+        "std_mass_counts_D_f": std_stats["masses"][1],
+        "std_mass_counts_D_g": std_stats["masses"][2],
+        "std_mass_probab_n_p": std_stats["mass_probabs"][0],
+        "std_mass_probab_D_f": std_stats["mass_probabs"][1],
+        "std_mass_probab_D_g": std_stats["mass_probabs"][2],
     }
 
     myio.save_to_h5(Path(output_dir) / "floc_PDF.h5", results)
@@ -434,7 +583,9 @@ def CalcAvgDiam(
             D_g_arr = f["flocs/D_g"][first_indices]  # type: ignore
 
         for i in range(y_left_arr.shape[0]):
-            bin_map: np.ndarray = (y_floc_arr >= y_left_arr[i]) & (y_floc_arr < y_right_arr[i])
+            bin_map: np.ndarray = (y_floc_arr >= y_left_arr[i]) & (
+                y_floc_arr < y_right_arr[i]
+            )
             tot_y_mean[i] += np.sum(y_floc_arr[bin_map])
             N_flocs_bin[i] += np.sum(bin_map)
             mass_bin[i] += np.sum(n_p_arr[bin_map])
@@ -452,7 +603,9 @@ def CalcAvgDiam(
             )
 
         for i in range(yp_left_arr.shape[0]):
-            bin_map: np.ndarray = (yp_floc_arr >= yp_left_arr[i]) & (yp_floc_arr < yp_right_arr[i])
+            bin_map: np.ndarray = (yp_floc_arr >= yp_left_arr[i]) & (
+                yp_floc_arr < yp_right_arr[i]
+            )
             tot_yp_mean[i] += np.sum(yp_floc_arr[bin_map])
             inner_N_flocs_bin[i] += np.sum(bin_map)
             inner_mass_bin[i] += np.sum(n_p_arr[bin_map])
@@ -476,6 +629,7 @@ def CalcAvgDiam(
 
     y_center: np.ndarray = (y_left_arr + y_right_arr) / 2
     yp_center: np.ndarray = (yp_left_arr + yp_right_arr) / 2
+
     def calc_avg(numerator: np.ndarray, denominator: np.ndarray) -> np.ndarray:
         return np.divide(
             numerator,
@@ -483,6 +637,7 @@ def CalcAvgDiam(
             out=np.full_like(numerator, np.nan),
             where=denominator != 0,
         )
+
     y_mean: np.ndarray = calc_avg(tot_y_mean, N_flocs_bin)
     tot_yp_mean: np.ndarray = calc_avg(tot_yp_mean, inner_N_flocs_bin)
     D_f_avg: np.ndarray = calc_avg(tot_D_f_arr, N_flocs_bin)
@@ -510,16 +665,23 @@ def CalcAvgDiam(
     std_D_g: np.ndarray = calc_std(tot_D_g_sq_arr, D_g_avg, N_flocs_bin)
     std_D_f_mass: np.ndarray = calc_std(tot_mass_D_f_sq_arr, D_f_mass_avg, mass_bin)
     std_D_g_mass: np.ndarray = calc_std(tot_mass_D_g_sq_arr, D_g_mass_avg, mass_bin)
-    inner_std_D_f: np.ndarray = calc_std(inner_tot_D_f_sq_arr, inner_D_f_avg, inner_N_flocs_bin)
-    inner_std_D_g: np.ndarray = calc_std(inner_tot_D_g_sq_arr, inner_D_g_avg, inner_N_flocs_bin)
-    inner_std_D_f_mass: np.ndarray = calc_std(inner_tot_mass_D_f_sq_arr, inner_D_f_mass_avg, inner_mass_bin)
-    inner_std_D_g_mass: np.ndarray = calc_std(inner_tot_mass_D_g_sq_arr, inner_D_g_mass_avg, inner_mass_bin)
+    inner_std_D_f: np.ndarray = calc_std(
+        inner_tot_D_f_sq_arr, inner_D_f_avg, inner_N_flocs_bin
+    )
+    inner_std_D_g: np.ndarray = calc_std(
+        inner_tot_D_g_sq_arr, inner_D_g_avg, inner_N_flocs_bin
+    )
+    inner_std_D_f_mass: np.ndarray = calc_std(
+        inner_tot_mass_D_f_sq_arr, inner_D_f_mass_avg, inner_mass_bin
+    )
+    inner_std_D_g_mass: np.ndarray = calc_std(
+        inner_tot_mass_D_g_sq_arr, inner_D_g_mass_avg, inner_mass_bin
+    )
 
     results: Dict[str, Union[int, float, np.ndarray]] = {
         "d": 2 * r_p,
         "nbins": n_bins,
         "N_flocs": N_flocs_bin,
-
         "y_left": y_left_arr,
         "y_right": y_right_arr,
         "y_center": y_center,
@@ -528,22 +690,18 @@ def CalcAvgDiam(
         "yp_right": yp_right_arr,
         "yp_center": yp_center,
         "yp_mean": tot_yp_mean,
-
         "D_f_avg": D_f_avg,
         "D_g_avg": D_g_avg,
         "D_f_mass_avg": D_f_mass_avg,
         "D_g_mass_avg": D_g_mass_avg,
-
         "inner_D_f_avg": inner_D_f_avg,
         "inner_D_g_avg": inner_D_g_avg,
         "inner_D_f_mass_avg": inner_D_f_mass_avg,
         "inner_D_g_mass_avg": inner_D_g_mass_avg,
-
         "stds_D_f": std_D_f,
         "stds_D_g": std_D_g,
         "stds_D_f_mass": std_D_f_mass,
         "stds_D_g_mass": std_D_g_mass,
-
         "inner_stds_D_f": inner_std_D_f,
         "inner_stds_D_g": inner_std_D_g,
         "inner_stds_D_f_mass": inner_std_D_f_mass,

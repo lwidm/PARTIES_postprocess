@@ -202,13 +202,32 @@ def floc(plot_dir: MyPath):
         PlotSeries,
         PlotSeries,
         PlotSeries,
+        PlotSeries,
+        PlotSeries,
+        PlotSeries,
+        PlotSeries,
+        PlotSeries,
+        PlotSeries,
     ]:
-        s_n_p_PDF, s_D_f_PDF, s_D_g_PDF, s_n_p_PDF_err, s_D_f_PDF_err, s_D_g_PDF_err = (
+        (
+        s_n_p_PDF,
+        s_D_f_PDF,
+        s_D_g_PDF,
+        s_n_p_PDF_err,
+        s_D_f_PDF_err,
+        s_D_g_PDF_err,
+        s_mass_n_p_PDF,
+        s_mass_D_f_PDF,
+        s_mass_D_g_PDF,
+        s_mass_n_p_PDF_err,
+        s_mass_D_f_PDF_err,
+        s_mass_D_g_PDF_err,
+    ) = (
             plt_series.floc_pdf(
                 floc_dir=Path(output_dir) / "flocs",
-                labels=[label for _ in range(3)],
-                colours=[colour for _ in range(3)],
-                markers=[marker for _ in range(3)],
+                labels=[label for _ in range(6)],
+                colours=[colour for _ in range(6)],
+                markers=[marker for _ in range(6)],
             )
         )
 
@@ -219,6 +238,12 @@ def floc(plot_dir: MyPath):
             s_n_p_PDF_err,
             s_D_f_PDF_err,
             s_D_g_PDF_err,
+        s_mass_n_p_PDF,
+        s_mass_D_f_PDF,
+        s_mass_D_g_PDF,
+        s_mass_n_p_PDF_err,
+        s_mass_D_f_PDF_err,
+        s_mass_D_g_PDF_err,
         )
 
     def get_series_avg(
@@ -268,6 +293,12 @@ def floc(plot_dir: MyPath):
     s_pdf_np_err_list: List[PlotSeries] = []
     s_pdf_Df_err_list: List[PlotSeries] = []
     s_pdf_Dg_err_list: List[PlotSeries] = []
+    s_pdf_np_mass_list: List[PlotSeries] = []
+    s_pdf_Df_mass_list: List[PlotSeries] = []
+    s_pdf_Dg_mass_list: List[PlotSeries] = []
+    s_pdf_np_mass_err_list: List[PlotSeries] = []
+    s_pdf_Df_mass_err_list: List[PlotSeries] = []
+    s_pdf_Dg_mass_err_list: List[PlotSeries] = []
     s_avg_Df_list: List[PlotSeries] = []
     s_avg_Dg_list: List[PlotSeries] = []
     s_mass_avg_Df_list: List[PlotSeries] = []
@@ -285,7 +316,7 @@ def floc(plot_dir: MyPath):
             max_file_indices[i],
         )
         s_evo_list.append(s_evo)
-        s_np, s_Df, s_Dg, s_np_err, s_Df_err, s_Dg_err = get_series_pdf(
+        s_np, s_Df, s_Dg, s_np_err, s_Df_err, s_Dg_err, s_np_mass, s_Df_mass, s_Dg_mass, s_np_mass_err, s_Df_mass_err, s_Dg_mass_err = get_series_pdf(
             output_dirs[i],
             colours[i],
             labels[i],
@@ -297,6 +328,12 @@ def floc(plot_dir: MyPath):
         s_pdf_np_err_list.append(s_np_err)
         s_pdf_Df_err_list.append(s_Df_err)
         s_pdf_Dg_err_list.append(s_Dg_err)
+        s_pdf_np_mass_list.append(s_np_mass)
+        s_pdf_Df_mass_list.append(s_Df_mass)
+        s_pdf_Dg_mass_list.append(s_Dg_mass)
+        s_pdf_np_mass_err_list.append(s_np_mass_err)
+        s_pdf_Df_mass_err_list.append(s_Df_mass_err)
+        s_pdf_Dg_mass_err_list.append(s_Dg_mass_err)
 
         (
             s_avg_Df,
@@ -321,6 +358,9 @@ def floc(plot_dir: MyPath):
     plt_templ.n_p_pdf(plot_dir, s_pdf_np_err_list + s_pdf_np_list)
     plt_templ.D_f_pdf(plot_dir, s_pdf_Df_err_list + s_pdf_Df_list)
     plt_templ.D_g_pdf(plot_dir, s_pdf_Dg_err_list + s_pdf_Dg_list)
+    plt_templ.n_p_mass_pdf(plot_dir, s_pdf_np_mass_err_list + s_pdf_np_mass_list)
+    plt_templ.D_f_mass_pdf(plot_dir, s_pdf_Df_mass_err_list + s_pdf_Df_mass_list)
+    plt_templ.D_g_mass_pdf(plot_dir, s_pdf_Dg_mass_err_list + s_pdf_Dg_mass_list)
 
     if False:
         s_avg_Df_list = s_avg_Df_err_list + s_avg_Df_list

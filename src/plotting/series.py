@@ -74,21 +74,40 @@ def floc_pdf(
     labels: List[Optional[str]],
     colours: List[str],
     markers: List[str],
-) -> Tuple[PlotSeries, PlotSeries, PlotSeries, PlotSeries, PlotSeries, PlotSeries]:
+) -> Tuple[
+    PlotSeries,
+    PlotSeries,
+    PlotSeries,
+    PlotSeries,
+    PlotSeries,
+    PlotSeries,
+    PlotSeries,
+    PlotSeries,
+    PlotSeries,
+    PlotSeries,
+    PlotSeries,
+    PlotSeries,
+]:
 
     means_list: List[np.ndarray] = []
-    stds_list: List[np.ndarray] = []
+    std_probab_list: List[np.ndarray] = []
     bin_widths_list: List[np.ndarray] = []
     probabs_list: List[np.ndarray] = []
     postfixes: List[str] = ["n_p", "D_f", "D_g"]
 
     with h5py.File(Path(floc_dir) / "floc_PDF.h5", "r") as f:
         for i in range(len(postfixes)):
-            # centers.append(f["centers_" + strings[i]][:])  # type: ignore
-            means_list.append(f["means_" + postfixes[i]][:])  # type: ignore
-            stds_list.append(f["stds_" + postfixes[i]][:])  # type: ignore
             bin_widths_list.append(f["bin_width_" + postfixes[i]][()])  # type: ignore
+
+            means_list.append(f["means_" + postfixes[i]][:])  # type: ignore
+            std_probab_list.append(f["std_probab_" + postfixes[i]][:])  # type: ignore
             probabs_list.append(f["probab_" + postfixes[i]][:])  # type: ignore
+
+        for i in range(len(postfixes)):
+            bin_widths_list.append(f["bin_width_" + postfixes[i]][()])  # type: ignore
+            means_list.append(f["mass_means_" + postfixes[i]][:])  # type: ignore
+            std_probab_list.append(f["std_mass_probab_" + postfixes[i]][:])  # type: ignore
+            probabs_list.append(f["mass_probab_" + postfixes[i]][:])  # type: ignore
 
     markeredgewidth: float = 0.5
 
@@ -119,7 +138,7 @@ def floc_pdf(
                 "x": means_list[i],
                 "y": probabs_list[i],
                 "bin_width": bin_widths_list[i],
-                "x_err": stds_list[i],
+                "y_err": std_probab_list[i],
             },
             x_key="x",
             y_key="y",
@@ -141,8 +160,24 @@ def floc_pdf(
     s_n_p, s_n_p_err = create_series(0)
     s_D_f, s_D_f_err = create_series(1)
     s_D_g, s_D_g_err = create_series(2)
+    s_mass_n_p, s_mass_n_p_err = create_series(3)
+    s_mass_D_f, s_mass_D_f_err = create_series(4)
+    s_mass_D_g, s_mass_D_g_err = create_series(5)
 
-    return s_n_p, s_D_f, s_D_g, s_n_p_err, s_D_f_err, s_D_g_err
+    return (
+        s_n_p,
+        s_D_f,
+        s_D_g,
+        s_n_p_err,
+        s_D_f_err,
+        s_D_g_err,
+        s_mass_n_p,
+        s_mass_D_f,
+        s_mass_D_g,
+        s_mass_n_p_err,
+        s_mass_D_f_err,
+        s_mass_D_g_err,
+    )
 
 
 def floc_avg_dir(
