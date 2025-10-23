@@ -12,111 +12,158 @@ from src.scripts.run_floc_analysis import process_flocs
 
 def fluid(utexas_dir: MyPath, plot_dir: MyPath):
 
+    # ==============================
+    # Inputs
+    # ==============================
+
+    data_names: List[str] = [
+        # "phi1p5",
+        "phi5p0",
+        # "phi5p0_new",
+    ]
+    labels: List[str] = [
+        # r"$\phi_{1.5\%}$",
+        r"$\phi_{5\%}$",
+        # r"$\phi_{5\%}$ new",
+    ]
+    parties_data_dir: str = "/media/usb/UCSB/data/"
+    output_dir: str = "/media/usb/UCSB/output/"
+    # colours: List[str] = ["C0", "C1", "C2", "C3", "C4"]
+    colours: List[str] = ["k"]
+
+    # ==============================
+    # Automation
+    # ==============================
+
+    Num_data: int = len(data_names)
     utexas_h5 = Path(utexas_dir) / "utexas.h5"
     parties_processed_filename = "parties_reynolds.h5"
     utexas_wall_series: List[PlotSeries] = plt_series.u_plus_mean_wall_utexas(utexas_h5)
-    # parties_wall_series_phi1p5: List[PlotSeries] = plt_series.u_plus_mean_wall_parties(
-    #     Path("/media/usb/UCSB/output/phi1p5/fluid") / parties_processed_filename,
-    #     label=r"$\phi_{1.5\%}$",
-    #     colour="C0",
-    # )
-    parties_wall_series_phi5p0: List[PlotSeries] = (
-        plt_series.u_plus_mean_wall_parties(
-            Path("/media/usb/UCSB/output/phi5p0/fluid") / parties_processed_filename,
-            label=r"$\phi_{5\%}$",
-            colour="k",
-            linestyles=("-", "--")
+    parties_wall_series: List[List[PlotSeries]] = []
+    for i in range(Num_data):
+        parties_wall_series.append(
+            plt_series.u_plus_mean_wall_parties(
+                Path(output_dir + data_names[i] + "/fluid")
+                / parties_processed_filename,
+                label=labels[i],
+                colour=colours[i],
+                linestyles=("-", "--"),
+            )
         )
-    )
 
-    all_wall_series: List[PlotSeries] = (
-        utexas_wall_series
-        + parties_wall_series_phi5p0
-        # + parties_wall_series_phi1p5
-    )
+    all_wall_series: List[PlotSeries] = utexas_wall_series
+    for series in parties_wall_series:
+        all_wall_series += series
     plt_templ.velocity_profile_wall(plot_dir, all_wall_series)
 
     utexas_stress_series: List[PlotSeries] = plt_series.normal_stress_wall_utexas(
         utexas_h5
     )
-    # parties_stress_series_phi1p5: List[PlotSeries] = (
-    #     plt_series.normal_stress_wall_parties(
-    #         Path("/media/usb/UCSB/output/phi1p5/fluid") / parties_processed_filename,
-    #         label=r"$\phi_{1.5\%}$",
-    #         colour="C0",
-    #     )
-    # )
-    parties_stress_series_phi5p0: List[PlotSeries] = (
-        plt_series.normal_stress_wall_parties(
-            Path("/media/usb/UCSB/output/phi5p0/fluid") / parties_processed_filename,
-            label=r"$\phi_{5\%}$",
-            colour="k",
+    parties_stress_series: List[List[PlotSeries]] = []
+    for i in range(Num_data):
+        parties_stress_series.append(
+            plt_series.normal_stress_wall_parties(
+                Path(output_dir + data_names[i] + "/fluid")
+                / parties_processed_filename,
+                label=labels[i],
+                colour=colours[i],
+            )
         )
-    )
-    all_stress_series: List[PlotSeries] = (
-        utexas_stress_series
-        + parties_stress_series_phi5p0
-        # + parties_stress_series_phi1p5
-    )
+    all_stress_series: List[PlotSeries] = utexas_stress_series
+    for series in parties_stress_series:
+        all_stress_series += series
     plt_templ.normal_stress_wall(plot_dir, all_stress_series)
 
 
 def floc(plot_dir: MyPath):
-    plot_dir = Path(plot_dir)
-    time_idx_info: List[dict] = [
-        {},
-        # {}
+
+    # ==============================
+    # Inputs
+    # ==============================
+
+    compute: bool = True
+    compute_flocs: List[bool] = [
+        False,
+        False,
+        # False,
     ]
-    time_idx_info[0] = myio.find_idx_from_time(
-        file_prefix="Particle",
-        data_dir="/media/usb/UCSB/data/phi1p5",
-        target_time=200.0,
-    )
-    # time_idx_info[2] = myio.find_idx_from_time(
-    #     file_prefix="Particle",
-    #     data_dir="/media/usb/UCSB/data/phi5p0",
-    #     target_time=100.0,
-    # )
+    data_names: List[str] = [
+        "phi1p5",
+        "phi5p0",
+        # "phi5p0_new",
+    ]
+    labels: List[str] = [
+        r"$\phi_{1.5\%}$",
+        r"$\phi_{5\%}$",
+        # r"$\phi_{5\%}$ new",
+    ]
+    trn: List[bool] = [False, True, True]
+    Re_tau: List[float] = [
+        189.54087993838434,
+        180,
+        # 180,
+    ]
+    parties_data_dir: str = "/media/usb/UCSB/data/"
+    output_dir: str = "/media/usb/UCSB/output/"
     min_file_indices: List[Optional[int]] = [
         None,
-        101,
+        None,
+        # None,
     ]
     max_file_indices: List[Optional[int]] = [
         None,
         None,
+        # None,
     ]
-    min_steady_indices: List[Optional[int]] = [inf["file_idx"] for inf in time_idx_info]
-    min_steady_indices.append(101)
+    min_steady_times: List[Optional[float]] = [
+        200,
+        None,
+        # None,
+    ]
     max_steady_indices: List[Optional[int]] = [
         None,
-        None
+        None,
+        # None,
     ]
+    colours: List[str] = ["C0", "C1", "C2", "C3", "C4"]
+    markers: List[str] = ["o", "s", "^", "v", "P"]
+    linestyles: List[str] = ["-", "--", "-.", ":"]
+
+    # ==============================
+    # Automation
+    # ==============================
+
+    Num_data: int = len(data_names)
+
     parties_data_dirs: List[str] = [
-        "/media/usb/UCSB/data/phi1p5",
-        "/media/usb/UCSB/data/phi5p0",
+        parties_data_dir + data_name for data_name in data_names
     ]
-    output_dirs: List[str] = [
-        "/media/usb/UCSB/output/phi1p5",
-        "/media/usb/UCSB/output/phi5p0",
+    output_dirs: List[str] = [output_dir + data_name for data_name in data_names]
+
+    time_idx_info: List[dict] = [{} for _ in range(Num_data)]
+    for i in range(Num_data):
+        min_steady_time = min_steady_times[i]
+        if min_steady_time is None:
+            time_idx_info[i] = {"file_idx": None}
+        else:
+            time_idx_info[i] = myio.find_idx_from_time(
+                file_prefix="Particle",
+                data_dir=parties_data_dirs[i],
+                target_time=min_steady_time,
+            )
+    min_steady_indices: List[Optional[int]] = [
+        info["file_idx"] for info in time_idx_info
     ]
 
-    compute: bool = True
+    plot_dir = Path(plot_dir)
     if compute:
-        trn: List[bool] = [
-            False,
-            True
-        ]
-        Re_tau: List[float] = [
-            189.54087993838434,
-            180,
-        ]
         for i in range(len(parties_data_dirs)):
             scripts.run_floc_analysis.main(
                 parties_data_dir=parties_data_dirs[i],
                 output_dir=output_dirs[i],
                 trn=trn[i],
                 Re_tau=Re_tau[i],
-                process_flocs = False,
+                process_flocs=compute_flocs[i],
                 min_file_index=min_file_indices[i],
                 max_file_index=max_file_indices[i],
                 min_steady_index=min_steady_indices[i],
@@ -139,7 +186,7 @@ def floc(plot_dir: MyPath):
             min_file_index,
             max_file_index,
             normalised=True,
-            reset_time=True,
+            reset_time=False,
         )
         return s
 
@@ -214,13 +261,6 @@ def floc(plot_dir: MyPath):
         )
 
     plot_dir.mkdir(parents=True, exist_ok=True)
-    labels: List[str] = [
-        r"$\phi_{1.5\%}$",
-        r"$\phi_{5\%}$",
-    ]
-    colours: List[str] = ["C0", "C1", "C2"]
-    markers: List[str] = ["o", "s", "^"]
-    linestyles: List[str] = ["-", "--", "-."]
     s_evo_list: List[PlotSeries] = []
     s_pdf_np_list: List[PlotSeries] = []
     s_pdf_Df_list: List[PlotSeries] = []
@@ -281,7 +321,6 @@ def floc(plot_dir: MyPath):
     plt_templ.n_p_pdf(plot_dir, s_pdf_np_err_list + s_pdf_np_list)
     plt_templ.D_f_pdf(plot_dir, s_pdf_Df_err_list + s_pdf_Df_list)
     plt_templ.D_g_pdf(plot_dir, s_pdf_Dg_err_list + s_pdf_Dg_list)
-
 
     if False:
         s_avg_Df_list = s_avg_Df_err_list + s_avg_Df_list
