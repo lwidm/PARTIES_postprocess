@@ -398,7 +398,14 @@ def calc_PDF(
             for key in mean_stats.keys():
                 new_arrays: List[np.ndarray] = []
                 for idx in range(len(current[key])):
-                    new_array: np.ndarray = mean_stats[key][idx] + current[key][idx]
+                    if key in ["means", "medians", "mass_means"]:
+                        # Replace NaN with 0 for summation, but keep track of valid counts
+                        current_val = np.nan_to_num(current[key][idx], nan=0.0)
+                        mean_val = np.nan_to_num(mean_stats[key][idx], nan=0.0)
+                        new_array: np.ndarray = mean_val + current_val
+                    else:
+                        # For counts, probabs, masses, mass_probabs, use regular addition
+                        new_array: np.ndarray = mean_stats[key][idx] + current[key][idx]
                     new_arrays.append(new_array)
                 new_mean_stats[key] = new_arrays
             mean_stats = new_mean_stats
@@ -406,10 +413,30 @@ def calc_PDF(
     if mean_stats is None:
         raise ValueError("no mean stats computed")
 
+    valid_counts: Dict[str, List[np.ndarray]] = {}
+    for key in all_stats:
+        if key in ["means", "medians", "mass_means"]:
+            valid_counts[key] = []
+            for j in range(len(all_stats[key][0])):
+                count_arr = np.zeros_like(all_stats[key][0][j])
+                for i in range(len(floc_files)):
+                    valid_mask = ~np.isnan(all_stats[key][i][j])
+                    count_arr[valid_mask] += 1
+                valid_counts[key].append(count_arr)
+
     for key in mean_stats.keys():
         new_arrays: List[np.ndarray] = []
-        for arr in mean_stats[key]:
-            new_array: np.ndarray = arr / len(floc_files)
+        for idx, arr in enumerate(mean_stats[key]):
+            if key in ["means", "medians", "mass_means"]:
+                valid_count = valid_counts[key][idx]
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    new_array: np.ndarray = np.where(
+                        valid_count > 0, 
+                        arr / valid_count, 
+                        np.nan
+                    )
+            else:
+                new_array: np.ndarray = arr / len(floc_files)
             new_arrays.append(new_array)
         mean_stats[key] = new_arrays
 
@@ -429,16 +456,30 @@ def calc_PDF(
         for j in range(len(mean_stats[key])):
             squared_diffs: List[np.ndarray] = []
             for i in range(len(floc_files)):
-                squared_array: np.ndarray = diff_stats[key][i][j] ** 2
-                squared_diffs.append(squared_array)
+                if key in ["means", "medians", "mass_means"]:
+                    if not np.isnan(all_stats[key][i][j]).all():
+                        diff_clean = np.nan_to_num(diff_stats[key][i][j], nan=0.0)
+                        squared_array: np.ndarray = diff_clean ** 2
+                        squared_diffs.append(squared_array)
+                else:
+                    squared_array: np.ndarray = diff_stats[key][i][j] ** 2
+                    squared_diffs.append(squared_array)
 
-            sum_squared: np.ndarray = np.zeros_like(squared_diffs[0])
-            for sq_arr in squared_diffs:
-                sum_squared += sq_arr
-            mean_squared = sum_squared / len(floc_files)
-
-            std_arr: np.ndarray = np.sqrt(mean_squared)
-            std_stats[key].append(std_arr)
+            if squared_diffs:
+                sum_squared: np.ndarray = np.zeros_like(squared_diffs[0])
+                for sq_arr in squared_diffs:
+                    sum_squared += sq_arr
+                if key in ["means", "medians", "mass_means"]:
+                    valid_count = valid_counts[key][j]
+                    with np.errstate(divide='ignore', invalid='ignore'):
+                        mean_squared = np.where(valid_count > 0, sum_squared / valid_count, np.nan)
+                else:
+                    mean_squared = sum_squared / len(floc_files)
+                std_arr: np.ndarray = np.sqrt(mean_squared)
+                std_stats[key].append(std_arr)
+            else:
+                std_arr: np.ndarray = np.full_like(mean_stats[key][j], np.nan)
+                std_stats[key].append(std_arr)
 
     results: Dict[str, Union[float, np.ndarray]] = {
         "d": d,
