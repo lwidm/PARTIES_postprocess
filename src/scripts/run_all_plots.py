@@ -85,45 +85,45 @@ def floc(plot_dir: MyPath):
     compute_flocs: List[bool] = [
         False,
         False,
-        # False,
+        True,
     ]
     data_names: List[str] = [
         "phi1p5",
         "phi5p0",
-        # "phi5p0_new",
+        "phi5p0_new",
     ]
     labels: List[str] = [
         r"$\phi_{1.5\%}$",
         r"$\phi_{5\%}$",
-        # r"$\phi_{5\%}$ new",
+        r"$\phi_{5\%}$ new",
     ]
     trn: List[bool] = [False, True, True]
     Re_tau: List[float] = [
         189.54087993838434,
         180,
-        # 180,
+        180,
     ]
     parties_data_dir: str = "/media/usb/UCSB/data/"
     output_dir: str = "/media/usb/UCSB/output/"
     min_file_indices: List[Optional[int]] = [
         None,
         None,
-        # None,
+        None,
     ]
     max_file_indices: List[Optional[int]] = [
         None,
         None,
-        # None,
+        None,
     ]
     min_steady_times: List[Optional[float]] = [
         200,
         None,
-        # None,
+        None,
     ]
     max_steady_indices: List[Optional[int]] = [
         None,
         None,
-        # None,
+        None,
     ]
     colours: List[str] = ["C0", "C1", "C2", "C3", "C4"]
     markers: List[str] = ["o", "s", "^", "v", "P"]

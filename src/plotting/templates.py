@@ -269,7 +269,7 @@ def D_g_mass_pdf(output_dir: Union[str, Path], series_list):
     _pdf(
         output_dir,
         series_list,
-        r"PDF_D_g",
+        r"PDF_D_g_mass",
         r"$D_g / D_p$",
         r"Mass-weighted $PDF(D_g)$",
         0.0,
