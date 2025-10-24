@@ -3,9 +3,9 @@
 #SBATCH --ntasks=1
 #SBATCH --mem-per-cpu=32G
 #SBATCH --time=5:00:00
-#SBATCH -J analysisRUN7
-#SBATCH -o log_ana8.o%j
-#SBATCH -e log_ana8.e%j
+#SBATCH -J analysisRUN10
+#SBATCH -o log_ana10.o%j
+#SBATCH -e log_ana10.e%j
 #SBATCH -p shared
 #SBATCH --mail-user=lukwidmer@ucsb.edu
 #SBATCH --mail-type=NONE
@@ -15,19 +15,11 @@ module load conda texlive
 eval "$(conda shell.bash hook)"
 conda activate PARTIES_postprocess_anvil
 
-# PYTHONPATH=. python ./main.py \
-# 	--output_dir="/home/x-lwidmer/Documents/PARTIES_postprocess/output/RUN7" \
-# 	--utexas_data_dir="/home/x-lwidmer/Documents/PARTIES_postprocess/data" \
-# 	--parties_data_dir="/anvil/scratch/x-lwidmer/RUN7" \
-# 	-trn \
-# 	--num_workers=8 \
-# 	--min_file_index=99351 \
-# 	--max_file_index=125152
-# 	# --use_threading
 
 PYTHONPATH=. python ./main.py \
-	--output_dir="/home/x-lwidmer/Documents/PARTIES_postprocess/output/RUN8" \
+	--output_dir="/home/x-lwidmer/Documents/PARTIES_postprocess/output/RUN10" \
 	--utexas_data_dir="/home/x-lwidmer/Documents/PARTIES_postprocess/data" \
-	--parties_data_dir="/anvil/scratch/x-lwidmer/RUN8" \
+	--parties_data_dir="/anvil/scratch/x-lwidmer/RUN10" \
+	--trn \
 	--num_workers=8 \
 	--min_file_index=101
