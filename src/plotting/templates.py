@@ -13,6 +13,7 @@ from src.plotting.tools import (
     format_plot_axes,
 )
 from src import globals
+from src.myio.myio import MyPath
 
 
 def velocity_profile_wall(
@@ -333,4 +334,28 @@ def mass_avg_D_g(
         r"mass_avg_D_g",
         r"$\langle D_g \rangle_\text{mass}$",
         inner_units,
+    )
+
+# -------------------- Fluid volume fraction --------------------
+
+def phi_eulerian(
+    output_dir: MyPath,
+    series_list: List[PlotSeries],
+    normalised: bool
+) -> None:
+    out_path = Path(output_dir) / f"phi_eulerian{"_norm" if normalised else ""}.png"
+    xlabel: str = r"$y = \tilde y/L$ [-]"
+    ylabel: str = r"$\langle \phi \rangle$ [%]"
+    if normalised:
+        ylabel: str = r"$\langle \phi / \phi_0 \rangle$ [-]"
+
+    generic_plot(
+        out_path,
+        list(series_list),
+        xlabel=xlabel,
+        ylabel=ylabel,
+        figsize=(6.5, 5.5),
+        legend_loc="lower right",
+        legend_bbox=(1.0, 0.80),
+        dpi=150,
     )

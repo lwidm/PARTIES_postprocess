@@ -303,22 +303,22 @@ def process_mean_phi(
     fluid_files: List[Path] = myio.list_data_files(
         parties_data_dir, "Data", min_file_index, max_file_index
     )
-
-    grid: Dict[str, np.ndarray] = get_grid(fluid_files[0])
-
     n_snapshots: int = len(fluid_files)
 
     if n_snapshots == 0:
-        raise ValueError("no fluid files provided")
+        raise ValueError(f"no fluid files provided (looking in {parties_data_dir} with min_file_index {min_file_index} and max_file_index {max_file_index})")
+
+    grid: Dict[str, np.ndarray] = get_grid(fluid_files[0])
+
 
     dset: h5py.Dataset
     with h5py.File(fluid_files[0], "r") as h5file_sample:
         dset = h5file_sample["vfv"]  # type: ignore
-
-    vfv_Nz, vfv_Ny, vfv_Nx = dset.shape
-    Nx: int = vfv_Nx - 1
+        print(dset)
+        vfv_Nz, vfv_Ny, vfv_Nx = dset.shape
+    Nx: int = (vfv_Nx - 1) * 2
     Ny: int = (vfv_Ny - 1) // 2
-    Nz: int = (vfv_Nz - 1) * 2
+    Nz: int = vfv_Nz - 1
     vfv_dtype = dset.dtype
 
     results: Dict[str, np.ndarray] = {
@@ -340,7 +340,9 @@ def process_mean_phi(
     )
     vfv_mirr_buf: np.ndarray = np.empty((Nz, Ny, Nx), dtype=vfv_dtype)
     vfv_mean_buf: np.ndarray = np.empty(Ny, dtype=vfv_dtype)
-    vfv_err_buf: np.ndarray = np.empty(Ny, dtype=vfv_dtype)
+    vfv_err_buf: Optional[np.ndarray] = None
+    if compute_err:
+        vfv_err_buf = np.empty(Ny, dtype=vfv_dtype)
 
     # first pass: accumulate means
     for fluid_file in tqdm.tqdm(fluid_files, desc="Processing mean phi"):
@@ -361,6 +363,7 @@ def process_mean_phi(
 
     # second pass: compute variance
     if compute_err:
+        assert vfv_err_buf is not None
         for fluid_file in tqdm.tqdm(fluid_files, desc="Processing mean phi"):
             with h5py.File(fluid_file, "r") as h5_file:
                 dset = h5_file["vfv"]  # type: ignore

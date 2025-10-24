@@ -1,12 +1,13 @@
-from typing import Optional, Union, Tuple
+from typing import Optional, Tuple
 from pathlib import Path
 
 from src.fluid import flow_statistics as fstat
+from src.myio.myio import MyPath
 
 
 def main(
-    parties_data_dir: Union[str, Path],
-    output_dir: Union[str, Path],
+    parties_data_dir: MyPath,
+    output_dir: MyPath,
     min_file_index: Optional[int],
     max_file_index: Optional[int],
     compute: Tuple[bool],

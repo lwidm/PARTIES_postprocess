@@ -75,59 +75,32 @@ def fluid(utexas_dir: MyPath, plot_dir: MyPath):
     plt_templ.normal_stress_wall(plot_dir, all_stress_series)
 
 
-def floc(plot_dir: MyPath):
+def floc(
+    plot_dir: MyPath,
+    compute: bool,
+    compute_flocs: List[bool],
+    data_names: List[str],
+    labels: List[str],
+    trn: List[bool],
+    Re_tau: List[float],
+    parties_data_dir: MyPath,
+    output_dir: MyPath,
+    min_file_indices: List[Optional[int]],
+    max_file_indices: List[Optional[int]],
+    min_steady_times: List[Optional[float]],
+    max_steady_indices: List[Optional[int]],
+    colours: List[str],
+    markers: List[str],
+    linestyles: List[str],
+) -> None:
+
+    plot_dir = Path(plot_dir)
+    parties_data_dir = Path(output_dir)
+    output_dir = Path(output_dir)
 
     # ==============================
     # Inputs
     # ==============================
-
-    compute: bool = True
-    compute_flocs: List[bool] = [
-        False,
-        False,
-        True,
-    ]
-    data_names: List[str] = [
-        "phi1p5",
-        "phi5p0",
-        "phi5p0_new",
-    ]
-    labels: List[str] = [
-        r"$\phi_{1.5\%}$",
-        r"$\phi_{5\%}$",
-        r"$\phi_{5\%}$ new",
-    ]
-    trn: List[bool] = [False, True, True]
-    Re_tau: List[float] = [
-        189.54087993838434,
-        180,
-        180,
-    ]
-    parties_data_dir: str = "/media/usb/UCSB/data/"
-    output_dir: str = "/media/usb/UCSB/output/"
-    min_file_indices: List[Optional[int]] = [
-        None,
-        None,
-        None,
-    ]
-    max_file_indices: List[Optional[int]] = [
-        None,
-        None,
-        None,
-    ]
-    min_steady_times: List[Optional[float]] = [
-        200,
-        None,
-        None,
-    ]
-    max_steady_indices: List[Optional[int]] = [
-        None,
-        None,
-        None,
-    ]
-    colours: List[str] = ["C0", "C1", "C2", "C3", "C4"]
-    markers: List[str] = ["o", "s", "^", "v", "P"]
-    linestyles: List[str] = ["-", "--", "-.", ":"]
 
     # ==============================
     # Automation
@@ -135,10 +108,10 @@ def floc(plot_dir: MyPath):
 
     Num_data: int = len(data_names)
 
-    parties_data_dirs: List[str] = [
-        parties_data_dir + data_name for data_name in data_names
+    parties_data_dirs: List[Path] = [
+        parties_data_dir / data_name for data_name in data_names
     ]
-    output_dirs: List[str] = [output_dir + data_name for data_name in data_names]
+    output_dirs: List[Path] = [output_dir / data_name for data_name in data_names]
 
     time_idx_info: List[dict] = [{} for _ in range(Num_data)]
     for i in range(Num_data):
@@ -210,25 +183,23 @@ def floc(plot_dir: MyPath):
         PlotSeries,
     ]:
         (
-        s_n_p_PDF,
-        s_D_f_PDF,
-        s_D_g_PDF,
-        s_n_p_PDF_err,
-        s_D_f_PDF_err,
-        s_D_g_PDF_err,
-        s_mass_n_p_PDF,
-        s_mass_D_f_PDF,
-        s_mass_D_g_PDF,
-        s_mass_n_p_PDF_err,
-        s_mass_D_f_PDF_err,
-        s_mass_D_g_PDF_err,
-    ) = (
-            plt_series.floc_pdf(
-                floc_dir=Path(output_dir) / "flocs",
-                labels=[label for _ in range(6)],
-                colours=[colour for _ in range(6)],
-                markers=[marker for _ in range(6)],
-            )
+            s_n_p_PDF,
+            s_D_f_PDF,
+            s_D_g_PDF,
+            s_n_p_PDF_err,
+            s_D_f_PDF_err,
+            s_D_g_PDF_err,
+            s_mass_n_p_PDF,
+            s_mass_D_f_PDF,
+            s_mass_D_g_PDF,
+            s_mass_n_p_PDF_err,
+            s_mass_D_f_PDF_err,
+            s_mass_D_g_PDF_err,
+        ) = plt_series.floc_pdf(
+            floc_dir=Path(output_dir) / "flocs",
+            labels=[label for _ in range(6)],
+            colours=[colour for _ in range(6)],
+            markers=[marker for _ in range(6)],
         )
 
         return (
@@ -238,12 +209,12 @@ def floc(plot_dir: MyPath):
             s_n_p_PDF_err,
             s_D_f_PDF_err,
             s_D_g_PDF_err,
-        s_mass_n_p_PDF,
-        s_mass_D_f_PDF,
-        s_mass_D_g_PDF,
-        s_mass_n_p_PDF_err,
-        s_mass_D_f_PDF_err,
-        s_mass_D_g_PDF_err,
+            s_mass_n_p_PDF,
+            s_mass_D_f_PDF,
+            s_mass_D_g_PDF,
+            s_mass_n_p_PDF_err,
+            s_mass_D_f_PDF_err,
+            s_mass_D_g_PDF_err,
         )
 
     def get_series_avg(
@@ -316,7 +287,20 @@ def floc(plot_dir: MyPath):
             max_file_indices[i],
         )
         s_evo_list.append(s_evo)
-        s_np, s_Df, s_Dg, s_np_err, s_Df_err, s_Dg_err, s_np_mass, s_Df_mass, s_Dg_mass, s_np_mass_err, s_Df_mass_err, s_Dg_mass_err = get_series_pdf(
+        (
+            s_np,
+            s_Df,
+            s_Dg,
+            s_np_err,
+            s_Df_err,
+            s_Dg_err,
+            s_np_mass,
+            s_Df_mass,
+            s_Dg_mass,
+            s_np_mass_err,
+            s_Df_mass_err,
+            s_Dg_mass_err,
+        ) = get_series_pdf(
             output_dirs[i],
             colours[i],
             labels[i],
@@ -390,7 +374,114 @@ def floc(plot_dir: MyPath):
     )
 
 
+def phi_eulerian(
+    plot_dir: MyPath,
+    data_names: List[str],
+    labels: List[str],
+    output_dir: MyPath,
+    colours: List[str],
+    show_errs: bool,
+) -> None:
+    fluid_dirs: List[Path] = [
+        Path(output_dir) / data_name / "fluid" for data_name in data_names
+    ]
+
+    s_list: List[PlotSeries] = []
+    s_err_list: List[Optional[PlotSeries]] = []
+    for i, fluid_dir in enumerate(fluid_dirs):
+        s, s_err = plt_series.phi_eulerian(
+            fluid_dir=fluid_dir,
+            colour=colours[i],
+            linestyle="-",
+            label=labels[i],
+            normalised=True,
+            show_err=show_errs,
+        )
+        s_list.append(s)
+        s_err_list.append(s_err)
+
+    s_plot: List[PlotSeries] = []
+    if show_errs:
+        if any(x is None for x in s_err_list):
+            raise ValueError("s_err_lsit contains None entries")
+        s_plot += s_err_list  # type: ignore
+    s_plot += s_list
+
+    plt_templ.phi_eulerian(output_dir=plot_dir, series_list=s_plot, normalised=True)
+
+
 def main() -> None:
+
     plot_dir: Path = Path("./output/plots")
-    floc(plot_dir)
-    fluid("/media/usb/UCSB/output", plot_dir)
+
+    compute: bool = True
+    compute_flocs: List[bool] = [
+        # False,
+        # False,
+        True,
+    ]
+    data_names: List[str] = [
+        # "phi1p5",
+        # "phi5p0",
+        "phi5p0_new",
+    ]
+    labels: List[str] = [
+        # r"$\phi_{1.5\%}$",
+        # r"$\phi_{5\%}$",
+        r"$\phi_{5\%}$ new",
+    ]
+    trn: List[bool] = [
+        # False,
+        # True,
+        True
+    ]
+    Re_tau: List[float] = [
+        # 189.54087993838434,
+        # 180,
+        180,
+    ]
+    parties_data_dir: str = "/media/usb/UCSB/data/"
+    output_dir: str = "/media/usb/UCSB/output/"
+    min_file_indices: List[Optional[int]] = [
+        # None,
+        # None,
+        None,
+    ]
+    max_file_indices: List[Optional[int]] = [
+        # None,
+        # None,
+        None,
+    ]
+    min_steady_times: List[Optional[float]] = [
+        # 200,
+        # None,
+        None,
+    ]
+    max_steady_indices: List[Optional[int]] = [
+        # None,
+        # None,
+        None,
+    ]
+    colours: List[str] = ["C0", "C1", "C2", "C3", "C4"]
+    markers: List[str] = ["o", "s", "^", "v", "P"]
+    linestyles: List[str] = ["-", "--", "-.", ":"]
+    # floc(
+    #     plot_dir,
+    #     compute,
+    #     compute_flocs,
+    #     data_names,
+    #     labels,
+    #     trn,
+    #     Re_tau,
+    #     parties_data_dir,
+    #     output_dir,
+    #     min_file_indices,
+    #     max_file_indices,
+    #     min_steady_times,
+    #     max_steady_indices,
+    #     colours,
+    #     markers,
+    #     linestyles,
+    # )
+    # fluid("/media/usb/UCSB/output", plot_dir)
+    phi_eulerian(plot_dir, data_names, labels, output_dir, colours, True)

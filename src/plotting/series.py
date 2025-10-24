@@ -7,6 +7,7 @@ import h5py  # type: ignore
 import numpy as np
 
 from src.myio import myio
+from src.myio.myio import MyPath
 from src.plotting.tools import (
     PlotSeries,
 )
@@ -637,3 +638,63 @@ def Ekin_evolution(
             "fillstyle": "none",
         },
     )
+
+# -------------------- Fluid volume fraction --------------------
+
+def phi_eulerian(
+    fluid_dir: MyPath,
+    colour: str,
+    linestyle: str,
+    label: Optional[str],
+    normalised: bool,
+    show_err: bool,
+) -> Tuple[PlotSeries, Optional[PlotSeries]]:
+
+
+    mean_phi_h5: Path = Path(fluid_dir) / "mean_phi.h5"
+    yv: np.ndarray
+    Phi_mean: np.ndarray
+    Phi_mean_err: Optional[np.ndarray] = None
+    yv: np.ndarray
+    h5_postfix: str = "_norm" if normalised else ""
+    with h5py.File(mean_phi_h5, "r") as h5_file:
+        yv = h5_file["yv"][:] # type: ignore
+        Phi_mean = h5_file["Phi_mean" + h5_postfix][:] # type: ignore
+        if show_err:
+            Phi_mean_err = h5_file["Phi_err" + h5_postfix][:] # type: ignore
+
+    if not normalised:
+        Phi_mean *= 100 # convert to %
+
+    s: PlotSeries = PlotSeries(
+        data={"x": yv, "y": Phi_mean},
+            x_key="x",
+            y_key="y",
+            plot_method="plot",
+            kwargs={
+                "label": label,
+                "linestyle": linestyle,
+                "color": colour,
+            },
+        )
+
+    if show_err:
+        assert Phi_mean_err is not None
+        s_err: PlotSeries = PlotSeries(
+            data={ "x": yv, "y": Phi_mean, "y_err": Phi_mean_err,},
+            x_key="x",
+            y_key="y",
+            plot_method="err_plot",
+            kwargs={
+                "color": "k",
+                "linestyle": "None",
+                "fmt": "None",
+                "ecolor": "k",
+                "elinewidth": 0.6,
+                "capsize": 2,
+                "capthick": 0.8,
+                "barsabove": True,
+            },
+        )
+        return s, s_err
+    return s, None
