@@ -316,7 +316,6 @@ def streaming_data_files_generator(
 
     if not files_to_process:
         return
-        yield
 
     with ThreadPoolExecutor(max_workers=max(1, download_workers)) as ex:
         futures = [ex.submit(downlaod_and_return_local, p) for p in files_to_process]
@@ -560,3 +559,49 @@ def find_idx_from_time(
             return {"position": pos, "path": data_file, "file_idx": file_index}
 
     return {"position": None, "path": None, "file_idx": None}
+
+
+def mirror_and_append_along_y(arr: np.ndarray):
+    """
+    Split a 3D array along the y-axis (middle j), mirror the top half,
+    and append it to the right of the bottom half.
+    """
+    Nx, Ny, Nz = arr.shape
+    split_idx = Ny // 2
+
+    result: np.ndarray = np.empty((Nx, split_idx, 2 * Nz), dtype=arr.dtype)
+
+    bottom_view: np.ndarray = arr[:, :split_idx, :]
+    top_view: np.ndarray = arr[:, -split_idx:, :]
+
+    result[:, :, :Nz] = bottom_view
+
+    for i in range(split_idx):
+        result[:, i, Nz:] = top_view[:, split_idx - 1 - i, :]
+
+    return result
+
+
+def mirror_and_append_along_y_inplace(arr: np.ndarray, result: np.ndarray):
+    """
+    Split a 3D array along the y-axis (middle j), mirror the top half,
+    and append it to the right of the bottom half.
+    This functions is inteded to update a preallocated numpy array (result)
+    """
+    Nx, Ny, Nz = arr.shape
+    split_idx = Ny // 2
+
+    expected_shape = (Nx, split_idx, Nz * 2)
+    if result.shape != expected_shape:
+        raise ValueError(
+            f"result has shape {result.shape}, expected {expected_shape} for input arr.shape={arr.shape}"
+        )
+
+    bottom_view: np.ndarray = arr[:, :split_idx, :]
+    top_view: np.ndarray = arr[:, -split_idx:, :]
+
+    result[:, :, :Nz] = bottom_view
+
+    for i in range(split_idx):
+        result[:, i, Nz:] = top_view[:, split_idx - 1 - i, :]
+

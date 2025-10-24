@@ -102,5 +102,11 @@ if __name__ == "__main__":
     #     args.min_file_index,
     #     args.max_file_index,
     # )
-
-    scripts.run_meeting_2025_10_23.main()
+    # scripts.run_meeting_2025_10_23.main()
+    scripts.run_phi_eulerian.main(
+        args.parties_data_dir,
+        args.output_dir,
+        args.min_file_index,
+        args.max_file_index,
+        compute=(True,),
+    )

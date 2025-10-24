@@ -3,9 +3,12 @@
 import numpy as np
 import h5py  # type: ignore
 from pathlib import Path
-from typing import Union, Dict, Literal, List, Tuple, Any
+from typing import Union, Dict, Literal, List, Tuple, Any, Optional
 import tqdm  # type: ignore
 import gc
+
+from src.myio import myio
+from src.myio.myio import MyPath
 
 
 def get_grid(fluid_file: Union[str, Path]) -> Dict[str, np.ndarray]:
@@ -287,3 +290,100 @@ def calc_tot_fluid_Ekin(fluid_file_path: Union[str, Path], Re: float) -> float:
     V_fluid: float = grid["xu"][-1] * grid["yv"][-1] * grid["zw"][-1] * (1 - phi)
     E_kin = Re / 2 * V_fluid * float(mean_u_squared)
     return E_kin
+
+
+def process_mean_phi(
+    parties_data_dir: MyPath,
+    output_h5: MyPath,
+    compute_err: bool,
+    min_file_index: Optional[int],
+    max_file_index: Optional[int],
+) -> Dict[str, np.ndarray]:
+
+    fluid_files: List[Path] = myio.list_data_files(
+        parties_data_dir, "Data", min_file_index, max_file_index
+    )
+
+    grid: Dict[str, np.ndarray] = get_grid(fluid_files[0])
+
+    n_snapshots: int = len(fluid_files)
+
+    if n_snapshots == 0:
+        raise ValueError("no fluid files provided")
+
+    dset: h5py.Dataset
+    with h5py.File(fluid_files[0], "r") as h5file_sample:
+        dset = h5file_sample["vfv"]  # type: ignore
+
+    vfv_Nz, vfv_Ny, vfv_Nx = dset.shape
+    Nx: int = vfv_Nx - 1
+    Ny: int = (vfv_Ny - 1) // 2
+    Nz: int = (vfv_Nz - 1) * 2
+    vfv_dtype = dset.dtype
+
+    results: Dict[str, np.ndarray] = {
+        "yv": grid["yv"][:Ny].copy(),
+        "Phi_mean": np.zeros(Ny, dtype=vfv_dtype),
+        "Phi_mean_norm": np.zeros(Ny, dtype=vfv_dtype),
+    }
+    if compute_err:
+        results.update(
+            {
+                "Phi_err": np.zeros(Ny, dtype=vfv_dtype),
+                "Phi_err_norm": np.zeros(Ny, dtype=vfv_dtype),
+            }
+        )
+
+    # preallocated working buffers
+    vfv_buf: np.ndarray = np.empty(
+        (vfv_Nz - 1, vfv_Ny - 1, vfv_Nx - 1), dtype=vfv_dtype
+    )
+    vfv_mirr_buf: np.ndarray = np.empty((Nz, Ny, Nx), dtype=vfv_dtype)
+    vfv_mean_buf: np.ndarray = np.empty(Ny, dtype=vfv_dtype)
+    vfv_err_buf: np.ndarray = np.empty(Ny, dtype=vfv_dtype)
+
+    # first pass: accumulate means
+    for fluid_file in tqdm.tqdm(fluid_files, desc="Processing mean phi"):
+        with h5py.File(fluid_file, "r") as h5_file:
+            dset = h5_file["vfv"]  # type: ignore
+            dset.read_direct(vfv_buf, np.s_[:-1, :-1, :-1])
+        myio.mirror_and_append_along_y_inplace(vfv_buf, vfv_mirr_buf)
+        np.mean(vfv_mirr_buf, axis=(0, 2), out=vfv_mean_buf)
+        results["Phi_mean"] += vfv_mean_buf
+        phi_tot: float = np.sum(vfv_mean_buf, axis=None) / float(Ny)
+        np.divide(vfv_mean_buf, phi_tot, out=vfv_mean_buf)
+        results["Phi_mean_norm"] += vfv_mean_buf
+
+    np.divide(results["Phi_mean"], float(n_snapshots), out=results["Phi_mean"])
+    np.divide(
+        results["Phi_mean_norm"], float(n_snapshots), out=results["Phi_mean_norm"]
+    )
+
+    # second pass: compute variance
+    if compute_err:
+        for fluid_file in tqdm.tqdm(fluid_files, desc="Processing mean phi"):
+            with h5py.File(fluid_file, "r") as h5_file:
+                dset = h5_file["vfv"]  # type: ignore
+                dset.read_direct(vfv_buf, np.s_[:-1, :-1, :-1])
+            myio.mirror_and_append_along_y_inplace(vfv_buf, vfv_mirr_buf)
+            np.mean(vfv_mirr_buf, axis=(0, 2), out=vfv_mean_buf)
+            np.subtract(vfv_mean_buf, results["Phi_mean"], out=vfv_err_buf)
+            np.multiply(vfv_err_buf, vfv_err_buf, out=vfv_err_buf)
+            results["Phi_err"] += vfv_err_buf
+
+            phi_tot: float = np.sum(vfv_mean_buf, axis=None) / Ny
+            np.divide(vfv_mean_buf, phi_tot, out=vfv_mean_buf)
+            np.subtract(vfv_mean_buf, results["Phi_mean_norm"], out=vfv_err_buf)
+            np.multiply(vfv_err_buf, vfv_err_buf, out=vfv_err_buf)
+            results["Phi_err_norm"] += vfv_err_buf
+
+        np.divide(results["Phi_err"], float(n_snapshots), out=results["Phi_err"])
+        np.divide(
+            results["Phi_err_norm"], float(n_snapshots), out=results["Phi_err_norm"]
+        )
+        np.sqrt(results["Phi_err"], out=results["Phi_err"])
+        np.sqrt(results["Phi_err_norm"], out=results["Phi_err_norm"])
+
+    myio.save_to_h5(output_h5, results)
+
+    return results

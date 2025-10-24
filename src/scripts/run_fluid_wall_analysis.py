@@ -1,11 +1,11 @@
 # -- src/scripts/run_fuild_wall_analysis.py
 
-from typing import Optional, List, Dict, Union, Literal
+from typing import Optional, List, Dict, Union, Tuple
 from pathlib import Path
 import numpy as np
 
-from src import globals
 from src.myio import myio
+from src.myio.myio import MyPath
 from src.fluid import flow_statistics as fstat
 from src import theory
 from src import plotting
@@ -13,15 +13,10 @@ from src.plotting.tools import PlotSeries
 
 
 def compute_all_reynolds_stresses(
-    parties_data_dir: Union[str, Path],
-    output_dir: Union[str, Path],
+    parties_data_dir: MyPath,
     Re: float,
     min_file_index: Optional[int] = None,
     max_file_index: Optional[int] = None,
-    num_workers_single_component: Optional[int] = None,
-    num_workers_cross_component: Optional[int] = None,
-    use_threads: bool = False,
-    save_intermediates: bool = True,
 ) -> Dict[str, Union[np.ndarray, float]]:
     """
     Compute all Reynolds stresses using ADLeonelli's code
@@ -130,24 +125,16 @@ def compute_and_save_utexas(
 
 def compute_and_save_parties(
     parties_data_dir: Union[str, Path],
-    output_dir: Union[str, Path],
-    output_h5_filename: str,
+    output_h5: Union[str, Path],
     Re: float,
     min_file_index: Optional[int] = None,
     max_file_index: Optional[int] = None,
-    num_workers_single_component: Optional[int] = None,
-    num_workers_cross_component: Optional[int] = None,
-    use_threads: bool = False,
 ) -> Dict[str, Union[np.ndarray, float]]:
     parties_results = compute_all_reynolds_stresses(
         parties_data_dir,
-        output_dir,
         Re,
         min_file_index,
         max_file_index,
-        num_workers_single_component,
-        num_workers_cross_component,
-        use_threads,
     )
 
     # compute law-of-the-wall fits & profiles for PARTIES
@@ -181,7 +168,7 @@ def compute_and_save_parties(
         "min_index": min_file_index,
         "max_index": max_file_index,
     }
-    myio.save_to_h5(Path(output_dir) / output_h5_filename, parties_results, meta)
+    myio.save_to_h5(output_h5, parties_results, meta)
     return parties_results
 
 
@@ -189,8 +176,9 @@ def main(
     parties_data_dir: Union[str, Path],
     utexas_data_dir: Union[str, Path],
     output_dir: Union[str, Path],
-    min_file_index: Optional[int] = None,
-    max_file_index: Optional[int] = None,
+    min_file_index: Optional[int],
+    max_file_index: Optional[int],
+    compute: Tuple[bool, bool],
 ):
 
     # =============================================================================
@@ -202,34 +190,26 @@ def main(
     output_dir = Path(output_dir) / "fluid"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    num_workers_single_component: Optional[int] = 5
-    num_workers_cross_component: Optional[int] = 2
-
-    if globals.on_anvil:
-        num_workers_single_component = 8
-        num_workers_cross_component = 4
-
     Path(output_dir).mkdir(parents=True, exist_ok=True)
 
-    # processing_method: Literal["load", "compute"] = "load"
-    processing_method: Literal["load", "compute"] = "compute"
 
     # =============================================================================
     # Computation and plotting
     # =============================================================================
 
-    plot_dir = output_dir / "plots"
-    utexas_h5 = output_dir / "utexas.h5"
-    results_utexas = compute_and_save_utexas(utexas_data_dir, utexas_h5)
-    parties_processed_filename = "parties_reynolds.h5"
-    results_parties = compute_and_save_parties(
-        parties_data_dir,
-        output_dir,
-        parties_processed_filename,
-        Re,
-        min_file_index,
-        max_file_index,
-    )
+    plot_dir: Path = output_dir / "plots"
+    utexas_h5: Path = output_dir / "utexas.h5"
+    reynolds_h5: Path = output_dir / "parties_reynolds.h5"
+    if compute[0]:
+        compute_and_save_utexas(utexas_data_dir, utexas_h5)
+    if compute[1]:
+        compute_and_save_parties(
+            parties_data_dir,
+            reynolds_h5,
+            Re,
+            min_file_index,
+            max_file_index,
+        )
 
     plot_dir: Path = Path(output_dir) / "plots"
     plot_dir.mkdir(parents=True, exist_ok=True)
@@ -238,7 +218,7 @@ def main(
         utexas_h5
     )
     parties_wall_series: List[PlotSeries] = plotting.series.u_plus_mean_wall_parties(
-        output_dir / parties_processed_filename, label="PARTIES", colour="C1"
+        reynolds_h5, label="PARTIES", colour="C1"
     )
     all_wall_series: List[PlotSeries] = utexas_wall_series + parties_wall_series
     plotting.templates.velocity_profile_wall(plot_dir, all_wall_series)
@@ -248,7 +228,7 @@ def main(
     )
     parties_stress_series: List[PlotSeries] = (
         plotting.series.normal_stress_wall_parties(
-            output_dir / parties_processed_filename, label="PARTIES", colour="C1"
+            reynolds_h5, label="PARTIES", colour="C1"
         )
     )
     all_stress_series: List[PlotSeries] = utexas_stress_series + parties_stress_series
