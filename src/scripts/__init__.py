@@ -11,6 +11,7 @@ from . import (
     run_all_plots,
     run_phi_eulerian,
     run_double_check,
+    run_get_start_steady,
 )
 
 __all__ = [
@@ -20,4 +21,5 @@ __all__ = [
     "run_all_plots",
     "run_phi_eulerian",
     "run_double_check",
+    "run_get_start_steady",
 ]

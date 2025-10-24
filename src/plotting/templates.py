@@ -117,10 +117,6 @@ def velocity_profile_wall(
 
     fig.savefig(str(plot_filename), dpi=dpi)
 
-    if not globals.on_anvil:
-        plt.show()
-    plt.close(fig)
-
 
 def normal_stress_wall(
     output_dir: Union[str, Path],

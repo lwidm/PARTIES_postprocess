@@ -8,7 +8,9 @@ from src.plotting.tools import PlotSeries
 from src.plotting import series as plt_series
 from src.plotting import templates as plt_templ
 from src.scripts.run_floc_analysis import process_flocs
+from src import globals
 
+from matplotlib import pyplot as plt
 
 def fluid(utexas_dir: MyPath, plot_dir: MyPath):
 
@@ -97,14 +99,6 @@ def floc(
     plot_dir = Path(plot_dir)
     parties_data_dir = Path(output_dir)
     output_dir = Path(output_dir)
-
-    # ==============================
-    # Inputs
-    # ==============================
-
-    # ==============================
-    # Automation
-    # ==============================
 
     Num_data: int = len(data_names)
 
@@ -485,3 +479,5 @@ def main() -> None:
     # )
     # fluid("/media/usb/UCSB/output", plot_dir)
     phi_eulerian(plot_dir, data_names, labels, output_dir, colours, True)
+    if not globals.on_anvil:
+        plt.show()

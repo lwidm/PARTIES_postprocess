@@ -228,9 +228,6 @@ def generic_plot(
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(str(out_path), dpi=dpi)
 
-    if not globals.on_anvil:
-        plt.show()
-    plt.close(fig)
 
 def generic_hist_plot(
     output_path: Union[str, Path],
@@ -276,6 +273,3 @@ def generic_hist_plot(
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(str(out_path), dpi=dpi)
 
-    if not globals.on_anvil:
-        plt.show()
-    plt.close(fig)

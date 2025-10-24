@@ -10,6 +10,8 @@ from src import globals
 from src.myio import myio
 from src.fluid import flow_statistics as fstat
 from src import plotting
+from src import globals
+from matplotlib import pyplot as plt
 
 
 def compute_fluid_Ekin_evolution(
@@ -89,3 +91,6 @@ def main(
     s = plotting.series.Ekin_evolution(output_dir / "E_kin.h5", 'k', '-', 'None', 'None')
 
     plotting.templates.fluid_Ekin_evolution(plot_dir, [s])
+
+    if not globals.on_anvil:
+        plt.show()

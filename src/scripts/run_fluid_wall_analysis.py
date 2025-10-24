@@ -3,12 +3,14 @@
 from typing import Optional, List, Dict, Union, Tuple
 from pathlib import Path
 import numpy as np
+from matplotlib import pyplot as plt
 
 from src.myio import myio
 from src.myio.myio import MyPath
 from src.fluid import flow_statistics as fstat
 from src import theory
 from src import plotting
+from src import globals
 from src.plotting.tools import PlotSeries
 
 
@@ -240,3 +242,6 @@ def main(
     data_file: Path = data_files[-1]
     phi: float = fstat.calc_tot_vol_frac(data_file)
     print(f"Total volume fraction is {phi*100} %")
+
+    if not globals.on_anvil:
+        plt.show()
