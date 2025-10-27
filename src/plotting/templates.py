@@ -12,7 +12,6 @@ from src.plotting.tools import (
     update_plot_params,
     format_plot_axes,
 )
-from src import globals
 from src.myio.myio import MyPath
 
 
@@ -147,6 +146,7 @@ def normal_stress_wall(
     generic_plot(
         Path(output_dir) / "wall_normal_stress.png",
         list(series_list),
+        legend=True,
         xlabel=r"$y^+$",
         ylabel="$\\left\\{\\langle u^\\prime u^\\prime \\rangle,\\; \\langle v^\\prime v^\\prime \\rangle,\\; \\langle w^\\prime w^\\prime \\rangle,\\; \\langle k \\rangle\\right\\}/u_\\tau^2$",
         figsize=(6.5, 5.5),
@@ -168,6 +168,7 @@ def floc_count_evolution(
     generic_plot(
         out_path,
         list(series_list),
+        legend=True,
         xlabel=r"Dimensionless time, $\tau = L/U$ [-]",
         ylabel=ylabel,
         figsize=(6.5, 5.5),
@@ -182,6 +183,7 @@ def fluid_Ekin_evolution(output_dir: Union[str, Path], series_list) -> None:
     generic_plot(
         out_path,
         list(series_list),
+        legend=True,
         xlabel=r"Dimensionless time, $\tau = L/U$ [-]",
         ylabel=r"Dimensionless energy, $E_{kin}$ [-]",
         figsize=(6.5, 5.5),
@@ -205,6 +207,7 @@ def _pdf(
     generic_plot(
         out_path,
         list(series_list),
+        legend=True,
         xlabel=xlabel,
         ylabel=ylabel,
         xlim=(xmin, xmax),
@@ -217,7 +220,16 @@ def _pdf(
 
 
 def n_p_pdf(output_dir: Union[str, Path], series_list):
-    _pdf(output_dir, series_list, r"PDF_n_p", r"\#Particles in floc, $n_p$", r"$PDF(n_p)$", 0.9, 4.5, 1e-3)
+    _pdf(
+        output_dir,
+        series_list,
+        r"PDF_n_p",
+        r"\#Particles in floc, $n_p$",
+        r"$PDF(n_p)$",
+        0.9,
+        20,
+        1e-3,
+    )
 
 
 def D_f_pdf(output_dir: Union[str, Path], series_list):
@@ -245,8 +257,18 @@ def D_g_pdf(output_dir: Union[str, Path], series_list):
         1e-6,
     )
 
+
 def n_p_mass_pdf(output_dir: Union[str, Path], series_list):
-    _pdf(output_dir, series_list, r"PDF_n_p_mass", r"\#Particles in floc, $n_p$", r"Mass-weighted $PDF(n_p)$", 0.9, 4.5, 1e-3)
+    _pdf(
+        output_dir,
+        series_list,
+        r"PDF_n_p_mass",
+        r"\#Particles in floc, $n_p$",
+        r"Mass-weighted $PDF(n_p)$",
+        0.9,
+        20,
+        1e-3,
+    )
 
 
 def D_f_mass_pdf(output_dir: Union[str, Path], series_list):
@@ -274,6 +296,7 @@ def D_g_mass_pdf(output_dir: Union[str, Path], series_list):
         1e-6,
     )
 
+
 def _avg_floc_dir(
     output_dir: Union[str, Path], series_list, name: str, ylabel: str, inner_units: bool
 ) -> None:
@@ -284,6 +307,7 @@ def _avg_floc_dir(
     generic_plot(
         out_path,
         list(series_list),
+        legend=True,
         xlabel=xlabel,
         ylabel=ylabel,
         figsize=(6.5, 5.5),
@@ -332,12 +356,12 @@ def mass_avg_D_g(
         inner_units,
     )
 
+
 # -------------------- Fluid volume fraction --------------------
 
+
 def phi_eulerian(
-    output_dir: MyPath,
-    series_list: List[PlotSeries],
-    normalised: bool
+    output_dir: MyPath, series_list: List[PlotSeries], normalised: bool
 ) -> None:
     out_path = Path(output_dir) / f"phi_eulerian{"_norm" if normalised else ""}.png"
     xlabel: str = r"$y = \tilde y/L$ [-]"
@@ -348,10 +372,10 @@ def phi_eulerian(
     generic_plot(
         out_path,
         list(series_list),
+        legend=True,
         xlabel=xlabel,
         ylabel=ylabel,
         figsize=(6.5, 5.5),
         legend_loc="lower right",
-        legend_bbox=(1.0, 0.80),
         dpi=150,
     )

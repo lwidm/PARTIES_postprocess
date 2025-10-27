@@ -2,12 +2,10 @@ from typing import Optional, Tuple, List
 from pathlib import Path
 
 from src import scripts
-from src.myio import myio
 from src.myio.myio import MyPath
 from src.plotting.tools import PlotSeries
 from src.plotting import series as plt_series
 from src.plotting import templates as plt_templ
-from src.scripts.run_floc_analysis import process_flocs
 from src import globals
 
 from matplotlib import pyplot as plt
@@ -24,13 +22,13 @@ def fluid(utexas_dir: MyPath, plot_dir: MyPath):
 
     data_names: List[str] = [
         # "phi1p5",
-        "phi5p0",
-        # "phi5p0_new",
+        # "phi5p0",
+        "phi5p0_new",
     ]
     labels: List[str] = [
         # r"$\phi_{1.5\%}$",
-        r"$\phi_{5\%}$",
-        # r"$\phi_{5\%}$ new",
+        # r"$\phi_{5\%}$",
+        r"$\phi_{5\%}$ new",
     ]
     parties_data_dir: Path = parent_dir / "data/"
     output_dir: Path = parent_dir / "output/"
@@ -68,8 +66,7 @@ def fluid(utexas_dir: MyPath, plot_dir: MyPath):
     for i in range(Num_data):
         parties_stress_series.append(
             plt_series.normal_stress_wall_parties(
-                Path(output_dir / data_names[i] / "/fluid")
-                / parties_processed_filename,
+                output_dir / data_names[i] / "fluid" / parties_processed_filename,
                 label=labels[i],
                 colour=colours[i],
             )
@@ -92,8 +89,10 @@ def floc(
     output_dir: MyPath,
     min_file_indices: List[Optional[int]],
     max_file_indices: List[Optional[int]],
-    min_steady_times: List[Optional[float]],
+    min_steady_indices: List[Optional[int]],
     max_steady_indices: List[Optional[int]],
+    min_trn_steady_indices: List[Optional[int]],
+    max_trn_steady_indices: List[Optional[int]],
     colours: List[str],
     markers: List[str],
     linestyles: List[str],
@@ -110,24 +109,13 @@ def floc(
     ]
     output_dirs: List[Path] = [output_dir / data_name for data_name in data_names]
 
-    time_idx_info: List[dict] = [{} for _ in range(Num_data)]
-    for i in range(Num_data):
-        min_steady_time = min_steady_times[i]
-        if min_steady_time is None:
-            time_idx_info[i] = {"file_idx": None}
-        else:
-            time_idx_info[i] = myio.find_idx_from_time(
-                file_prefix="Particle",
-                data_dir=parties_data_dirs[i],
-                target_time=min_steady_time,
-            )
-    min_steady_indices: List[Optional[int]] = [
-        info["file_idx"] for info in time_idx_info
-    ]
-
     plot_dir = Path(plot_dir)
     if compute:
         for i in range(len(parties_data_dirs)):
+            min_idx: Optional[int] = min_trn_steady_indices[i] if trn[i] else min_steady_indices[i]
+            max_idx: Optional[int] = max_trn_steady_indices[i] if trn[i] else max_steady_indices[i]
+            print(f"min_idx {min_idx}")
+            print(f"max_idx {max_idx}")
             scripts.run_floc_analysis.main(
                 parties_data_dir=parties_data_dirs[i],
                 output_dir=output_dirs[i],
@@ -136,8 +124,8 @@ def floc(
                 process_flocs=compute_flocs[i],
                 min_file_index=min_file_indices[i],
                 max_file_index=max_file_indices[i],
-                min_steady_index=min_steady_indices[i],
-                max_steady_index=max_steady_indices[i],
+                min_steady_index=min_idx,
+                max_steady_index=max_idx,
                 num_workers=6,
                 use_threading=False,
             )
@@ -156,7 +144,7 @@ def floc(
             min_file_index,
             max_file_index,
             normalised=True,
-            reset_time=False,
+            reset_time=True,
         )
         return s
 
@@ -382,6 +370,7 @@ def phi_eulerian(
     fluid_dirs: List[Path] = [
         Path(output_dir) / data_name / "fluid" for data_name in data_names
     ]
+    print(fluid_dirs[0])
 
     s_list: List[PlotSeries] = []
     s_err_list: List[Optional[PlotSeries]] = []
@@ -449,7 +438,7 @@ def main() -> None:
         # None,
         None,
     ]
-    min_steady_times: List[Optional[float]] = [
+    min_steady_indices: List[Optional[int]] = [
         268,
         # None,
         206,
@@ -459,28 +448,40 @@ def main() -> None:
         # None,
         None,
     ]
+    min_trn_steady_indices: List[Optional[int]] = [
+        None,
+        # None,
+        170912,
+    ]
+    max_trn_steady_indices: List[Optional[int]] = [
+        None,
+        # None,
+        None,
+    ]
     colours: List[str] = ["C0", "C1", "C2", "C3", "C4"]
     markers: List[str] = ["o", "s", "^", "v", "P"]
     linestyles: List[str] = ["-", "--", "-.", ":"]
-    # floc(
-    #     plot_dir,
-    #     compute,
-    #     compute_flocs,
-    #     data_names,
-    #     labels,
-    #     trn,
-    #     Re_tau,
-    #     parties_data_dir,
-    #     output_dir,
-    #     min_file_indices,
-    #     max_file_indices,
-    #     min_steady_times,
-    #     max_steady_indices,
-    #     colours,
-    #     markers,
-    #     linestyles,
-    # )
+    floc(
+        plot_dir,
+        compute,
+        compute_flocs,
+        data_names,
+        labels,
+        trn,
+        Re_tau,
+        parties_data_dir,
+        output_dir,
+        min_file_indices,
+        max_file_indices,
+        min_steady_indices,
+        max_steady_indices,
+        min_trn_steady_indices,
+        max_trn_steady_indices,
+        colours,
+        markers,
+        linestyles,
+    )
     fluid(parent_dir / "output", plot_dir)
-    phi_eulerian(plot_dir, data_names, labels, output_dir, colours, True)
+    phi_eulerian(plot_dir, [data_names[1]], [labels[1]], output_dir, colours, False)
     if not globals.on_anvil:
         plt.show()

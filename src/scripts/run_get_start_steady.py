@@ -36,6 +36,11 @@ def main():
         # None,
         None,
     ]
+    trn: List[bool] = [
+        False,
+        # True,
+        True,
+    ]
     colours: List[str] = ["C0", "C1", "C2", "C3", "C4"]
 
     plot_dir = Path(plot_dir)
@@ -83,6 +88,9 @@ def main():
         time: float = xy[0][0]
         info: Dict[str, Any] = myio.find_idx_from_time("Particle", parties_data_dirs[i], time)
         print(f"{data_names[i]}: time: {time}, idx: {info["file_idx"]}")
+        if trn[i]:
+            info2: Dict[str, Any] = myio.find_idx_from_time("Particle", parties_data_dirs[i] / "trn", time)
+            print(f"TRN: {data_names[i]}: time: {time}, idx: {info2["file_idx"]}")
 
     if not globals.on_anvil:
         plt.show()

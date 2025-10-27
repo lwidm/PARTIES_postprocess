@@ -48,12 +48,6 @@ def format_plot_axes(axes: Axes) -> Axes:
     axes.spines["left"].set_linewidth(1.2)
     axes.spines["bottom"].set_linewidth(1.0)
     axes.tick_params(axis="both", which="both", direction="out", labelsize=12)
-    # legend handling is left to callers; keep the frame off by default
-    try:
-        axes.legend(frameon=False, fontsize=12)
-    except Exception:
-        # no legend present yet
-        pass
     plt.tight_layout()
     return axes
 
@@ -187,6 +181,7 @@ def _plot_one(ax: Axes, series: PlotSeries) -> None:
 def generic_plot(
     output_path: Union[str, Path],
     series_list: Sequence[PlotSeries],
+    legend:bool,
     figsize: Tuple[float, float] = (6.5, 5.5),
     xlabel: Optional[str] = None,
     ylabel: Optional[str] = None,
@@ -214,57 +209,12 @@ def generic_plot(
     if ylim is not None:
         ax.set_ylim(*ylim)
 
-    legend_kwargs = {}
-    if legend_loc is not None:
-        legend_kwargs["loc"] = legend_loc
-    if legend_bbox is not None:
-        legend_kwargs["bbox_to_anchor"] = legend_bbox
-    if legend_kwargs:
-        ax.legend(**legend_kwargs)
-
-    ax = format_plot_axes(ax)
-
-    out_path = Path(output_path)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(str(out_path), dpi=dpi)
-
-
-def generic_hist_plot(
-    output_path: Union[str, Path],
-    series_list: Sequence[PlotSeries],
-    figsize: Tuple[float, float] = (6.5, 5.5),
-    xlabel: Optional[str] = None,
-    ylabel: Optional[str] = None,
-    xlim: Optional[Tuple[float, float]] = None,
-    ylim: Optional[Tuple[float, float]] = None,
-    title: Optional[str] = None,
-    legend_loc: Optional[str] = None,
-    legend_bbox: Optional[Tuple[float, float]] = None,
-    dpi: int = 300,
-) -> None:
-    update_plot_params()
-    fig, ax = plt.subplots(figsize=figsize)
-
-    for s in series_list:
-        _plot_one(ax, s)
-
-    if xlabel:
-        ax.set_xlabel(xlabel, fontsize=14)
-    if ylabel:
-        ax.set_ylabel(ylabel, fontsize=14)
-    if title:
-        ax.set_title(title)
-    if xlim is not None:
-        ax.set_xlim(*xlim)
-    if ylim is not None:
-        ax.set_ylim(*ylim)
-
-    legend_kwargs = {}
-    if legend_loc is not None:
-        legend_kwargs["loc"] = legend_loc
-    if legend_bbox is not None:
-        legend_kwargs["bbox_to_anchor"] = legend_bbox
-    if legend_kwargs:
+    if legend:
+        legend_kwargs: Dict[str, Any] = {"frameon": False, "fontsize": 12}
+        if legend_loc is not None:
+            legend_kwargs["loc"] = legend_loc
+        if legend_bbox is not None:
+            legend_kwargs["bbox_to_anchor"] = legend_bbox
         ax.legend(**legend_kwargs)
 
     ax = format_plot_axes(ax)

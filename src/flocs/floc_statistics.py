@@ -315,7 +315,7 @@ def calc_PDF(
     for h5_file in tqdm(
         floc_files,
         total=len(floc_files),
-        desc="Generating eges lists for pdfs",
+        desc="Generating edges lists for pdfs",
     ):
         with h5py.File(h5_file, "r") as f:
             floc_ids: np.ndarray = np.asarray(f["flocs/floc_id"][:])  # type: ignore
