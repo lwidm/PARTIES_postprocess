@@ -1,2 +1,9 @@
 *.h5
 *.h5.*
+*
+
+!*/
+
+!LM_Channel_0180_mean_prof.dat
+!LM_Channel_0180_vel_fluc_prof.dat
+!copy_data.sh

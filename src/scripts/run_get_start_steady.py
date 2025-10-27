@@ -11,29 +11,31 @@ from src import globals
 
 def main():
     plot_dir: Path = Path("./output/plots_tmp")
-    parties_data_dir: Path = Path("/media/usb/UCSB/data/")
+    # parties_data_dir: Path = Path("/media/usb/UCSB/data/")
+    parties_data_dir: Path = Path("./data/")
+    # output_dir: MyPath = Path("/media/usb/UCSB/output/")
+    output_dir: MyPath = Path("./output")
 
     data_names: List[str] = [
         "phi1p5",
         # "phi5p0",
-        # "phi5p0_new",
+        "phi5p0_new",
     ]
     labels: List[str] = [
         r"$\phi_{1.5\%}$",
         # r"$\phi_{5\%}$",
-        # r"$\phi_{5\%}$ new",
+        r"$\phi_{5\%}$ new",
     ]
     min_file_indices: List[Optional[int]] = [
         None,
         # None,
-        # None,
+        None,
     ]
     max_file_indices: List[Optional[int]] = [
         None,
         # None,
-        # None,
+        None,
     ]
-    output_dir: MyPath = "/media/usb/UCSB/output/"
     colours: List[str] = ["C0", "C1", "C2", "C3", "C4"]
 
     plot_dir = Path(plot_dir)

@@ -2,7 +2,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --mem-per-cpu=32G
-#SBATCH --time=5:00:00
+#SBATCH --time=12:00:00
 #SBATCH -J analysisRUN10
 #SBATCH -o log_ana10.o%j
 #SBATCH -e log_ana10.e%j
@@ -22,4 +22,4 @@ PYTHONPATH=. python ./main.py \
 	--parties_data_dir="/anvil/scratch/x-lwidmer/RUN10" \
 	-trn \
 	--num_workers=8 \
-	--min_file_index=101
+	--min_file_index=206

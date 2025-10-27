@@ -12,6 +12,10 @@ from src import globals
 
 from matplotlib import pyplot as plt
 
+# parant_dir: Path = Path("media/usb/UCSB/")
+parent_dir: Path = Path("./")
+
+
 def fluid(utexas_dir: MyPath, plot_dir: MyPath):
 
     # ==============================
@@ -28,8 +32,8 @@ def fluid(utexas_dir: MyPath, plot_dir: MyPath):
         r"$\phi_{5\%}$",
         # r"$\phi_{5\%}$ new",
     ]
-    parties_data_dir: str = "/media/usb/UCSB/data/"
-    output_dir: str = "/media/usb/UCSB/output/"
+    parties_data_dir: Path = parent_dir / "data/"
+    output_dir: Path = parent_dir / "output/"
     # colours: List[str] = ["C0", "C1", "C2", "C3", "C4"]
     colours: List[str] = ["k"]
 
@@ -45,8 +49,7 @@ def fluid(utexas_dir: MyPath, plot_dir: MyPath):
     for i in range(Num_data):
         parties_wall_series.append(
             plt_series.u_plus_mean_wall_parties(
-                Path(output_dir + data_names[i] + "/fluid")
-                / parties_processed_filename,
+                Path(output_dir / data_names[i] / "fluid") / parties_processed_filename,
                 label=labels[i],
                 colour=colours[i],
                 linestyles=("-", "--"),
@@ -65,7 +68,7 @@ def fluid(utexas_dir: MyPath, plot_dir: MyPath):
     for i in range(Num_data):
         parties_stress_series.append(
             plt_series.normal_stress_wall_parties(
-                Path(output_dir + data_names[i] + "/fluid")
+                Path(output_dir / data_names[i] / "/fluid")
                 / parties_processed_filename,
                 label=labels[i],
                 colour=colours[i],
@@ -97,7 +100,7 @@ def floc(
 ) -> None:
 
     plot_dir = Path(plot_dir)
-    parties_data_dir = Path(output_dir)
+    parties_data_dir = Path(parties_data_dir)
     output_dir = Path(output_dir)
 
     Num_data: int = len(data_names)
@@ -410,49 +413,49 @@ def main() -> None:
 
     compute: bool = True
     compute_flocs: List[bool] = [
+        False,
         # False,
-        # False,
-        True,
+        False,
     ]
     data_names: List[str] = [
-        # "phi1p5",
+        "phi1p5",
         # "phi5p0",
         "phi5p0_new",
     ]
     labels: List[str] = [
-        # r"$\phi_{1.5\%}$",
+        r"$\phi_{1.5\%}$",
         # r"$\phi_{5\%}$",
         r"$\phi_{5\%}$ new",
     ]
     trn: List[bool] = [
-        # False,
+        False,
         # True,
-        True
+        True,
     ]
     Re_tau: List[float] = [
-        # 189.54087993838434,
+        189.54087993838434,
         # 180,
         180,
     ]
-    parties_data_dir: str = "/media/usb/UCSB/data/"
-    output_dir: str = "/media/usb/UCSB/output/"
+    parties_data_dir: Path = parent_dir / "data/"
+    output_dir: Path = parent_dir / "output/"
     min_file_indices: List[Optional[int]] = [
-        # None,
+        None,
         # None,
         None,
     ]
     max_file_indices: List[Optional[int]] = [
-        # None,
+        None,
         # None,
         None,
     ]
     min_steady_times: List[Optional[float]] = [
-        # 200,
+        268,
         # None,
-        None,
+        206,
     ]
     max_steady_indices: List[Optional[int]] = [
-        # None,
+        None,
         # None,
         None,
     ]
@@ -477,7 +480,7 @@ def main() -> None:
     #     markers,
     #     linestyles,
     # )
-    # fluid("/media/usb/UCSB/output", plot_dir)
+    fluid(parent_dir / "output", plot_dir)
     phi_eulerian(plot_dir, data_names, labels, output_dir, colours, True)
     if not globals.on_anvil:
         plt.show()
