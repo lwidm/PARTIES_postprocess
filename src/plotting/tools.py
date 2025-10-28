@@ -8,8 +8,6 @@ from matplotlib.axes import Axes
 from matplotlib import colors as mcolors
 import colorsys
 
-from src import globals
-
 NumericArray = Union[np.ndarray, float, int]
 PlotMethod = Literal[
     "plot", "semilogx", "semilogy", "loglog", "pcolormesh", "imshow", "scatter", "bar", "err_plot", "err_semilogx", "err_semilogy", "err_loglog"

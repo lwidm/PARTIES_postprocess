@@ -3,15 +3,13 @@
 import numpy as np
 from typing import Dict, Union, Optional, Tuple, List
 from pathlib import Path
-import tqdm  # type: ignore
+import tqdm
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 
 from src.myio import myio
 from src.flocs.find_flocs import find_flocs
 from src.flocs import floc_statistics as floc_stat
 from src import plotting
-
-from matplotlib import pyplot as plt
 
 
 def analyze_floc(

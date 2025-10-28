@@ -9,12 +9,12 @@ import io
 import re
 import glob
 import warnings
-import h5py  # type: ignore
+import h5py
 import configparser
 import ast
 import sys
 import subprocess
-import tqdm  # type: ignore
+import tqdm
 import shlex
 
 sys.setrecursionlimit(int(1e9))
@@ -43,14 +43,14 @@ def save_to_h5(
                 )
             # Handle scalar values
             elif isinstance(value, (int, float, complex, np.floating, np.integer)):
-                h5_group.create_dataset(key, data=value)
+                h5_group.create_dataset(key, data=value) # type: ignore[arg-type]
             # Handle strings
             elif isinstance(value, str):
                 str_dtype = h5py.string_dtype(encoding="utf-8")
                 h5_group.create_dataset(key, data=value, dtype=str_dtype)
             # Handle booleans
             elif isinstance(value, (bool, np.bool_)):
-                h5_group.create_dataset(key, data=np.bool_(value))
+                h5_group.create_dataset(key, data=np.bool_(value)) # type: ignore[arg-type]
             # Handle lists and tuples (convert to numpy arrays)
             elif isinstance(value, (list, tuple)):
                 try:
@@ -74,7 +74,7 @@ def save_to_h5(
                 str_dtype = h5py.string_dtype(encoding="utf-8")
                 h5_group.create_dataset(key, data=str(value), dtype=str_dtype)
 
-    with h5py.File(output_path, "w") as h5_file:
+    with h5py.File(output_path._str, "w") as h5_file:
         _save_nested_dict(h5_file, data_dict)
         if metadata:
             for mkey, mval in metadata.items():
@@ -109,7 +109,7 @@ def load_from_h5(
         return result
 
     metadata: Optional[Dict[str, Any]] = None
-    with h5py.File(input_path, "r") as h5_file:
+    with h5py.File(input_path._str, "r") as h5_file:
         data_dict = _load_nested_dict(h5_file)
         metadata = dict(h5_file.attrs) if h5_file.attrs else None
 
@@ -342,7 +342,7 @@ def read_coh_range(
         return coh_range * dy
     except KeyError:
         warnings.warn(r"parties.inp not found, using coh_range = 0.05 * D_p.")
-        with h5py.File(particle_path, "r") as f:
+        with h5py.File(particle_path._str, "r") as f:
             return 0.1 * f["mobile/R"][0]  # type: ignore
 
 
@@ -374,7 +374,7 @@ def read_channel_half_height(data_dir: MyPath) -> float:
 
 def read_domain_info(path: Path) -> Dict[str, Union[int, float]]:
     """Returns a dict containing the domain size and periodicity in each direction."""
-    with h5py.File(path, "r") as f:
+    with h5py.File(path._str, "r") as f:
         domain_data: h5py.Group = f["domain"]  # type: ignore
         Lx: int = domain_data["xmax"][0]  # type: ignore
         Ly: int = domain_data["ymax"][0]  # type: ignore
@@ -393,8 +393,9 @@ def read_domain_info(path: Path) -> Dict[str, Union[int, float]]:
     return domain
 
 
-def read_particle_data(path: Union[str, Path]) -> Dict[str, Union[np.ndarray, float]]:
-    with h5py.File(path, "r") as f:
+def read_particle_data(path: MyPath) -> Dict[str, Union[np.ndarray, float]]:
+    path = Path(path)
+    with h5py.File(path._str, "r") as f:
         mobile_data: h5py.Group = f["mobile"]  # type: ignore
         id: np.ndarray = np.arange(mobile_data["R"].shape[0])  # type: ignore
         x: np.ndarray = mobile_data["X"][:, 0]  # type: ignore
@@ -507,7 +508,7 @@ def _merge_dicts(dict_list: list[dict]) -> dict:
 
 def get_time_array(
     file_prefix: str,
-    data_dir: Union[str, Path],
+    data_dir:MyPath,
     min_file_index: Optional[int],
     max_file_index: Optional[int],
     key: Optional[str] = None,
@@ -526,7 +527,7 @@ def get_time_array(
     t_arr: np.ndarray = np.zeros(len(data_files))
 
     for i, data_file in enumerate(data_files):
-        with h5py.File(data_file, "r") as h5_file:
+        with h5py.File(data_file._str, "r") as h5_file:
             t_arr[i] = h5_file[key][()]  # type: ignore
 
     return t_arr
@@ -534,7 +535,7 @@ def get_time_array(
 
 def find_idx_from_time(
     file_prefix: str,
-    data_dir: Union[str, Path],
+    data_dir: MyPath,
     target_time: float,
     key: Optional[str] = None,
 ) -> Dict[str, Any]:
@@ -548,7 +549,7 @@ def find_idx_from_time(
 
     for pos, data_file in enumerate(data_files):
         time: float
-        with h5py.File(data_file, "r") as f:
+        with h5py.File(data_file._str, "r") as f:
             if key not in f:
                 raise KeyError(f"Key '{key}' not found in file {data_file}")
             time = f[key][()]  # type: ignore

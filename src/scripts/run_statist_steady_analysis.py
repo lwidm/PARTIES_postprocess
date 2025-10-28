@@ -3,8 +3,8 @@
 from typing import Optional, List, Dict, Union, Literal
 from pathlib import Path
 import numpy as np
-import h5py # type: ignore
-import tqdm # type: ignore
+import h5py
+import tqdm
 
 from src import globals
 from src.myio import myio

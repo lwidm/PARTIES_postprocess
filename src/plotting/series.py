@@ -2,10 +2,10 @@
 
 from pathlib import Path
 from typing import Union, Dict, List, Optional, Tuple
-import h5py  # type: ignore
+import h5py
 
 import numpy as np
-import scipy.optimize # type: ignore
+import scipy.optimize
 
 from src.myio import myio
 from src.myio.myio import MyPath
@@ -17,7 +17,7 @@ from src.plotting.tools import (
 
 
 def floc_count_evolution(
-    floc_dir: Union[str, Path],
+    floc_dir: MyPath,
     colour: str,
     label: Optional[str],
     min_file_index: Optional[int],
@@ -45,7 +45,7 @@ def floc_count_evolution(
         time = time - time[0]
 
     for floc_file in floc_files:
-        with h5py.File(floc_file, "r") as f:
+        with h5py.File(floc_file._str, "r") as f:
             floc_count = len(np.unique(f["flocs"]["floc_id"][:]))  # type: ignore
             counts.append(floc_count)
 
@@ -53,7 +53,7 @@ def floc_count_evolution(
     if normalised:
         counts_arr = counts_arr.astype(float)
         N_particles: int
-        with h5py.File(floc_files[0], "r") as f:
+        with h5py.File(floc_files[0]._str, "r") as f:
             N_particles = len(f["particles"]["r"][:])  # type: ignore
         counts_arr /= N_particles
 
@@ -72,7 +72,7 @@ def floc_count_evolution(
 
 
 def floc_count_evolution_fit(
-    floc_dir: Union[str, Path],
+    floc_dir: MyPath,
     colour: str,
     label: Optional[str],
     min_file_index: Optional[int],
@@ -102,19 +102,19 @@ def floc_count_evolution_fit(
     if reset_time:
         time = time - time[0]
     N_particles: int
-    with h5py.File(floc_files[0], "r") as f:
+    with h5py.File(floc_files[0]._str, "r") as f:
         N_particles = len(f["particles"]["r"][:])  # type: ignore
 
     counts: List[float] = []
     for floc_file in floc_files:
-        with h5py.File(floc_file, "r") as f:
+        with h5py.File(floc_file._str, "r") as f:
             floc_count = len(np.unique(f["flocs"]["floc_id"][:]))  # type: ignore
             counts.append(floc_count)
 
 
     Nf_eq: float = 0.0
     for steady_floc_file in steady_floc_files:
-        with h5py.File(steady_floc_file, "r") as f:
+        with h5py.File(steady_floc_file._str, "r") as f:
             Nf_eq += len(np.unique(f["flocs"]["floc_id"][:]))  # type: ignore
     Nf_eq /= len(steady_floc_files)
 
@@ -148,7 +148,7 @@ def floc_count_evolution_fit(
 
 
 def floc_pdf(
-    floc_dir: Union[str, Path],
+    floc_dir: MyPath,
     labels: List[Optional[str]],
     colours: List[str],
     markers: List[str],
@@ -173,7 +173,7 @@ def floc_pdf(
     probabs_list: List[np.ndarray] = []
     postfixes: List[str] = ["n_p", "D_f", "D_g"]
 
-    with h5py.File(Path(floc_dir) / "floc_PDF.h5", "r") as f:
+    with h5py.File((Path(floc_dir) / "floc_PDF.h5")._str, "r") as f:
         for i in range(len(postfixes)):
             bin_widths_list.append(f["bin_width_" + postfixes[i]][()])  # type: ignore
 
@@ -259,7 +259,7 @@ def floc_pdf(
 
 
 def floc_avg_dir(
-    floc_dir: Union[str, Path],
+    floc_dir: MyPath,
     labels: List[Optional[str]],
     colours: List[str],
     markers: List[str],
@@ -284,7 +284,7 @@ def floc_avg_dir(
     std_D_g_avg: np.ndarray
     std_D_f_mass_avg: np.ndarray
     std_D_g_mass_avg: np.ndarray
-    with h5py.File(Path(floc_dir) / "avg_floc_diam.h5", "r") as f:
+    with h5py.File((Path(floc_dir) / "avg_floc_diam.h5")._str, "r") as f:
         if inner_units:
             x_data = f["yp_mean"][:]  # type: ignore
             D_f_avg = f["inner_D_f_avg"][:]  # type: ignore
@@ -686,16 +686,17 @@ def normal_stress_wall_utexas(
 
 
 def Ekin_evolution(
-    h5_path: Union[str, Path],
+    h5_path: MyPath,
     colour: str,
     linestyle: str,
     marker: str,
     label: Optional[str],
 ) -> PlotSeries:
 
+    h5_path = Path(h5_path)
     E_kin: np.ndarray
     time: np.ndarray
-    with h5py.File(h5_path, "r") as f:
+    with h5py.File(h5_path._str, "r") as f:
         E_kin = f["E_kin"][:]  # type: ignore
         time = f["time"][:]  # type: ignore
 
@@ -735,7 +736,7 @@ def phi_eulerian(
     Phi_mean_err: Optional[np.ndarray] = None
     yv: np.ndarray
     h5_postfix: str = "_norm" if normalised else ""
-    with h5py.File(mean_phi_h5, "r") as h5_file:
+    with h5py.File(mean_phi_h5._str, "r") as h5_file:
         yv = h5_file["yv"][:]  # type: ignore
         Phi_mean = h5_file["Phi_mean" + h5_postfix][:]  # type: ignore
         if show_err:

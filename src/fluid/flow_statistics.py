@@ -1,19 +1,20 @@
 # -- src/fluid/flow_statistics.py
 
 import numpy as np
-import h5py  # type: ignore
+import h5py
 from pathlib import Path
 from typing import Union, Dict, Literal, List, Tuple, Any, Optional
-import tqdm  # type: ignore
+import tqdm
 import gc
 
 from src.myio import myio
 from src.myio.myio import MyPath
 
 
-def get_grid(fluid_file: Union[str, Path]) -> Dict[str, np.ndarray]:
+def get_grid(fluid_file: MyPath) -> Dict[str, np.ndarray]:
     """Get domain information from the fluid file."""
-    with h5py.File(fluid_file, "r") as f:
+    fluid_file = Path(fluid_file)
+    with h5py.File(fluid_file._str, "r") as f:
         xc: np.ndarray = f["grid/xc"][:-1]  # type: ignore
         yc: np.ndarray = f["grid/yc"][:-1]  # type: ignore
         zc: np.ndarray = f["grid/zc"][:-1]  # type: ignore
@@ -55,7 +56,7 @@ def E_ij(data_i: np.ndarray, data_j: np.ndarray, axis: Literal[0, 1, 2]):
 
 
 def process_mean_flow(
-    fluid_files: Union[List[str], List[Path]], grid: Dict[str, np.ndarray]
+    fluid_files: List[MyPath], grid: Dict[str, np.ndarray]
 ) -> Dict[str, np.ndarray]:
     n_snapshots: int = len(fluid_files)
     results: Dict[str, np.ndarray] = {
@@ -66,7 +67,7 @@ def process_mean_flow(
     }
 
     for fluid_file in tqdm.tqdm(fluid_files, desc="Processing mean flow"):
-        with h5py.File(fluid_file, "r") as f:
+        with h5py.File(Path(fluid_file)._str, "r") as f:
             vfu: np.ndarray = f["vfu"][:-1, :-1, :-1]  # type: ignore
             results["U"] += masked_mean(f["u"][:-1, :-1, :-1], 1 - vfu)  # type: ignore
             results["Phi"] += np.mean(vfu, axis=(0, 2))
@@ -84,7 +85,7 @@ def process_mean_flow(
 
 
 def process_fluctuations(
-    fluid_files: Union[List[str], List[Path]],
+    fluid_files: List[MyPath],
     mean_results: Dict[str, np.ndarray],
     grid: Dict[str, np.ndarray],
 ) -> Dict[str, np.ndarray]:
@@ -111,7 +112,7 @@ def process_fluctuations(
     }
 
     for fluid_file in tqdm.tqdm(fluid_files, desc="Processing fluctuations"):
-        with h5py.File(fluid_file, "r") as f:
+        with h5py.File(Path(fluid_file)._str, "r") as f:
             w: np.ndarray = f["w"][:-1, :-1, :-1] - mean_results["W"][np.newaxis, :, np.newaxis]  # type: ignore
             gc.collect()
             vfw: np.ndarray = 1 - f["vfw"][:, :-1, :-1]  # type: ignore
@@ -123,7 +124,7 @@ def process_fluctuations(
         del w
         gc.collect()
 
-        with h5py.File(fluid_file, "r") as f:
+        with h5py.File(Path(fluid_file)._str, "r") as f:
             u: np.ndarray = f["u"][:-1, :-1, :] - mean_results["U"][np.newaxis, :, np.newaxis]  # type: ignore
             v: np.ndarray = f["v"][:-1, :, :-1] - mean_results["V"][np.newaxis, :, np.newaxis]  # type: ignore
 
@@ -248,11 +249,11 @@ def get_wall_units(
     return wall_results
 
 
-def calc_tot_vol_frac(path: Union[str, Path]) -> float:
-
+def calc_tot_vol_frac(path: MyPath) -> float:
+    path = Path(path)
     print(f"Calculating volume fraction using {path}")
     vfu: np.ndarray
-    with h5py.File(path, "r") as h5_file:
+    with h5py.File(path._str, "r") as h5_file:
         vfu = h5_file["vfu"][:]  # type: ignore
 
     vfu = vfu[:-1, :-1, :-1]
@@ -267,12 +268,13 @@ def calc_tot_vol_frac(path: Union[str, Path]) -> float:
     return phi
 
 
-def calc_tot_fluid_Ekin(fluid_file_path: Union[str, Path], Re: float) -> float:
+def calc_tot_fluid_Ekin(fluid_file_path: MyPath, Re: float) -> float:
+    fluid_file_path = Path(fluid_file_path)
 
     grid: Dict[str, np.ndarray] = get_grid(fluid_file_path)
     mean_u_squared: np.floating
     phi: float
-    with h5py.File(fluid_file_path, "r") as h5_file:
+    with h5py.File(fluid_file_path._str, "r") as h5_file:
         uc: np.ndarray = h5_file["u"][:-1, :-1, :-1]  # type: ignore
         vc: np.ndarray = interp_y(h5_file["v"][:-1, :, :-1])  # type: ignore
         wc: np.ndarray = h5_file["w"][:-1, :-1, :-1]  # type: ignore
@@ -312,7 +314,7 @@ def process_mean_phi(
 
 
     dset: h5py.Dataset
-    with h5py.File(fluid_files[0], "r") as h5file_sample:
+    with h5py.File(fluid_files[0]._str, "r") as h5file_sample:
         dset = h5file_sample["vfv"]  # type: ignore
         print(dset)
         vfv_Nz, vfv_Ny, vfv_Nx = dset.shape
@@ -346,7 +348,7 @@ def process_mean_phi(
 
     # first pass: accumulate means
     for fluid_file in tqdm.tqdm(fluid_files, desc="Processing mean phi"):
-        with h5py.File(fluid_file, "r") as h5_file:
+        with h5py.File(fluid_file._str, "r") as h5_file:
             dset = h5_file["vfv"]  # type: ignore
             dset.read_direct(vfv_buf, np.s_[:-1, :-1, :-1])
         myio.mirror_and_append_along_y_inplace(vfv_buf, vfv_mirr_buf)
@@ -365,7 +367,7 @@ def process_mean_phi(
     if compute_err:
         assert vfv_err_buf is not None
         for fluid_file in tqdm.tqdm(fluid_files, desc="Processing mean phi"):
-            with h5py.File(fluid_file, "r") as h5_file:
+            with h5py.File(fluid_file._str, "r") as h5_file:
                 dset = h5_file["vfv"]  # type: ignore
                 dset.read_direct(vfv_buf, np.s_[:-1, :-1, :-1])
             myio.mirror_and_append_along_y_inplace(vfv_buf, vfv_mirr_buf)

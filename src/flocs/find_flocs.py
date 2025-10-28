@@ -1,7 +1,7 @@
 # -- src/flocs/find_flocs.py
 
 import numpy as np
-from scipy.spatial import cKDTree  # type: ignore
+from scipy.spatial import cKDTree
 from typing import Dict, Union, List, Set
 
 

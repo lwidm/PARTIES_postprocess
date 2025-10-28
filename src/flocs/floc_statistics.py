@@ -1,12 +1,10 @@
 # -- src/flocs/floc_statistics.py
 
 from pathlib import Path
-import h5py  # type: ignore
+import h5py
 import numpy as np
 from typing import Dict, Union, Tuple, Optional, List
-from tqdm import tqdm  # type: ignore
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
-import scipy.stats  # type: ignore
+from tqdm import tqdm
 
 
 from src.myio import myio
@@ -284,8 +282,8 @@ def _process_single_pdf(
 
 
 def calc_PDF(
-    output_dir: Union[str, Path],
-    floc_dir: Union[str, Path],
+    output_dir: MyPath,
+    floc_dir: MyPath,
     bin_widths: tuple[float, float, float],
     min_file_index: Optional[int],
     max_file_index: Optional[int],
@@ -301,7 +299,7 @@ def calc_PDF(
     )
 
     d: float
-    with h5py.File(floc_files[0], "r") as f:
+    with h5py.File(floc_files[0]._str, "r") as f:
         d = f["particles/r"][0] * 2  # type: ignore
 
     N_flocs_total: int = 0
@@ -317,7 +315,7 @@ def calc_PDF(
         total=len(floc_files),
         desc="Generating edges lists for pdfs",
     ):
-        with h5py.File(h5_file, "r") as f:
+        with h5py.File(h5_file._str, "r") as f:
             floc_ids: np.ndarray = np.asarray(f["flocs/floc_id"][:])  # type: ignore
             n_p: np.ndarray = np.asarray(f["flocs/n_p"][:])  # type: ignore
             D_f: np.ndarray = np.asarray(f["flocs/D_f"][:]) / d  # type: ignore
@@ -568,7 +566,7 @@ def CalcAvgDiam(
     )
 
     r_p: float
-    with h5py.File(floc_files[0], "r") as f:
+    with h5py.File(floc_files[0]._str, "r") as f:
         r_p = f["particles/r"][0]  # type: ignore
 
     def to_wall_units(y: np.ndarray) -> np.ndarray:
@@ -604,7 +602,7 @@ def CalcAvgDiam(
         n_p_arr: np.ndarray
         D_f_arr: np.ndarray
         D_g_arr: np.ndarray
-        with h5py.File(floc_file, "r") as f:
+        with h5py.File(floc_file._str, "r") as f:
             floc_ids: np.ndarray = f["flocs/floc_id"][:]  # type: ignore
             _, first_indices = np.unique(floc_ids, return_index=True)
             y_floc_arr = f["flocs/y"][first_indices]  # type: ignore
@@ -712,7 +710,7 @@ def CalcAvgDiam(
     inner_mass_bin: np.ndarray = np.zeros_like(yp_left_arr)
 
     for floc_file in floc_files:
-        with h5py.File(floc_file, "r") as f:
+        with h5py.File(floc_file._str, "r") as f:
             floc_ids: np.ndarray = f["flocs/floc_id"][:]  # type: ignore
             _, first_indices = np.unique(floc_ids, return_index=True)
             y_floc_arr = f["flocs/y"][first_indices]  # type: ignore

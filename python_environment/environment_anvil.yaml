@@ -15,4 +15,7 @@ dependencies:
       - torch
       - torchvision
       - --index-url https://download.pytorch.org/whl/cpu
+      - scipy-stubs
+      - h5py-stubs
+      - types-tqdm
 

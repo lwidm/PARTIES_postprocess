@@ -7,3 +7,7 @@ PyQt5
 snakeviz
 tqdm
 configparser
+
+scipy-stubs
+h5py-stubs
+types-tqdm

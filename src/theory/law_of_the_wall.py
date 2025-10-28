@@ -2,7 +2,7 @@
 
 import numpy as np
 from typing import Tuple
-from scipy.optimize import curve_fit  # type: ignore
+from scipy.optimize import curve_fit
 import warnings
 
 
@@ -52,12 +52,11 @@ def fit_parameters(
 
     initial_guess: Tuple[float, float] = (0.41, 5.0)
 
-    fitted_parameters: Tuple[float, float]
     try:
-        fitted_parameters, _ = curve_fit(
+        popt, _ = curve_fit(
             _log_law_velocity, log_region_yc_plus, log_region_velocity, p0=initial_guess
         )
-        fitted_kappa, fitted_constant = fitted_parameters
+        fitted_kappa, fitted_constant = popt[0], popt[1]
         return fitted_kappa, fitted_constant
     except Exception as error:
         warnings.warn(
