@@ -114,8 +114,6 @@ def floc(
         for i in range(len(parties_data_dirs)):
             min_idx: Optional[int] = min_trn_steady_indices[i] if trn[i] else min_steady_indices[i]
             max_idx: Optional[int] = max_trn_steady_indices[i] if trn[i] else max_steady_indices[i]
-            print(f"min_idx {min_idx}")
-            print(f"max_idx {max_idx}")
             scripts.run_floc_analysis.main(
                 parties_data_dir=parties_data_dirs[i],
                 output_dir=output_dirs[i],
@@ -143,6 +141,28 @@ def floc(
             label,
             min_file_index,
             max_file_index,
+            normalised=True,
+            reset_time=True,
+        )
+        return s
+
+    def get_series_floc_evolution_fit(
+        output_dir: MyPath,
+        colour: str,
+        label: str,
+        min_file_index: Optional[int],
+        max_file_index: Optional[int],
+        min_steady_index: Optional[int],
+        max_steady_index: Optional[int],
+    ) -> PlotSeries:
+        s: PlotSeries = plt_series.floc_count_evolution_fit(
+            Path(output_dir) / "flocs",
+            colour,
+            label,
+            min_file_index,
+            max_file_index,
+            min_steady_index,
+            max_steady_index,
             normalised=True,
             reset_time=True,
         )
@@ -243,6 +263,7 @@ def floc(
 
     plot_dir.mkdir(parents=True, exist_ok=True)
     s_evo_list: List[PlotSeries] = []
+    s_evo_fit_list: List[PlotSeries] = []
     s_pdf_np_list: List[PlotSeries] = []
     s_pdf_Df_list: List[PlotSeries] = []
     s_pdf_Dg_list: List[PlotSeries] = []
@@ -272,6 +293,19 @@ def floc(
             max_file_indices[i],
         )
         s_evo_list.append(s_evo)
+
+        min_idx: Optional[int] = min_trn_steady_indices[i] if trn[i] else min_steady_indices[i]
+        max_idx: Optional[int] = max_trn_steady_indices[i] if trn[i] else max_steady_indices[i]
+        s_evo_fit = get_series_floc_evolution_fit(
+            output_dirs[i],
+            colours[i],
+            labels[i],
+            min_file_indices[i],
+            max_file_indices[i],
+            min_idx,
+            max_idx,
+        )
+        s_evo_fit_list.append(s_evo_fit)
         (
             s_np,
             s_Df,
@@ -323,6 +357,8 @@ def floc(
         s_mass_avg_Df_err_list.append(s_mass_err_Df)
         s_mass_avg_Dg_err_list.append(s_mass_err_Dg)
 
+    if True:
+        s_evo_list = s_evo_fit_list + s_evo_list
     plt_templ.floc_count_evolution(plot_dir, s_evo_list, normalised=True)
     plt_templ.n_p_pdf(plot_dir, s_pdf_np_err_list + s_pdf_np_list)
     plt_templ.D_f_pdf(plot_dir, s_pdf_Df_err_list + s_pdf_Df_list)
@@ -481,7 +517,7 @@ def main() -> None:
         markers,
         linestyles,
     )
-    fluid(parent_dir / "output", plot_dir)
-    phi_eulerian(plot_dir, [data_names[1]], [labels[1]], output_dir, colours, False)
+    # fluid(parent_dir / "output", plot_dir)
+    # phi_eulerian(plot_dir, [data_names[1]], [labels[1]], output_dir, colours, False)
     if not globals.on_anvil:
         plt.show()

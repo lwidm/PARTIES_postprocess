@@ -5,6 +5,7 @@ from typing import Union, Dict, List, Optional, Tuple
 import h5py  # type: ignore
 
 import numpy as np
+import scipy.optimize # type: ignore
 
 from src.myio import myio
 from src.myio.myio import MyPath
@@ -64,6 +65,82 @@ def floc_count_evolution(
         kwargs={
             "label": label,
             "color": colour,
+        },
+    )
+
+    return s
+
+
+def floc_count_evolution_fit(
+    floc_dir: Union[str, Path],
+    colour: str,
+    label: Optional[str],
+    min_file_index: Optional[int],
+    max_file_index: Optional[int],
+    min_steady_index: Optional[int],
+    max_steady_index: Optional[int],
+    normalised: bool,
+    reset_time: bool,
+) -> PlotSeries:
+
+    print(
+        f'Looking for floc files in directory: "{floc_dir}" with min_file_index: {min_file_index} and max_file_index: {max_file_index}'
+    )
+    floc_files: List[Path] = myio.list_data_files(
+        floc_dir, "Flocs", min_file_index, max_file_index
+    )
+    steady_floc_files: List[Path] = myio.list_data_files(
+        floc_dir, "Flocs", min_steady_index, max_steady_index
+    )
+    time: np.ndarray = myio.get_time_array(
+        "Flocs",
+        floc_dir,
+        min_file_index,
+        max_file_index,
+        "time",
+    )
+    if reset_time:
+        time = time - time[0]
+    N_particles: int
+    with h5py.File(floc_files[0], "r") as f:
+        N_particles = len(f["particles"]["r"][:])  # type: ignore
+
+    counts: List[float] = []
+    for floc_file in floc_files:
+        with h5py.File(floc_file, "r") as f:
+            floc_count = len(np.unique(f["flocs"]["floc_id"][:]))  # type: ignore
+            counts.append(floc_count)
+
+
+    Nf_eq: float = 0.0
+    for steady_floc_file in steady_floc_files:
+        with h5py.File(steady_floc_file, "r") as f:
+            Nf_eq += len(np.unique(f["flocs"]["floc_id"][:]))  # type: ignore
+    Nf_eq /= len(steady_floc_files)
+
+    def fit_equilibration(time: np.ndarray, b: float) -> np.ndarray:
+        return (N_particles - Nf_eq)*np.exp(-b*(time-time[0])) + Nf_eq
+
+    popt, _ = scipy.optimize.curve_fit(fit_equilibration, time, counts)
+    print(f"Floc count evolution fit for {label}: b = {popt[0]}")
+
+    time_fit: np.ndarray = np.linspace(time[0], time[-1], 200)
+    counts_fit: np.ndarray = fit_equilibration(time_fit, *popt)
+    if normalised:
+        counts_fit /= N_particles
+
+    if label is not None:
+        label += f"; fit $b={popt[0]:.4f}$"
+
+    s: PlotSeries = PlotSeries(
+        data={"time": time_fit, "counts": counts_fit},
+        x_key="time",
+        y_key="counts",
+        plot_method="plot",
+        kwargs={
+            "label": label,
+            "color": colour,
+            "linestyle": ":",
         },
     )
 
@@ -639,7 +716,9 @@ def Ekin_evolution(
         },
     )
 
+
 # -------------------- Fluid volume fraction --------------------
+
 
 def phi_eulerian(
     fluid_dir: MyPath,
@@ -650,7 +729,6 @@ def phi_eulerian(
     show_err: bool,
 ) -> Tuple[PlotSeries, Optional[PlotSeries]]:
 
-
     mean_phi_h5: Path = Path(fluid_dir) / "mean_phi.h5"
     yv: np.ndarray
     Phi_mean: np.ndarray
@@ -658,30 +736,34 @@ def phi_eulerian(
     yv: np.ndarray
     h5_postfix: str = "_norm" if normalised else ""
     with h5py.File(mean_phi_h5, "r") as h5_file:
-        yv = h5_file["yv"][:] # type: ignore
-        Phi_mean = h5_file["Phi_mean" + h5_postfix][:] # type: ignore
+        yv = h5_file["yv"][:]  # type: ignore
+        Phi_mean = h5_file["Phi_mean" + h5_postfix][:]  # type: ignore
         if show_err:
-            Phi_mean_err = h5_file["Phi_err" + h5_postfix][:] # type: ignore
+            Phi_mean_err = h5_file["Phi_err" + h5_postfix][:]  # type: ignore
 
     if not normalised:
-        Phi_mean *= 100 # convert to %
+        Phi_mean *= 100  # convert to %
 
     s: PlotSeries = PlotSeries(
         data={"x": yv, "y": Phi_mean},
-            x_key="x",
-            y_key="y",
-            plot_method="plot",
-            kwargs={
-                "label": label,
-                "linestyle": linestyle,
-                "color": colour,
-            },
-        )
+        x_key="x",
+        y_key="y",
+        plot_method="plot",
+        kwargs={
+            "label": label,
+            "linestyle": linestyle,
+            "color": colour,
+        },
+    )
 
     if show_err:
         assert Phi_mean_err is not None
         s_err: PlotSeries = PlotSeries(
-            data={ "x": yv, "y": Phi_mean, "y_err": Phi_mean_err,},
+            data={
+                "x": yv,
+                "y": Phi_mean,
+                "y_err": Phi_mean_err,
+            },
             x_key="x",
             y_key="y",
             plot_method="err_plot",
