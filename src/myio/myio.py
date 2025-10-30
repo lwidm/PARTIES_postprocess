@@ -21,11 +21,10 @@ sys.setrecursionlimit(int(1e9))
 
 
 def save_to_h5(
-    output_path: Union[str, Path],
+    output_path: Path,
     data_dict: Dict[str, Any],
     metadata: Optional[Dict[str, Any]] = None,
 ) -> None:
-    output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     def _save_nested_dict(h5_group: h5py.Group, data: Dict[str, Any]) -> None:
@@ -82,9 +81,8 @@ def save_to_h5(
 
 
 def load_from_h5(
-    input_path: Union[str, Path],
+    input_path: Path,
 ) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
-    input_path = Path(input_path)
 
     def _load_nested_dict(h5_group: h5py.Group) -> Dict[str, Any]:
         result: Dict[str, Any] = {}
@@ -165,7 +163,7 @@ def load_columns_from_txt_numpy(
 
 
 def list_data_files(
-    path: Union[str, Path],
+    path: Path,
     base_name: str,
     min_file_index: Optional[int],
     max_file_index: Optional[int],
@@ -181,7 +179,7 @@ def list_data_files(
     Returns:
         Sorted list of file paths matching the criteria
     """
-    file_pattern: str = f"{path}/{base_name}_*.h5"
+    file_pattern: str = str(path / f"{base_name}_*.h5")
     all_files: List[Path] = [Path(f) for f in glob.glob(file_pattern)]
     all_files = natsorted(all_files, key=lambda f: f.stem)
 
@@ -205,12 +203,12 @@ def list_data_files(
     return filtered_files
 
 
-def _is_ssh_path(file_path: MyPath) -> bool:
+def _is_ssh_path(file_path: Path) -> bool:
     path_str = str(file_path)
     return ":" in path_str and not Path(path_str).exists()
 
 
-def rsync_download_file(remote_path: MyPath, local_path: Path) -> bool:
+def rsync_download_file(remote_path: Path, local_path: Path) -> bool:
     try:
         cmd: List[str] = [
             "rsync",
@@ -228,36 +226,34 @@ def rsync_download_file(remote_path: MyPath, local_path: Path) -> bool:
         return False
 
 
-def _list_remote_files(ssh_path: str, base_name: str) -> List[MyPath]:
+def _list_remote_files(ssh_path: str, base_name: str) -> List[Path]:
     host, remote_dir = ssh_path.split(":", 1)
     remote_pattern: str = f"{shlex.quote(remote_dir.rstrip('/'))}/{base_name}_*.h5"
     ssh_cmd = ["ssh", host, "ls -l " + remote_pattern]
     try:
         proc = subprocess.run(ssh_cmd, capture_output=True, text=True, check=True)
         lines = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
-        results: List[MyPath] = []
+        results: List[Path] = []
         for l in lines:
-            remote_file: MyPath
+            remote_file: str
             if l.startswith("/"):
                 remote_file = l
             else:
                 remote_file = f"{remote_dir.rstrip('/')}/{l}"
-            results.append(f"{host}:{remote_file}")
+            results.append(Path(f"{host}:{remote_file}"))
         return results
     except subprocess.CalledProcessError:
         return []
 
 
 def streaming_data_files_generator(
-    data_dir: MyPath,
-    download_dir: MyPath,
+    data_dir: Path,
+    download_dir: Path,
     base_name: str,
     min_file_index: Optional[int],
     max_file_index: Optional[int],
     download_workers: int,
-) -> Generator[MyPath, None, None]:
-    data_dir = Path(data_dir)
-    download_dir = Path(download_dir)
+) -> Generator[Path, None, None]:
     download_dir.mkdir(parents=True, exist_ok=True)
 
     def parse_index_from_name(name: str) -> Optional[int]:
@@ -269,18 +265,18 @@ def streaming_data_files_generator(
         except Exception:
             return None
 
-    def discover_once() -> List[MyPath]:
-        discovered: List[MyPath] = []
+    def discover_once() -> List[Path]:
+        discovered: List[Path] = []
         if _is_ssh_path(data_dir):
             discovered = _list_remote_files(str(data_dir), base_name)
         else:
             pattern: str = f"{data_dir}/{base_name}_*.h5"
-            discovered = [str(p) for p in glob.glob(pattern)]
+            discovered = [Path(str(p)) for p in glob.glob(pattern)]
 
         discovered_sorted = natsorted(
             discovered, key=lambda p: Path(str(p).split(":")[-1]).stem
         )
-        filtered: List[MyPath] = []
+        filtered: List[Path] = []
         for p in discovered_sorted:
             idx = parse_index_from_name(str(p))
             if idx is None:
@@ -292,24 +288,22 @@ def streaming_data_files_generator(
             filtered.append(p)
         return filtered
 
-    def downlaod_and_return_local(remote_or_local: MyPath) -> Path:
-        pstr = str(remote_or_local)
-        if _is_ssh_path(pstr):
-            local_name = Path(pstr).name
+    def downlaod_and_return_local(remote_or_local: Path) -> Path:
+        if _is_ssh_path(remote_or_local):
+            local_name = remote_or_local.name
             local_path = download_dir / local_name
             if local_path.exists():
                 return local_path
-            ok: bool = rsync_download_file(pstr, local_path)
+            ok: bool = rsync_download_file(remote_or_local, local_path)
             if not ok:
-                raise RuntimeError(f"rsync failed for {pstr}")
+                raise RuntimeError(f"rsync failed for {str(remote_or_local)}")
             return local_path
         else:
-            local_path = Path(pstr)
-            if not local_path.exists():
-                raise RuntimeError(f"Local file not found: {local_path}")
-            return local_path
+            if not remote_or_local.exists():
+                raise RuntimeError(f"Local file not found: {str(remote_or_local)}")
+            return remote_or_local
 
-    files_to_process: List[MyPath] = discover_once()
+    files_to_process: List[Path] = discover_once()
 
     if not files_to_process:
         return
@@ -325,11 +319,9 @@ def streaming_data_files_generator(
 
 
 def read_coh_range(
-    data_dir: Union[str, Path], particle_path: Union[str, Path]
+    data_dir: Path, particle_path: Path
 ) -> float:
     """Read the cohesive range from 'parties.inp' if not, return 0.05 * D_p."""
-    data_dir = Path(data_dir)
-    particle_path = Path(particle_path)
     try:
         params: Dict[str, Union[np.ndarray, int, float]] = _read_inp(
             data_dir / "parties.inp"
@@ -339,13 +331,12 @@ def read_coh_range(
         return coh_range * dy
     except KeyError:
         warnings.warn(r"parties.inp not found, using coh_range = 0.05 * D_p.")
-        with h5py.File(particle_path._str, "r") as f:
+        with h5py.File(str(particle_path), "r") as f:
             return 0.1 * f["mobile/R"][0]  # type: ignore
 
 
-def read_Re(data_dir: MyPath) -> float:
+def read_Re(data_dir: Path) -> float:
     """Read the cohesive range from 'parties.inp' if not, return 0.05 * D_p."""
-    data_dir = Path(data_dir)
     try:
         params: Dict[str, Union[np.ndarray, int, float]] = _read_inp(
             data_dir / "parties.inp"
@@ -356,8 +347,7 @@ def read_Re(data_dir: MyPath) -> float:
         raise KeyError(r"Either parties.inp not found, or Re not found in parties.inp")
 
 
-def read_channel_half_height(data_dir: MyPath) -> float:
-    data_dir = Path(data_dir)
+def read_channel_half_height(data_dir: Path) -> float:
     try:
         params: Dict[str, Union[np.ndarray, int, float]] = _read_inp(
             data_dir / "parties.inp"
@@ -390,8 +380,7 @@ def read_domain_info(path: Path) -> Dict[str, Union[int, float]]:
     return domain
 
 
-def read_particle_data(path: MyPath) -> Dict[str, Union[np.ndarray, float]]:
-    path = Path(path)
+def read_particle_data(path: Path) -> Dict[str, Union[np.ndarray, float]]:
     with h5py.File(path._str, "r") as f:
         mobile_data: h5py.Group = f["mobile"]  # type: ignore
         id: np.ndarray = np.arange(mobile_data["R"].shape[0])  # type: ignore
@@ -472,7 +461,7 @@ def combine_dicts(dict_list: List[Dict[str, Any]]) -> Dict[str, np.ndarray]:
     return out
 
 
-def _read_inp(inp_file: Union[Path, str]) -> Dict[str, Union[np.ndarray, int, float]]:
+def _read_inp(inp_file: Path) -> Dict[str, Union[np.ndarray, int, float]]:
     """Return a dict of all parameters in a config file."""
     config_parser = configparser.ConfigParser(inline_comment_prefixes="#")
 
@@ -505,7 +494,7 @@ def _merge_dicts(dict_list: list[dict]) -> dict:
 
 def get_time_array(
     file_prefix: str,
-    data_dir:MyPath,
+    data_dir: Path,
     min_file_index: Optional[int],
     max_file_index: Optional[int],
     key: Optional[str] = None,
@@ -532,7 +521,7 @@ def get_time_array(
 
 def find_idx_from_time(
     file_prefix: str,
-    data_dir: MyPath,
+    data_dir: Path,
     target_time: float,
     key: Optional[str] = None,
 ) -> Dict[str, Any]:
