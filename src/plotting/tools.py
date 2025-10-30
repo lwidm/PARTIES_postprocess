@@ -177,7 +177,7 @@ def _plot_one(ax: Axes, series: PlotSeries) -> None:
 
 
 def generic_plot(
-    output_path: Union[str, Path],
+    output_path: Path,
     series_list: Sequence[PlotSeries],
     legend:bool,
     figsize: Tuple[float, float] = (6.5, 5.5),
@@ -217,7 +217,6 @@ def generic_plot(
 
     ax = format_plot_axes(ax)
 
-    out_path = Path(output_path)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(str(out_path), dpi=dpi)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(str(output_path), dpi=dpi)
 

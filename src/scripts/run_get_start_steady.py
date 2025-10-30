@@ -3,7 +3,6 @@ from typing import List, Optional, Tuple, Dict, Any
 from matplotlib import pyplot as plt
 
 from src.myio import myio
-from src.myio.myio import MyPath
 from src.plotting.tools import PlotSeries
 from src.plotting import series as plt_series
 from src.plotting import templates as plt_templ
@@ -13,8 +12,8 @@ def main():
     plot_dir: Path = Path("./output/plots_tmp")
     # parties_data_dir: Path = Path("/media/usb/UCSB/data/")
     parties_data_dir: Path = Path("./data/")
-    # output_dir: MyPath = Path("/media/usb/UCSB/output/")
-    output_dir: MyPath = Path("./output")
+    # output_dir: Path = Path("/media/usb/UCSB/output/")
+    output_dir: Path = Path("./output")
 
     data_names: List[str] = [
         "phi1p5",
@@ -43,8 +42,6 @@ def main():
     ]
     colours: List[str] = ["C0", "C1", "C2", "C3", "C4"]
 
-    plot_dir = Path(plot_dir)
-    output_dir = Path(output_dir)
 
     parties_data_dirs: List[Path] = [
         parties_data_dir / data_name for data_name in data_names
@@ -52,14 +49,14 @@ def main():
     output_dirs: List[Path] = [output_dir / data_name for data_name in data_names]
 
     def get_series_floc_evolution(
-        output_dir: MyPath,
+        output_dir: Path,
         colour: str,
         label: str,
         min_file_index: Optional[int],
         max_file_index: Optional[int],
     ) -> PlotSeries:
         s: PlotSeries = plt_series.floc_count_evolution(
-            Path(output_dir) / "flocs",
+            output_dir / "flocs",
             colour,
             label,
             min_file_index,

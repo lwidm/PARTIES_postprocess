@@ -121,8 +121,8 @@ def extract_floc(
 
 
 def process_flocs(
-    in_file: Union[str, Path],
-    out_file: Union[str, Path],
+    in_file: Path,
+    out_file: Path,
     domain: Dict[str, Union[int, float]],
     coh_range: float,
 ) -> Dict[str, np.ndarray]:
@@ -152,15 +152,13 @@ def process_flocs(
 
 
 def process_all_flocs(
-    parties_data_dir: Union[str, Path],
-    output_dir: Union[str, Path],
+    parties_data_dir: Path,
+    output_dir: Path,
     min_file_index: Optional[int],
     max_file_index: Optional[int],
     num_workers: Optional[int],
     use_threading: bool,
 ):
-    output_dir = Path(output_dir)
-
     print(f"Looking for particle files in {parties_data_dir} ...")
     particle_files: List[Path] = myio.list_data_files(
         parties_data_dir, "Particle", min_file_index, max_file_index
@@ -202,8 +200,8 @@ def process_all_flocs(
 
 
 def main(
-    parties_data_dir: Union[str, Path],
-    output_dir: Union[str, Path],
+    parties_data_dir: Path,
+    output_dir: Path,
     trn: bool,
     Re_tau: float,
     process_flocs: bool,
@@ -218,9 +216,9 @@ def main(
     # CONFIGURATION AND CONSTANTS
     # =============================================================================
 
-    output_dir = Path(output_dir) / "flocs"
+    output_dir = output_dir / "flocs"
 
-    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     plotting.tools.update_plot_params()
 
@@ -232,7 +230,7 @@ def main(
     L: float = myio.read_channel_half_height(parties_data_dir)
 
     if trn:
-        parties_data_dir = Path(parties_data_dir) / "trn"
+        parties_data_dir = parties_data_dir / "trn"
 
     if process_flocs:
         process_all_flocs(

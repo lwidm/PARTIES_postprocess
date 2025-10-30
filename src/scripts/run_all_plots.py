@@ -2,7 +2,6 @@ from typing import Optional, Tuple, List
 from pathlib import Path
 
 from src import scripts
-from src.myio.myio import MyPath
 from src.plotting.tools import PlotSeries
 from src.plotting import series as plt_series
 from src.plotting import templates as plt_templ
@@ -14,7 +13,7 @@ from matplotlib import pyplot as plt
 parent_dir: Path = Path("./")
 
 
-def fluid(utexas_dir: MyPath, plot_dir: MyPath):
+def fluid(utexas_dir: Path, plot_dir: Path):
 
     # ==============================
     # Inputs
@@ -40,14 +39,14 @@ def fluid(utexas_dir: MyPath, plot_dir: MyPath):
     # ==============================
 
     Num_data: int = len(data_names)
-    utexas_h5 = Path(utexas_dir) / "utexas.h5"
+    utexas_h5 = utexas_dir / "utexas.h5"
     parties_processed_filename = "parties_reynolds.h5"
     utexas_wall_series: List[PlotSeries] = plt_series.u_plus_mean_wall_utexas(utexas_h5)
     parties_wall_series: List[List[PlotSeries]] = []
     for i in range(Num_data):
         parties_wall_series.append(
             plt_series.u_plus_mean_wall_parties(
-                Path(output_dir / data_names[i] / "fluid") / parties_processed_filename,
+                output_dir / data_names[i] / "fluid" / parties_processed_filename,
                 label=labels[i],
                 colour=colours[i],
                 linestyles=("-", "--"),
@@ -78,15 +77,15 @@ def fluid(utexas_dir: MyPath, plot_dir: MyPath):
 
 
 def floc(
-    plot_dir: MyPath,
+    plot_dir: Path,
     compute: bool,
     compute_flocs: List[bool],
     data_names: List[str],
     labels: List[str],
     trn: List[bool],
     Re_tau: List[float],
-    parties_data_dir: MyPath,
-    output_dir: MyPath,
+    parties_data_dir: Path,
+    output_dir: Path,
     min_file_indices: List[Optional[int]],
     max_file_indices: List[Optional[int]],
     min_steady_indices: List[Optional[int]],
@@ -98,10 +97,6 @@ def floc(
     linestyles: List[str],
 ) -> None:
 
-    plot_dir = Path(plot_dir)
-    parties_data_dir = Path(parties_data_dir)
-    output_dir = Path(output_dir)
-
     Num_data: int = len(data_names)
 
     parties_data_dirs: List[Path] = [
@@ -109,7 +104,6 @@ def floc(
     ]
     output_dirs: List[Path] = [output_dir / data_name for data_name in data_names]
 
-    plot_dir = Path(plot_dir)
     if compute:
         for i in range(len(parties_data_dirs)):
             min_idx: Optional[int] = min_trn_steady_indices[i] if trn[i] else min_steady_indices[i]
@@ -129,14 +123,14 @@ def floc(
             )
 
     def get_series_floc_evolution(
-        output_dir: MyPath,
+        output_dir: Path,
         colour: str,
         label: str,
         min_file_index: Optional[int],
         max_file_index: Optional[int],
     ) -> PlotSeries:
         s: PlotSeries = plt_series.floc_count_evolution(
-            Path(output_dir) / "flocs",
+            output_dir / "flocs",
             colour,
             label,
             min_file_index,
@@ -147,7 +141,7 @@ def floc(
         return s
 
     def get_series_floc_evolution_fit(
-        output_dir: MyPath,
+        output_dir: Path,
         colour: str,
         label: str,
         min_file_index: Optional[int],
@@ -156,7 +150,7 @@ def floc(
         max_steady_index: Optional[int],
     ) -> PlotSeries:
         s: PlotSeries = plt_series.floc_count_evolution_fit(
-            Path(output_dir) / "flocs",
+            output_dir / "flocs",
             colour,
             label,
             min_file_index,
@@ -169,7 +163,7 @@ def floc(
         return s
 
     def get_series_pdf(
-        output_dir: MyPath,
+        output_dir: Path,
         colour: str,
         label: str,
         marker: str,
@@ -201,7 +195,7 @@ def floc(
             s_mass_D_f_PDF_err,
             s_mass_D_g_PDF_err,
         ) = plt_series.floc_pdf(
-            floc_dir=Path(output_dir) / "flocs",
+            floc_dir=output_dir / "flocs",
             labels=[label for _ in range(6)],
             colours=[colour for _ in range(6)],
             markers=[marker for _ in range(6)],
@@ -223,7 +217,7 @@ def floc(
         )
 
     def get_series_avg(
-        output_dir: MyPath, label: str, colour: str, marker: str
+        output_dir: Path, label: str, colour: str, marker: str
     ) -> Tuple[
         PlotSeries,
         PlotSeries,
@@ -244,7 +238,7 @@ def floc(
             s_D_f_mass_err,
             s_D_g_mass_err,
         ) = plt_series.floc_avg_dir(
-            floc_dir=Path(output_dir) / "flocs",
+            floc_dir=output_dir / "flocs",
             labels=[label for _ in range(4)],
             colours=[colour for _ in range(4)],
             markers=[marker for _ in range(4)],
@@ -396,15 +390,15 @@ def floc(
 
 
 def phi_eulerian(
-    plot_dir: MyPath,
+    plot_dir: Path,
     data_names: List[str],
     labels: List[str],
-    output_dir: MyPath,
+    output_dir: Path,
     colours: List[str],
     show_errs: bool,
 ) -> None:
     fluid_dirs: List[Path] = [
-        Path(output_dir) / data_name / "fluid" for data_name in data_names
+        output_dir / data_name / "fluid" for data_name in data_names
     ]
     print(fluid_dirs[0])
 

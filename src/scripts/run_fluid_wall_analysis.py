@@ -6,7 +6,6 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from src.myio import myio
-from src.myio.myio import MyPath
 from src.fluid import flow_statistics as fstat
 from src import theory
 from src import plotting
@@ -15,7 +14,7 @@ from src.plotting.tools import PlotSeries
 
 
 def compute_all_reynolds_stresses(
-    parties_data_dir: MyPath,
+    parties_data_dir: Path,
     Re: float,
     min_file_index: Optional[int] = None,
     max_file_index: Optional[int] = None,
@@ -64,8 +63,8 @@ def compute_all_reynolds_stresses(
 
 
 def compute_and_save_utexas(
-    utexas_data_dir: Union[str, Path],
-    out_h5: Union[str, Path],
+    utexas_data_dir: Path,
+    out_h5: Path,
 ) -> Dict[str, Union[np.ndarray, float]]:
     """Load UTEXAS text files, compute law-of-the-wall fits & profiles, save to HDF5 and return dict."""
     utexas_mean_data_file = f"{utexas_data_dir}/LM_Channel_0180_mean_prof.dat"
@@ -126,8 +125,8 @@ def compute_and_save_utexas(
 
 
 def compute_and_save_parties(
-    parties_data_dir: Union[str, Path],
-    output_h5: Union[str, Path],
+    parties_data_dir: Path,
+    output_h5: Path,
     Re: float,
     min_file_index: Optional[int] = None,
     max_file_index: Optional[int] = None,
@@ -175,9 +174,9 @@ def compute_and_save_parties(
 
 
 def main(
-    parties_data_dir: Union[str, Path],
-    utexas_data_dir: Union[str, Path],
-    output_dir: Union[str, Path],
+    parties_data_dir: Path,
+    utexas_data_dir: Path,
+    output_dir: Path,
     min_file_index: Optional[int],
     max_file_index: Optional[int],
     compute: Tuple[bool, bool],
@@ -189,10 +188,10 @@ def main(
 
     Re: float = 2800.0
 
-    output_dir = Path(output_dir) / "fluid"
+    output_dir = output_dir / "fluid"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
 
     # =============================================================================
@@ -213,7 +212,7 @@ def main(
             max_file_index,
         )
 
-    plot_dir: Path = Path(output_dir) / "plots"
+    plot_dir: Path = output_dir / "plots"
     plot_dir.mkdir(parents=True, exist_ok=True)
 
     utexas_wall_series: List[PlotSeries] = plotting.series.u_plus_mean_wall_utexas(

@@ -1,6 +1,6 @@
 # -- src/scripts/run_fuild_wall_analysis.py
 
-from typing import Optional, List, Dict, Union, Literal
+from typing import Optional, List, Dict, Literal
 from pathlib import Path
 import numpy as np
 import h5py
@@ -15,8 +15,8 @@ from matplotlib import pyplot as plt
 
 
 def compute_fluid_Ekin_evolution(
-    parties_data_dir: Union[str, Path],
-    output_dir: Union[str, Path],
+    parties_data_dir: Path,
+    output_dir: Path,
     Re: float,
     min_file_index: Optional[int],
     max_file_index: Optional[int],
@@ -40,15 +40,15 @@ def compute_fluid_Ekin_evolution(
 
     results: Dict[str, np.ndarray] = {"E_kin": E_kin, "time": time}
 
-    myio.save_to_h5(Path(output_dir) / "E_kin.h5", results)
+    myio.save_to_h5(output_dir / "E_kin.h5", results)
 
     return results
 
 
 
 def main(
-    parties_data_dir: Union[str, Path],
-    output_dir: Union[str, Path],
+    parties_data_dir: Path,
+    output_dir: Path,
     min_file_index: Optional[int] = None,
     max_file_index: Optional[int] = None,
 ):
@@ -59,7 +59,7 @@ def main(
 
 
     Re: float = 2800.0
-    output_dir = Path(output_dir) / "fluid"
+    output_dir = output_dir / "fluid"
     plot_dir = output_dir / "plots"
 
     num_workers_single_component: Optional[int] = 5
@@ -69,7 +69,7 @@ def main(
         num_workers_single_component = 8
         num_workers_cross_component = 4
 
-    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     # processing_method: Literal["load", "compute"] = "load"
     processing_method: Literal["load", "compute"] = "compute"

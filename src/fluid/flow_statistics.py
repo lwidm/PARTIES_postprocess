@@ -8,13 +8,11 @@ import tqdm
 import gc
 
 from src.myio import myio
-from src.myio.myio import MyPath
 
 
-def get_grid(fluid_file: MyPath) -> Dict[str, np.ndarray]:
+def get_grid(fluid_file: Path) -> Dict[str, np.ndarray]:
     """Get domain information from the fluid file."""
-    fluid_file = Path(fluid_file)
-    with h5py.File(fluid_file._str, "r") as f:
+    with h5py.File(str(fluid_file), "r") as f:
         xc: np.ndarray = f["grid/xc"][:-1]  # type: ignore
         yc: np.ndarray = f["grid/yc"][:-1]  # type: ignore
         zc: np.ndarray = f["grid/zc"][:-1]  # type: ignore
@@ -56,10 +54,25 @@ def E_ij(data_i: np.ndarray, data_j: np.ndarray, axis: Literal[0, 1, 2]):
 
 
 def process_mean_flow(
-    fluid_files: List[MyPath], grid: Dict[str, np.ndarray]
+    fluid_files: List[Path], grid: Dict[str, np.ndarray]
 ) -> Dict[str, np.ndarray]:
-    n_snapshots: int = len(fluid_files)
-    results: Dict[str, np.ndarray] = {
+
+    u_shape: Tuple[int, int, int]
+    v_shape: Tuple[int, int, int]
+    w_shape: Tuple[int, int, int]
+    with h5py.File(str(fluid_files[0]), "r") as f:
+        u_shape = f["u"][:-1, :-1, :-1].shape  # type: ignore
+        v_shape = f["v"][:-1, :, :-1].shape  # type: ignore
+        w_shape = f["w"][:-1, :-1, :-1].shape  # type: ignore
+
+    u_buf: np.ndarray = np.empty(u_shape)
+    v_buf: np.ndarray = np.empty(v_shape)
+    w_buf: np.ndarray = np.empty(w_shape)
+    vfu_buf: np.ndarray = np.empty(u_shape)
+    vfv_buf: np.ndarray = np.empty(v_shape)
+    vfw_buf: np.ndarray = np.empty(w_shape)
+    n_snapshots = len(fluid_files)
+    results = {
         "U": np.zeros_like(grid["yc"]),
         "V": np.zeros_like(grid["yv"]),
         "W": np.zeros_like(grid["yc"]),
@@ -67,36 +80,37 @@ def process_mean_flow(
     }
 
     for fluid_file in tqdm.tqdm(fluid_files, desc="Processing mean flow"):
-        with h5py.File(Path(fluid_file)._str, "r") as f:
-            vfu: np.ndarray = f["vfu"][:-1, :-1, :-1]  # type: ignore
-            results["U"] += masked_mean(f["u"][:-1, :-1, :-1], 1 - vfu)  # type: ignore
-            results["Phi"] += np.mean(vfu, axis=(0, 2))
-            del vfu
-            gc.collect()
-            results["V"] += masked_mean(f["v"][:-1, :, :-1], 1 - f["vfv"][:-1, :, :-1])  # type: ignore
-            gc.collect()
-            results["W"] += masked_mean(f["w"][:-1, :-1, :-1], 1 - f["vfw"][:-1, :-1, :-1])  # type: ignore
-            gc.collect()
+        with h5py.File(str(fluid_file), "r") as f:
+            f["u"].read_direct(u_buf, np.s_[:-1, :-1, :-1])  # type: ignore
+            f["v"].read_direct(v_buf, np.s_[:-1, :, :-1])  # type: ignore
+            f["w"].read_direct(w_buf, np.s_[:-1, :-1, :-1])  # type: ignore
+            f["vfu"].read_direct(vfu_buf, np.s_[:-1, :-1, :-1])  # type: ignore
+            f["vfv"].read_direct(vfv_buf, np.s_[:-1, :, :-1])  # type: ignore
+            f["vfw"].read_direct(vfw_buf, np.s_[:-1, :-1, :-1])  # type: ignore
+        np.add(results["U"], masked_mean(u_buf, 1 - vfu_buf), out=results["U"])
+        np.add(results["V"], masked_mean(v_buf, 1 - vfv_buf), out=results["V"])
+        np.add(results["W"], masked_mean(w_buf, 1 - vfw_buf), out=results["W"])
+        np.add(results["Phi"], np.mean(vfu_buf, axis=(0, 2)), out=results["Phi"])
 
     for key in results:
-        results[key] /= n_snapshots
+        np.divide(results[key], n_snapshots, out=results[key])
 
     return results
 
 
 def process_fluctuations(
-    fluid_files: List[MyPath],
+    fluid_files: List[Path],
     mean_results: Dict[str, np.ndarray],
     grid: Dict[str, np.ndarray],
 ) -> Dict[str, np.ndarray]:
-    n_snapshots = len(fluid_files)
-    ny_c = len(grid["yc"])
-    ny_v = len(grid["yv"])
-    nx = len(grid["xc"]) // 2 + 1
-    nz = len(grid["zc"]) // 2 + 1
+    n_snapshots: int = len(fluid_files)
+    ny_c: int = len(grid["yc"])
+    ny_v: int = len(grid["yv"])
+    nx: int = len(grid["xc"]) // 2 + 1
+    nz: int = len(grid["zc"]) // 2 + 1
 
-    results: Dict[str, np.ndarray] = {
-        "phip": np.zeros_like(grid["yc"]),
+    results = {
+        "phi": np.zeros_like(grid["yc"]),
         "upup": np.zeros_like(grid["yc"]),
         "upvp": np.zeros_like(grid["yc"]),
         "vpvp": np.zeros_like(grid["yv"]),
@@ -112,35 +126,53 @@ def process_fluctuations(
     }
 
     for fluid_file in tqdm.tqdm(fluid_files, desc="Processing fluctuations"):
-        with h5py.File(Path(fluid_file)._str, "r") as f:
-            w: np.ndarray = f["w"][:-1, :-1, :-1] - mean_results["W"][np.newaxis, :, np.newaxis]  # type: ignore
-            gc.collect()
-            vfw: np.ndarray = 1 - f["vfw"][:, :-1, :-1]  # type: ignore
-            gc.collect()
+        w: np.ndarray
+        vfw: np.ndarray
+        with h5py.File(str(fluid_file), "r") as f:
+            w = f["w"][:-1, :-1, :-1] - mean_results["W"][np.newaxis, :, np.newaxis]  # type: ignore
+            # BUG : -1, :, -1
+            vfw = 1 - f["vfw"][:, :-1, :-1]  # type: ignore
 
-        results["E_ww_kx"] += E_ii(np.fft.rfft(w, axis=2), axis=0)
-        results["E_ww_kz"] += E_ii(np.fft.rfft(w, axis=0), axis=2)
-        results["wpwp"] += masked_mean(w * w, vfw[:-1])
+        np.add(
+            results["E_ww_kx"],
+            E_ii(np.fft.rfft(w, axis=2), axis=0),
+            out=results["E_ww_kx"],
+        )
+        np.add(
+            results["E_ww_kz"],
+            E_ii(np.fft.rfft(w, axis=0), axis=2),
+            out=results["E_ww_kz"],
+        )
+        np.add(results["wpwp"], masked_mean(w * w, vfw[:-1]), out=results["wpwp"])
         del w
         gc.collect()
 
-        with h5py.File(Path(fluid_file)._str, "r") as f:
-            u: np.ndarray = f["u"][:-1, :-1, :] - mean_results["U"][np.newaxis, :, np.newaxis]  # type: ignore
-            v: np.ndarray = f["v"][:-1, :, :-1] - mean_results["V"][np.newaxis, :, np.newaxis]  # type: ignore
+        u: np.ndarray
+        v: np.ndarray
+        vfu: np.ndarray
+        vfv: np.ndarray
+        with h5py.File(str(fluid_file), "r") as f:
+            u = f["u"][:-1, :-1, :] - mean_results["U"][np.newaxis, :, np.newaxis]  # type: ignore
+            v = f["v"][:-1, :, :-1] - mean_results["V"][np.newaxis, :, np.newaxis]  # type: ignore
 
             # BUG : missing dimension here?
-            vfu: np.ndarray = f["vfu"][:-1, :-1]  # type: ignore
-            vfv: np.ndarray = 1 - f["vfv"][:-1, :, :-1]  # type: ignore
+            vfu = f["vfu"][:-1, :-1]  # type: ignore
+            vfv = 1 - f["vfv"][:-1, :, :-1]  # type: ignore
 
         phi: np.ndarray = (
             vfu[:, :, :-1] - mean_results["Phi"][np.newaxis, :, np.newaxis]
         )
-        results["phip"] += np.mean(phi * phi, axis=(0, 2))
-        vfu = 1 - vfu
+        np.add(results["phip"], np.mean(phi * phi, axis=(0, 2)), out=results["phip"])
+        np.subtract(1, vfu, out=vfu)
         del phi
+        gc.collect()
 
-        results["upup"] += masked_mean(u[:, :, :-1] * u[:, :, :-1], vfu[:, :, :-1])
-        results["vpvp"] += masked_mean(v * v, vfv)
+        np.add(
+            results["upup"],
+            masked_mean(u[:, :, :-1] * u[:, :, :-1], vfu[:, :, :-1]),
+            out=results["upup"],
+        )
+        np.add(results["vpvp"], masked_mean(v * v, vfv), out=results["vpvp"])
 
         vfc: np.ndarray = (interp_x(vfu) + interp_y(vfv) + interp_z(vfw)) / 3
 
@@ -148,32 +180,32 @@ def process_fluctuations(
         gc.collect()
 
         u_k: np.ndarray = np.fft.rfft(u[:, :, :-1], axis=2)
-        results["E_uu_kx"] += E_ii(u_k, axis=0)
+        np.add(results["E_uu_kx"], E_ii(u_k, axis=0), out=results["E_uu_kx"])
 
         v_k: np.ndarray = np.fft.rfft(v, axis=2)
-        results["E_vv_kx"] += E_ii(v_k, axis=0)
+        np.add(results["E_vv_kx"], E_ii(v_k, axis=0), out=results["E_vv_kx"])
 
         v_k = interp_y(v_k)
-        results["E_uv_kx"] += E_ij(u_k, v_k, axis=0)
+        np.add(results["E_uv_kx"], E_ij(u_k, v_k, axis=0), out=results["E_uv_kx"])
 
         del u_k, v_k
         gc.collect()
 
-        u_k = np.fft.rfft(u[:, :, :-1], axis=0)
-        results["E_uu_kz"] += E_ii(u_k, axis=2)
+        u_k: np.ndarray = np.fft.rfft(u[:, :, :-1], axis=0)
+        np.add(results["E_uu_kz"], E_ii(u_k, axis=2), out=results["E_uu_kz"])
 
-        v_k = np.fft.rfft(v, axis=0)
-        results["E_vv_kz"] += E_ii(v_k, axis=2)
+        v_k: np.ndarray = np.fft.rfft(v, axis=0)
+        np.add(results["E_vv_kz"], E_ii(v_k, axis=2), out=results["E_vv_kz"])
 
         v_k = interp_y(v_k)
-        results["E_uv_kz"] += E_ij(u_k, v_k, axis=2)
+        np.add(results["E_uv_kz"], E_ij(u_k, v_k, axis=2), out=results["E_uv_kz"])
 
         del u_k, v_k
         gc.collect()
 
         u = interp_x(u)
         v = interp_y(v)
-        results["upvp"] += masked_mean(u * v, vfc)
+        np.add(results["upvp"], masked_mean(u * v, vfc), out=results["upvp"])
         del u, v
         gc.collect()
 
@@ -183,14 +215,14 @@ def process_fluctuations(
     vv_cell_center: np.ndarray = 0.5 * (results["vpvp"][1:] + results["vpvp"][:-1])
     results["k"] = 0.5 * (results["upup"] + vv_cell_center + results["wpwp"])
 
-    results["E_uu_kx"] *= 0.5
-    results["E_vv_kx"] *= 0.5
-    results["E_ww_kx"] *= 0.5
-    results["E_uv_kx"] *= 0.5
-    results["E_uu_kz"] = 0.5 * results["E_uu_kz"].T
-    results["E_vv_kz"] = 0.5 * results["E_vv_kz"].T
-    results["E_ww_kz"] = 0.5 * results["E_ww_kz"].T
-    results["E_uv_kz"] = 0.5 * results["E_uv_kz"].T
+    np.multiply(results["E_uu_kx"], 0.5, out=results["E_uu_kx"])
+    np.multiply(results["E_vv_kx"], 0.5, out=results["E_vv_kx"])
+    np.multiply(results["E_ww_kx"], 0.5, out=results["E_ww_kx"])
+    np.multiply(results["E_uv_kx"], 0.5, out=results["E_uv_kx"])
+    np.multiply(results["E_uu_kz"].T, 0.5, out=results["E_uu_kz"])
+    np.multiply(results["E_vv_kz"].T, 0.5, out=results["E_vv_kz"])
+    np.multiply(results["E_ww_kz"].T, 0.5, out=results["E_ww_kz"])
+    np.multiply(results["E_uv_kz"].T, 0.5, out=results["E_uv_kz"])
 
     results["k_x"] = (
         2 * np.pi * np.fft.fftfreq(results["E_uu_kx"].shape[1], d=grid["xu"][1])
@@ -249,11 +281,10 @@ def get_wall_units(
     return wall_results
 
 
-def calc_tot_vol_frac(path: MyPath) -> float:
-    path = Path(path)
+def calc_tot_vol_frac(path: Path) -> float:
     print(f"Calculating volume fraction using {path}")
     vfu: np.ndarray
-    with h5py.File(path._str, "r") as h5_file:
+    with h5py.File(str(path), "r") as h5_file:
         vfu = h5_file["vfu"][:]  # type: ignore
 
     vfu = vfu[:-1, :-1, :-1]
@@ -268,13 +299,12 @@ def calc_tot_vol_frac(path: MyPath) -> float:
     return phi
 
 
-def calc_tot_fluid_Ekin(fluid_file_path: MyPath, Re: float) -> float:
-    fluid_file_path = Path(fluid_file_path)
+def calc_tot_fluid_Ekin(fluid_file_path: Path, Re: float) -> float:
 
     grid: Dict[str, np.ndarray] = get_grid(fluid_file_path)
     mean_u_squared: np.floating
     phi: float
-    with h5py.File(fluid_file_path._str, "r") as h5_file:
+    with h5py.File(str(fluid_file_path), "r") as h5_file:
         uc: np.ndarray = h5_file["u"][:-1, :-1, :-1]  # type: ignore
         vc: np.ndarray = interp_y(h5_file["v"][:-1, :, :-1])  # type: ignore
         wc: np.ndarray = h5_file["w"][:-1, :-1, :-1]  # type: ignore
@@ -295,8 +325,8 @@ def calc_tot_fluid_Ekin(fluid_file_path: MyPath, Re: float) -> float:
 
 
 def process_mean_phi(
-    parties_data_dir: MyPath,
-    output_h5: MyPath,
+    parties_data_dir: Path,
+    output_h5: Path,
     compute_err: bool,
     min_file_index: Optional[int],
     max_file_index: Optional[int],
@@ -314,7 +344,7 @@ def process_mean_phi(
 
 
     dset: h5py.Dataset
-    with h5py.File(fluid_files[0]._str, "r") as h5file_sample:
+    with h5py.File(str(fluid_files[0]), "r") as h5file_sample:
         dset = h5file_sample["vfv"]  # type: ignore
         print(dset)
         vfv_Nz, vfv_Ny, vfv_Nx = dset.shape
@@ -348,7 +378,7 @@ def process_mean_phi(
 
     # first pass: accumulate means
     for fluid_file in tqdm.tqdm(fluid_files, desc="Processing mean phi"):
-        with h5py.File(fluid_file._str, "r") as h5_file:
+        with h5py.File(str(fluid_file), "r") as h5_file:
             dset = h5_file["vfv"]  # type: ignore
             dset.read_direct(vfv_buf, np.s_[:-1, :-1, :-1])
         myio.mirror_and_append_along_y_inplace(vfv_buf, vfv_mirr_buf)
@@ -367,7 +397,7 @@ def process_mean_phi(
     if compute_err:
         assert vfv_err_buf is not None
         for fluid_file in tqdm.tqdm(fluid_files, desc="Processing mean phi"):
-            with h5py.File(fluid_file._str, "r") as h5_file:
+            with h5py.File(str(fluid_file), "r") as h5_file:
                 dset = h5_file["vfv"]  # type: ignore
                 dset.read_direct(vfv_buf, np.s_[:-1, :-1, :-1])
             myio.mirror_and_append_along_y_inplace(vfv_buf, vfv_mirr_buf)

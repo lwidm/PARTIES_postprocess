@@ -2,17 +2,16 @@ from typing import Optional, Tuple
 from pathlib import Path
 
 from src.fluid import flow_statistics as fstat
-from src.myio.myio import MyPath
 
 
 def main(
-    parties_data_dir: MyPath,
-    output_dir: MyPath,
+    parties_data_dir: Path,
+    output_dir: Path,
     min_file_index: Optional[int],
     max_file_index: Optional[int],
     compute: Tuple[bool],
 ):
-    output_dir = Path(output_dir) / "fluid"
+    output_dir = output_dir / "fluid"
     mean_phi_h5: Path = output_dir / "mean_phi.h5"
 
     if compute[0]:

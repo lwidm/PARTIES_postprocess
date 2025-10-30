@@ -1,14 +1,13 @@
 # -- src/plotting/series.py
 
 from pathlib import Path
-from typing import Union, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 import h5py
 
 import numpy as np
 import scipy.optimize
 
 from src.myio import myio
-from src.myio.myio import MyPath
 from src.plotting.tools import (
     PlotSeries,
 )
@@ -17,7 +16,7 @@ from src.plotting.tools import (
 
 
 def floc_count_evolution(
-    floc_dir: MyPath,
+    floc_dir: Path,
     colour: str,
     label: Optional[str],
     min_file_index: Optional[int],
@@ -72,7 +71,7 @@ def floc_count_evolution(
 
 
 def floc_count_evolution_fit(
-    floc_dir: MyPath,
+    floc_dir: Path,
     colour: str,
     label: Optional[str],
     min_file_index: Optional[int],
@@ -148,7 +147,7 @@ def floc_count_evolution_fit(
 
 
 def floc_pdf(
-    floc_dir: MyPath,
+    floc_dir: Path,
     labels: List[Optional[str]],
     colours: List[str],
     markers: List[str],
@@ -173,7 +172,7 @@ def floc_pdf(
     probabs_list: List[np.ndarray] = []
     postfixes: List[str] = ["n_p", "D_f", "D_g"]
 
-    with h5py.File((Path(floc_dir) / "floc_PDF.h5")._str, "r") as f:
+    with h5py.File(str(floc_dir / "floc_PDF.h5"), "r") as f:
         for i in range(len(postfixes)):
             bin_widths_list.append(f["bin_width_" + postfixes[i]][()])  # type: ignore
 
@@ -259,7 +258,7 @@ def floc_pdf(
 
 
 def floc_avg_dir(
-    floc_dir: MyPath,
+    floc_dir: Path,
     labels: List[Optional[str]],
     colours: List[str],
     markers: List[str],
@@ -284,7 +283,7 @@ def floc_avg_dir(
     std_D_g_avg: np.ndarray
     std_D_f_mass_avg: np.ndarray
     std_D_g_mass_avg: np.ndarray
-    with h5py.File((Path(floc_dir) / "avg_floc_diam.h5")._str, "r") as f:
+    with h5py.File(str(floc_dir / "avg_floc_diam.h5"), "r") as f:
         if inner_units:
             x_data = f["yp_mean"][:]  # type: ignore
             D_f_avg = f["inner_D_f_avg"][:]  # type: ignore
@@ -373,7 +372,7 @@ def floc_avg_dir(
 
 
 def u_plus_mean_wall_parties(
-    parties_data_path: Union[Path, str],
+    parties_data_path: Path,
     label: str,
     colour: str,
     linestyles: Optional[Tuple[str, str]] = None,
@@ -416,7 +415,7 @@ def u_plus_mean_wall_parties(
 
 
 def u_plus_mean_wall_utexas(
-    utexas_data_path: Union[Path, str],
+    utexas_data_path: Path,
     colour_map: Dict[str, str] = {},
     linestyle_map: Dict[str, str] = {},
 ) -> List[PlotSeries]:
@@ -487,7 +486,7 @@ def u_plus_mean_wall_utexas(
 
 
 def normal_stress_wall_parties(
-    parties_data_path: Union[Path, str],
+    parties_data_path: Path,
     label: Optional[str] = None,
     colour: str = "k",
     linestyle_map: Optional[Dict[str, str]] = None,
@@ -584,7 +583,7 @@ def normal_stress_wall_parties(
 
 
 def normal_stress_wall_utexas(
-    utexas_data_path: Union[Path, str],
+    utexas_data_path: Path,
     colour_map: Dict[str, str] = {},
     linestyle_map: Dict[str, str] = {},
     marker_map: Dict[str, str] = {},
@@ -686,14 +685,13 @@ def normal_stress_wall_utexas(
 
 
 def Ekin_evolution(
-    h5_path: MyPath,
+    h5_path: Path,
     colour: str,
     linestyle: str,
     marker: str,
     label: Optional[str],
 ) -> PlotSeries:
 
-    h5_path = Path(h5_path)
     E_kin: np.ndarray
     time: np.ndarray
     with h5py.File(h5_path._str, "r") as f:
@@ -722,7 +720,7 @@ def Ekin_evolution(
 
 
 def phi_eulerian(
-    fluid_dir: MyPath,
+    fluid_dir: Path,
     colour: str,
     linestyle: str,
     label: Optional[str],
@@ -730,7 +728,7 @@ def phi_eulerian(
     show_err: bool,
 ) -> Tuple[PlotSeries, Optional[PlotSeries]]:
 
-    mean_phi_h5: Path = Path(fluid_dir) / "mean_phi.h5"
+    mean_phi_h5: Path = fluid_dir / "mean_phi.h5"
     yv: np.ndarray
     Phi_mean: np.ndarray
     Phi_mean_err: Optional[np.ndarray] = None

@@ -19,9 +19,6 @@ import shlex
 
 sys.setrecursionlimit(int(1e9))
 
-MyPath = Union[str, Path]
-PathH5Union = Union[h5py.File, MyPath]
-
 
 def save_to_h5(
     output_path: Union[str, Path],

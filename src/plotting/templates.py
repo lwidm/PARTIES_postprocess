@@ -1,6 +1,6 @@
 # -- src/plotting/templates.py
 from pathlib import Path
-from typing import List, Optional, Sequence, Tuple, Union
+from typing import List, Optional, Sequence, Tuple
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -12,11 +12,10 @@ from src.plotting.tools import (
     update_plot_params,
     format_plot_axes,
 )
-from src.myio.myio import MyPath
 
 
 def velocity_profile_wall(
-    output_dir: Union[str, Path],
+    output_dir: Path,
     series_list: Sequence[PlotSeries],
     figsize: Tuple[float, float] = (6.5, 5.5),
     xlabel: str = r"$y^+$",
@@ -106,19 +105,18 @@ def velocity_profile_wall(
             except Exception:
                 pass
 
-    out_path = Path(output_dir)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
+    output_dir.parent.mkdir(parents=True, exist_ok=True)
 
     if Re_val is not None and Re_tau_val is not None:
-        plot_filename = out_path / f"Re={Re_val:.0f}_Re_tau={Re_tau_val:.0f}-y+_u+.png"
+        plot_filename = output_dir / f"Re={Re_val:.0f}_Re_tau={Re_tau_val:.0f}-y+_u+.png"
     else:
-        plot_filename = out_path / "y+_u+.png"
+        plot_filename = output_dir / "y+_u+.png"
 
     fig.savefig(str(plot_filename), dpi=dpi)
 
 
 def normal_stress_wall(
-    output_dir: Union[str, Path],
+    output_dir: Path,
     series_list: Sequence[PlotSeries],
 ) -> None:
     xmin: float = 0.0
@@ -144,7 +142,7 @@ def normal_stress_wall(
         xlim = (xmin, min(xmax, 80.0))
 
     generic_plot(
-        Path(output_dir) / "wall_normal_stress.png",
+        output_dir / "wall_normal_stress.png",
         list(series_list),
         legend=True,
         xlabel=r"$y^+$",
@@ -161,7 +159,7 @@ def normal_stress_wall(
 def floc_count_evolution(
     output_dir: Path, series_list: Sequence[PlotSeries], normalised: bool
 ) -> None:
-    out_path = Path(output_dir) / "floc_count_evolution.png"
+    out_path = output_dir / "floc_count_evolution.png"
     ylabel: str = r"\#Flocs"
     if normalised:
         ylabel = r"(\#Flocs) / (\#Particles)"
@@ -178,8 +176,8 @@ def floc_count_evolution(
     )
 
 
-def fluid_Ekin_evolution(output_dir: Union[str, Path], series_list) -> None:
-    out_path = Path(output_dir) / "E_kin_evolution.png"
+def fluid_Ekin_evolution(output_dir: Path, series_list) -> None:
+    out_path = output_dir / "E_kin_evolution.png"
     generic_plot(
         out_path,
         list(series_list),
@@ -194,7 +192,7 @@ def fluid_Ekin_evolution(output_dir: Union[str, Path], series_list) -> None:
 
 
 def _pdf(
-    output_dir: Union[str, Path],
+    output_dir: Path,
     series_list,
     name: str,
     xlabel: str,
@@ -203,7 +201,7 @@ def _pdf(
     xmax: float,
     ymin: float,
 ) -> None:
-    out_path = Path(output_dir) / f"{name}.png"
+    out_path = output_dir / f"{name}.png"
     generic_plot(
         out_path,
         list(series_list),
@@ -219,7 +217,7 @@ def _pdf(
     )
 
 
-def n_p_pdf(output_dir: Union[str, Path], series_list):
+def n_p_pdf(output_dir: Path, series_list):
     _pdf(
         output_dir,
         series_list,
@@ -232,7 +230,7 @@ def n_p_pdf(output_dir: Union[str, Path], series_list):
     )
 
 
-def D_f_pdf(output_dir: Union[str, Path], series_list):
+def D_f_pdf(output_dir: Path, series_list):
     _pdf(
         output_dir,
         series_list,
@@ -245,7 +243,7 @@ def D_f_pdf(output_dir: Union[str, Path], series_list):
     )
 
 
-def D_g_pdf(output_dir: Union[str, Path], series_list):
+def D_g_pdf(output_dir: Path, series_list):
     _pdf(
         output_dir,
         series_list,
@@ -258,7 +256,7 @@ def D_g_pdf(output_dir: Union[str, Path], series_list):
     )
 
 
-def n_p_mass_pdf(output_dir: Union[str, Path], series_list):
+def n_p_mass_pdf(output_dir: Path, series_list):
     _pdf(
         output_dir,
         series_list,
@@ -271,7 +269,7 @@ def n_p_mass_pdf(output_dir: Union[str, Path], series_list):
     )
 
 
-def D_f_mass_pdf(output_dir: Union[str, Path], series_list):
+def D_f_mass_pdf(output_dir: Path, series_list):
     _pdf(
         output_dir,
         series_list,
@@ -284,7 +282,7 @@ def D_f_mass_pdf(output_dir: Union[str, Path], series_list):
     )
 
 
-def D_g_mass_pdf(output_dir: Union[str, Path], series_list):
+def D_g_mass_pdf(output_dir: Path, series_list):
     _pdf(
         output_dir,
         series_list,
@@ -298,12 +296,12 @@ def D_g_mass_pdf(output_dir: Union[str, Path], series_list):
 
 
 def _avg_floc_dir(
-    output_dir: Union[str, Path], series_list, name: str, ylabel: str, inner_units: bool
+    output_dir: Path, series_list, name: str, ylabel: str, inner_units: bool
 ) -> None:
     xlabel: str = r"$y = \tilde y/L$ [-]"
     if inner_units:
         xlabel: str = r"$y^+$"
-    out_path = Path(output_dir) / f"{name}.png"
+    out_path = output_dir / f"{name}.png"
     generic_plot(
         out_path,
         list(series_list),
@@ -317,25 +315,19 @@ def _avg_floc_dir(
     )
 
 
-def avg_D_f(
-    output_dir: Union[str, Path], series_list: List[PlotSeries], inner_units: bool
-):
+def avg_D_f(output_dir: Path, series_list: List[PlotSeries], inner_units: bool):
     _avg_floc_dir(
         output_dir, series_list, r"avg_D_f", r"$\langle D_f \rangle$", inner_units
     )
 
 
-def avg_D_g(
-    output_dir: Union[str, Path], series_list: List[PlotSeries], inner_units: bool
-):
+def avg_D_g(output_dir: Path, series_list: List[PlotSeries], inner_units: bool):
     _avg_floc_dir(
         output_dir, series_list, r"avg_D_g", r"$\langle D_g \rangle$", inner_units
     )
 
 
-def mass_avg_D_f(
-    output_dir: Union[str, Path], series_list: List[PlotSeries], inner_units: bool
-):
+def mass_avg_D_f(output_dir: Path, series_list: List[PlotSeries], inner_units: bool):
     _avg_floc_dir(
         output_dir,
         series_list,
@@ -345,9 +337,7 @@ def mass_avg_D_f(
     )
 
 
-def mass_avg_D_g(
-    output_dir: Union[str, Path], series_list: List[PlotSeries], inner_units: bool
-):
+def mass_avg_D_g(output_dir: Path, series_list: List[PlotSeries], inner_units: bool):
     _avg_floc_dir(
         output_dir,
         series_list,
@@ -361,9 +351,9 @@ def mass_avg_D_g(
 
 
 def phi_eulerian(
-    output_dir: MyPath, series_list: List[PlotSeries], normalised: bool
+    output_dir: Path, series_list: List[PlotSeries], normalised: bool
 ) -> None:
-    out_path = Path(output_dir) / f"phi_eulerian{"_norm" if normalised else ""}.png"
+    out_path: Path = output_dir / f"phi_eulerian{"_norm" if normalised else ""}.png"
     xlabel: str = r"$y = \tilde y/L$ [-]"
     ylabel: str = r"$\langle \phi \rangle$ [%]"
     if normalised:

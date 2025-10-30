@@ -8,7 +8,6 @@ from tqdm import tqdm
 
 
 from src.myio import myio
-from src.myio.myio import MyPath
 
 
 def calc_CoM(
@@ -120,7 +119,7 @@ def calc_mass(r: np.ndarray) -> float:
 
 
 def calc_velocity(U: np.ndarray) -> np.ndarray:
-    """Calculate the floc felocity."""
+    """Calculate the floc velocity."""
     return U.mean(axis=0)
 
 
@@ -130,7 +129,7 @@ def calc_feret_diam(
     X_CoM: np.ndarray,
     shift: np.ndarray,
 ) -> float:
-    """Calcualte the floc Feret diameter."""
+    """Calculate the floc Feret diameter."""
     dist: float = np.linalg.norm(X_p - X_CoM + shift, axis=1)
     return 2 * np.max(dist) + particle_diam
 
@@ -155,7 +154,7 @@ def calc_gyration_diam(
 def calc_fractal_dim(
     particle_diam: float, feret_diam: float, N_particles: int
 ) -> float:
-    """Calculates the floc fractal dimension."""
+    """Calculate the floc fractal dimension."""
     if N_particles < 2:
         return 1
     return np.log(N_particles) / np.log(feret_diam / particle_diam)
@@ -174,7 +173,7 @@ def calc_orientation(
 
 
 def calc_pitch(orientation: np.ndarray, N_partices: int) -> float:
-    """Calcualtes the floc pitch.
+    """Calculate the floc pitch.
 
     The pitch is the angle the floc makes with the x-axis in the y-direction.
     """
@@ -184,9 +183,9 @@ def calc_pitch(orientation: np.ndarray, N_partices: int) -> float:
 
 
 def calc_theta(orientation: np.ndarray, N_particles: int) -> np.ndarray:
-    """Calculates the floc angle.
+    """Calculate the floc angle.
 
-    Theta is the angle the floc makes with the x-axis in the z-direction.
+    The angle is the angle the floc makes with the x-axis in the z-direction.
     """
     if N_particles < 2:
         return np.zeros(3)
@@ -282,8 +281,8 @@ def _process_single_pdf(
 
 
 def calc_PDF(
-    output_dir: MyPath,
-    floc_dir: MyPath,
+    output_dir: Path,
+    floc_dir: Path,
     bin_widths: tuple[float, float, float],
     min_file_index: Optional[int],
     max_file_index: Optional[int],
@@ -545,8 +544,8 @@ def calc_PDF(
 
 
 def CalcAvgDiam(
-    output_dir: Union[str, Path],
-    floc_dir: Union[str, Path],
+    output_dir: Path,
+    floc_dir: Path,
     channel_half_width: float,
     Re: float,
     u_tau: float,
@@ -566,7 +565,7 @@ def CalcAvgDiam(
     )
 
     r_p: float
-    with h5py.File(floc_files[0]._str, "r") as f:
+    with h5py.File(str(floc_files[0]), "r") as f:
         r_p = f["particles/r"][0]  # type: ignore
 
     def to_wall_units(y: np.ndarray) -> np.ndarray:
@@ -602,7 +601,7 @@ def CalcAvgDiam(
         n_p_arr: np.ndarray
         D_f_arr: np.ndarray
         D_g_arr: np.ndarray
-        with h5py.File(floc_file._str, "r") as f:
+        with h5py.File(str(floc_file), "r") as f:
             floc_ids: np.ndarray = f["flocs/floc_id"][:]  # type: ignore
             _, first_indices = np.unique(floc_ids, return_index=True)
             y_floc_arr = f["flocs/y"][first_indices]  # type: ignore
