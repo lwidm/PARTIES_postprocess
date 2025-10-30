@@ -44,7 +44,7 @@ def floc_count_evolution(
         time = time - time[0]
 
     for floc_file in floc_files:
-        with h5py.File(floc_file._str, "r") as f:
+        with h5py.File(str(floc_file), "r") as f:
             floc_count = len(np.unique(f["flocs"]["floc_id"][:]))  # type: ignore
             counts.append(floc_count)
 
@@ -52,7 +52,7 @@ def floc_count_evolution(
     if normalised:
         counts_arr = counts_arr.astype(float)
         N_particles: int
-        with h5py.File(floc_files[0]._str, "r") as f:
+        with h5py.File(str(floc_files[0]), "r") as f:
             N_particles = len(f["particles"]["r"][:])  # type: ignore
         counts_arr /= N_particles
 
@@ -101,19 +101,19 @@ def floc_count_evolution_fit(
     if reset_time:
         time = time - time[0]
     N_particles: int
-    with h5py.File(floc_files[0]._str, "r") as f:
+    with h5py.File(str(floc_files[0]), "r") as f:
         N_particles = len(f["particles"]["r"][:])  # type: ignore
 
     counts: List[float] = []
     for floc_file in floc_files:
-        with h5py.File(floc_file._str, "r") as f:
+        with h5py.File(str(floc_file), "r") as f:
             floc_count = len(np.unique(f["flocs"]["floc_id"][:]))  # type: ignore
             counts.append(floc_count)
 
 
     Nf_eq: float = 0.0
     for steady_floc_file in steady_floc_files:
-        with h5py.File(steady_floc_file._str, "r") as f:
+        with h5py.File(str(steady_floc_file), "r") as f:
             Nf_eq += len(np.unique(f["flocs"]["floc_id"][:]))  # type: ignore
     Nf_eq /= len(steady_floc_files)
 
@@ -694,7 +694,7 @@ def Ekin_evolution(
 
     E_kin: np.ndarray
     time: np.ndarray
-    with h5py.File(h5_path._str, "r") as f:
+    with h5py.File(str(h5_path), "r") as f:
         E_kin = f["E_kin"][:]  # type: ignore
         time = f["time"][:]  # type: ignore
 
@@ -734,7 +734,7 @@ def phi_eulerian(
     Phi_mean_err: Optional[np.ndarray] = None
     yv: np.ndarray
     h5_postfix: str = "_norm" if normalised else ""
-    with h5py.File(mean_phi_h5._str, "r") as h5_file:
+    with h5py.File(str(mean_phi_h5), "r") as h5_file:
         yv = h5_file["yv"][:]  # type: ignore
         Phi_mean = h5_file["Phi_mean" + h5_postfix][:]  # type: ignore
         if show_err:

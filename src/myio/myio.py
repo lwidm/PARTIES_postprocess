@@ -70,7 +70,7 @@ def save_to_h5(
                 str_dtype = h5py.string_dtype(encoding="utf-8")
                 h5_group.create_dataset(key, data=str(value), dtype=str_dtype)
 
-    with h5py.File(output_path._str, "w") as h5_file:
+    with h5py.File(str(output_path), "w") as h5_file:
         _save_nested_dict(h5_file, data_dict)
         if metadata:
             for mkey, mval in metadata.items():
@@ -104,7 +104,7 @@ def load_from_h5(
         return result
 
     metadata: Optional[Dict[str, Any]] = None
-    with h5py.File(input_path._str, "r") as h5_file:
+    with h5py.File(str(input_path), "r") as h5_file:
         data_dict = _load_nested_dict(h5_file)
         metadata = dict(h5_file.attrs) if h5_file.attrs else None
 
@@ -361,7 +361,7 @@ def read_channel_half_height(data_dir: Path) -> float:
 
 def read_domain_info(path: Path) -> Dict[str, Union[int, float]]:
     """Returns a dict containing the domain size and periodicity in each direction."""
-    with h5py.File(path._str, "r") as f:
+    with h5py.File(str(path), "r") as f:
         domain_data: h5py.Group = f["domain"]  # type: ignore
         Lx: int = domain_data["xmax"][0]  # type: ignore
         Ly: int = domain_data["ymax"][0]  # type: ignore
@@ -381,7 +381,7 @@ def read_domain_info(path: Path) -> Dict[str, Union[int, float]]:
 
 
 def read_particle_data(path: Path) -> Dict[str, Union[np.ndarray, float]]:
-    with h5py.File(path._str, "r") as f:
+    with h5py.File(str(path), "r") as f:
         mobile_data: h5py.Group = f["mobile"]  # type: ignore
         id: np.ndarray = np.arange(mobile_data["R"].shape[0])  # type: ignore
         x: np.ndarray = mobile_data["X"][:, 0]  # type: ignore
@@ -513,7 +513,7 @@ def get_time_array(
     t_arr: np.ndarray = np.zeros(len(data_files))
 
     for i, data_file in enumerate(data_files):
-        with h5py.File(data_file._str, "r") as h5_file:
+        with h5py.File(str(data_file), "r") as h5_file:
             t_arr[i] = h5_file[key][()]  # type: ignore
 
     return t_arr
@@ -535,7 +535,7 @@ def find_idx_from_time(
 
     for pos, data_file in enumerate(data_files):
         time: float
-        with h5py.File(data_file._str, "r") as f:
+        with h5py.File(str(data_file), "r") as f:
             if key not in f:
                 raise KeyError(f"Key '{key}' not found in file {data_file}")
             time = f[key][()]  # type: ignore

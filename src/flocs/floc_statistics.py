@@ -298,7 +298,7 @@ def calc_PDF(
     )
 
     d: float
-    with h5py.File(floc_files[0]._str, "r") as f:
+    with h5py.File(str(floc_files[0]), "r") as f:
         d = f["particles/r"][0] * 2  # type: ignore
 
     N_flocs_total: int = 0
@@ -314,7 +314,7 @@ def calc_PDF(
         total=len(floc_files),
         desc="Generating edges lists for pdfs",
     ):
-        with h5py.File(h5_file._str, "r") as f:
+        with h5py.File(str(h5_file), "r") as f:
             floc_ids: np.ndarray = np.asarray(f["flocs/floc_id"][:])  # type: ignore
             n_p: np.ndarray = np.asarray(f["flocs/n_p"][:])  # type: ignore
             D_f: np.ndarray = np.asarray(f["flocs/D_f"][:]) / d  # type: ignore
@@ -709,7 +709,7 @@ def CalcAvgDiam(
     inner_mass_bin: np.ndarray = np.zeros_like(yp_left_arr)
 
     for floc_file in floc_files:
-        with h5py.File(floc_file._str, "r") as f:
+        with h5py.File(str(floc_file), "r") as f:
             floc_ids: np.ndarray = f["flocs/floc_id"][:]  # type: ignore
             _, first_indices = np.unique(floc_ids, return_index=True)
             y_floc_arr = f["flocs/y"][first_indices]  # type: ignore
