@@ -162,7 +162,7 @@ def process_fluctuations(
         phi: np.ndarray = (
             vfu[:, :, :-1] - mean_results["Phi"][np.newaxis, :, np.newaxis]
         )
-        np.add(results["phip"], np.mean(phi * phi, axis=(0, 2)), out=results["phip"])
+        np.add(results["phi"], np.mean(phi * phi, axis=(0, 2)), out=results["phi"])
         np.subtract(1, vfu, out=vfu)
         del phi
         gc.collect()
