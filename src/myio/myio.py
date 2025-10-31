@@ -16,6 +16,7 @@ import sys
 import subprocess
 import tqdm
 import shlex
+import scipy
 
 sys.setrecursionlimit(int(1e9))
 
@@ -592,3 +593,43 @@ def mirror_and_append_along_y_inplace(arr: np.ndarray, result: np.ndarray):
     for i in range(split_idx):
         result[:, i, Nz:] = top_view[:, split_idx - 1 - i, :]
 
+
+def fit_flocculation_exponential(floc_dir: Path) -> tuple[float, float, int, np.ndarray, np.ndarray]:
+
+    floc_files: list[Path] = list_data_files( floc_dir, "Flocs", None, None)
+
+    if floc_files is not None and not floc_files:
+        raise ValueError(
+            f'No floc files found in "{floc_dir}".'
+        )
+
+    n_particles: int
+    with h5py.File(str(floc_files[0]), "r") as f:
+        n_particles = len(f["particles"]["r"][:])  # type: ignore
+
+    time_list: list[float] = []
+    count_list: list[int] = []
+    for floc_file in floc_files:
+        with h5py.File(str(floc_file), "r") as f:
+            time: float = f["time"][()] # type: ignore
+            time_list.append(time)
+            count: int = len(np.unique(f["flocs"]["floc_id"][:]))  # type: ignore
+            count_list.append(count)
+
+    time_arr: np.ndarray = np.asarray(time_list)
+    count_arr: np.ndarray = np.asarray(count_list)
+
+    def model(time: np.ndarray, b: float, Nf_eq: float) -> np.ndarray:
+        return (n_particles - Nf_eq)*np.exp(-b*(time-time[0])) + Nf_eq
+
+    popt, _ = scipy.optimize.curve_fit(model, time_arr, count_arr)
+    
+    b: float = popt[0]
+    Nf_eq: float = popt[1]
+
+    return b, Nf_eq, n_particles, time_arr, count_arr
+
+def get_flocculation_teq(floc_dir: Path) -> float:
+    b, Nf_eq, n_particles, _, _ = fit_flocculation_exponential(floc_dir)
+    t_eq: float = - 1 / b * np.log(0.01/((n_particles/Nf_eq) -1))
+    return t_eq

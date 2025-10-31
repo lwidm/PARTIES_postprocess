@@ -152,10 +152,6 @@ def floc(
             output_dir / "flocs",
             colour,
             label,
-            min_file_index,
-            max_file_index,
-            min_steady_index,
-            max_steady_index,
             normalised=True,
             reset_time=True,
         )
@@ -431,9 +427,9 @@ def main() -> None:
 
     compute: bool = True
     compute_flocs: List[bool] = [
-        True,
+        False,
         # False,
-        True,
+        False,
     ]
     data_names: List[str] = [
         "phi1p5",

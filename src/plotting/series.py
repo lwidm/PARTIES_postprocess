@@ -74,62 +74,27 @@ def floc_count_evolution_fit(
     floc_dir: Path,
     colour: str,
     label: Optional[str],
-    min_file_index: Optional[int],
-    max_file_index: Optional[int],
-    min_steady_index: Optional[int],
-    max_steady_index: Optional[int],
     normalised: bool,
     reset_time: bool,
 ) -> PlotSeries:
 
-    print(
-        f'Looking for floc files in directory: "{floc_dir}" with min_file_index: {min_file_index} and max_file_index: {max_file_index}'
-    )
-    floc_files: List[Path] = myio.list_data_files(
-        floc_dir, "Flocs", min_file_index, max_file_index
-    )
-    steady_floc_files: List[Path] = myio.list_data_files(
-        floc_dir, "Flocs", min_steady_index, max_steady_index
-    )
-    time: np.ndarray = myio.get_time_array(
-        "Flocs",
-        floc_dir,
-        min_file_index,
-        max_file_index,
-        "time",
-    )
-    if reset_time:
-        time = time - time[0]
-    N_particles: int
-    with h5py.File(str(floc_files[0]), "r") as f:
-        N_particles = len(f["particles"]["r"][:])  # type: ignore
+    b, Nf_eq, n_particles, time, _ = myio.fit_flocculation_exponential(floc_dir)
 
-    counts: List[float] = []
-    for floc_file in floc_files:
-        with h5py.File(str(floc_file), "r") as f:
-            floc_count = len(np.unique(f["flocs"]["floc_id"][:]))  # type: ignore
-            counts.append(floc_count)
+    def model(time: np.ndarray, b: float, Nf_eq: float) -> np.ndarray:
+        return (float(n_particles) - float(Nf_eq))*np.exp(-b*(time-time[0])) + float(Nf_eq)
 
-
-    Nf_eq: float = 0.0
-    for steady_floc_file in steady_floc_files:
-        with h5py.File(str(steady_floc_file), "r") as f:
-            Nf_eq += len(np.unique(f["flocs"]["floc_id"][:]))  # type: ignore
-    Nf_eq /= len(steady_floc_files)
-
-    def fit_equilibration(time: np.ndarray, b: float) -> np.ndarray:
-        return (N_particles - Nf_eq)*np.exp(-b*(time-time[0])) + Nf_eq
-
-    popt, _ = scipy.optimize.curve_fit(fit_equilibration, time, counts)
-    print(f"Floc count evolution fit for {label}: b = {popt[0]}")
+    print(f"Floc count evolution fit for {label}: b = {b}, Nf_eq = {Nf_eq}")
 
     time_fit: np.ndarray = np.linspace(time[0], time[-1], 200)
-    counts_fit: np.ndarray = fit_equilibration(time_fit, *popt)
+    counts_fit: np.ndarray = model(time_fit, b, Nf_eq)
     if normalised:
-        counts_fit /= N_particles
+        counts_fit /= n_particles
+
+    if reset_time:
+        time_fit = time_fit - time_fit[0]
 
     if label is not None:
-        label += f"; fit $b={popt[0]:.4f}$"
+        label += f"; fit $b={b:.4f}$ , $N_{{f,eq}}={Nf_eq:.4f}$"
 
     s: PlotSeries = PlotSeries(
         data={"time": time_fit, "counts": counts_fit},

@@ -219,10 +219,10 @@ def process_fluctuations(
     np.multiply(results["E_vv_kx"], 0.5, out=results["E_vv_kx"])
     np.multiply(results["E_ww_kx"], 0.5, out=results["E_ww_kx"])
     np.multiply(results["E_uv_kx"], 0.5, out=results["E_uv_kx"])
-    np.multiply(results["E_uu_kz"].T, 0.5, out=results["E_uu_kz"])
-    np.multiply(results["E_vv_kz"].T, 0.5, out=results["E_vv_kz"])
-    np.multiply(results["E_ww_kz"].T, 0.5, out=results["E_ww_kz"])
-    np.multiply(results["E_uv_kz"].T, 0.5, out=results["E_uv_kz"])
+    results["E_uu_kz"] = 0.5 * results["E_uu_kz"].T
+    results["E_vv_kz"] = 0.5 * results["E_vv_kz"].T
+    results["E_ww_kz"] = 0.5 * results["E_ww_kz"].T
+    results["E_uv_kz"] = 0.5 * results["E_uv_kz"].T
 
     results["k_x"] = (
         2 * np.pi * np.fft.fftfreq(results["E_uu_kx"].shape[1], d=grid["xu"][1])
