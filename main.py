@@ -56,8 +56,7 @@ if __name__ == "__main__":
         "-max",
         "--max_file_index",
         nargs="?",
-        type=int,
-        default=None,
+        type=int, default=None,
         help="maximal particle/fluid datafile index to be read",
     )
     parser.add_argument(

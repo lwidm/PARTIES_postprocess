@@ -22,4 +22,4 @@ PYTHONPATH=. python ./main.py \
 	--parties_data_dir="/anvil/scratch/x-lwidmer/RUN10" \
 	-trn \
 	--num_workers=8 \
-	--min_file_index=206
+	--min_file_index=226

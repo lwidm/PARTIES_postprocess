@@ -9,8 +9,8 @@ from src import globals
 
 from matplotlib import pyplot as plt
 
-# parant_dir: Path = Path("media/usb/UCSB/")
-parent_dir: Path = Path("./")
+parent_dir: Path = Path("/media/usb/UCSB/")
+# parent_dir: Path = Path("./")
 
 
 def fluid(utexas_dir: Path, plot_dir: Path):
@@ -47,8 +47,7 @@ def fluid(utexas_dir: Path, plot_dir: Path):
         parties_wall_series.append(
             plt_series.u_plus_mean_wall_parties(
                 output_dir / data_names[i] / "fluid" / parties_processed_filename,
-                label=labels[i],
-                colour=colours[i],
+                label=labels[i], colour=colours[i],
                 linestyles=("-", "--"),
             )
         )
@@ -432,9 +431,9 @@ def main() -> None:
 
     compute: bool = True
     compute_flocs: List[bool] = [
-        False,
+        True,
         # False,
-        False,
+        True,
     ]
     data_names: List[str] = [
         "phi1p5",
