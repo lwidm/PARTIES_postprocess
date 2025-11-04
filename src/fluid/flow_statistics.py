@@ -346,7 +346,6 @@ def process_mean_phi(
     dset: h5py.Dataset
     with h5py.File(str(fluid_files[0]), "r") as h5file_sample:
         dset = h5file_sample["vfv"]  # type: ignore
-        print(dset)
         vfv_Nz, vfv_Ny, vfv_Nx = dset.shape
     Nx: int = (vfv_Nx - 1) * 2
     Ny: int = (vfv_Ny - 1) // 2
@@ -451,29 +450,29 @@ def process_mean_phi_xz(
     Nx: int = (vfw_Nx - 1)
     Ny: int = (vfw_Ny - 1)
     Nz: int = (vfw_Nz - 1)
-    vfv_dtype = dset.dtype
+    vfw_dtype = dset.dtype
 
     results: Dict[str, np.ndarray] = {
-        "yv": grid["yv"][:Ny].copy(),
-        "Phi_mean": np.zeros(Ny, dtype=vfv_dtype),
-        "Phi_mean_norm": np.zeros(Ny, dtype=vfv_dtype),
+        "zw": grid["zw"][:].copy(),
+        "Phi_mean": np.zeros(Nz, dtype=vfw_dtype),
+        "Phi_mean_norm": np.zeros(Nu, dtype=vfw_dtype),
     }
     if compute_err:
         results.update(
             {
-                "Phi_err": np.zeros(Ny, dtype=vfv_dtype),
-                "Phi_err_norm": np.zeros(Ny, dtype=vfv_dtype),
+                "Phi_err": np.zeros(Nz, dtype=vfw_dtype),
+                "Phi_err_norm": np.zeros(Nz, dtype=vfw_dtype),
             }
         )
 
     # preallocated working buffers
     vfw_buf: np.ndarray = np.empty(
-        (vfw_Nz - 1, vfw_Ny - 1, vfw_Nx - 1), dtype=vfv_dtype
+        (vfw_Nz - 1, vfw_Ny - 1, vfw_Nx - 1), dtype=vfw_dtype
     )
-    vfw_mean_buf: np.ndarray = np.empty(Ny, dtype=vfv_dtype)
+    vfw_mean_buf: np.ndarray = np.empty(Ny, dtype=vfw_dtype)
     vfw_err_buf: Optional[np.ndarray] = None
     if compute_err:
-        vfw_err_buf = np.empty(Ny, dtype=vfv_dtype)
+        vfw_err_buf = np.empty(Nz, dtype=vfw_dtype)
 
     # first pass: accumulate means
     for fluid_file in tqdm.tqdm(fluid_files, desc="Processing mean phi"):
