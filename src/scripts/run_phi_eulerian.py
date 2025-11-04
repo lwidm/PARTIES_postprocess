@@ -16,17 +16,17 @@ def main(
     mean_phi_h5_xz: Path = output_dir / "mean_phi_xz.h5"
 
     if compute[0]:
-        # fstat.process_mean_phi(
-        #     parties_data_dir=parties_data_dir,
-        #     output_h5=mean_phi_h5,
-        #     compute_err=True,
-        #     min_file_index=min_file_index,
-        #     max_file_index=max_file_index,
-        # )
-        fstat.process_mean_phi_xz(
+        fstat.process_mean_phi(
             parties_data_dir=parties_data_dir,
-            output_h5=mean_phi_h5_xz,
+            output_h5=mean_phi_h5,
             compute_err=True,
             min_file_index=min_file_index,
             max_file_index=max_file_index,
         )
+        # fstat.process_mean_phi_xz(
+        #     parties_data_dir=parties_data_dir,
+        #     output_h5=mean_phi_h5_xz,
+        #     compute_err=True,
+        #     min_file_index=min_file_index,
+        #     max_file_index=max_file_index,
+        # )

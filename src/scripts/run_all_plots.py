@@ -428,31 +428,31 @@ def main() -> None:
     compute: bool = True
     compute_flocs: List[bool] = [
         False,
-        # False,
+        True,
         False,
         # True,
     ]
     data_names: List[str] = [
         "phi1p5",
-        # "phi5p0",
+        "phi5p0_noCo",
         "phi5p0_new",
         # "test",
     ]
     labels: List[str] = [
         r"$\phi_{1.5\%}$",
-        # r"$\phi_{5\%}$",
+        r"$\phi_{5\%}$ no cohesion",
         r"$\phi_{5\%}$ new",
         # r"test",
     ]
     trn: List[bool] = [
         False,
-        # True,
+        False,
         True,
         # False,
     ]
     Re_tau: List[float] = [
         189.54087993838434,
-        # 180,
+        180,
         180,
         # 180,
     ]
@@ -460,37 +460,37 @@ def main() -> None:
     output_dir: Path = parent_dir / "output/"
     min_file_indices: List[Optional[int]] = [
         None,
-        # None,
+        None,
         None,
         # None,
     ]
     max_file_indices: List[Optional[int]] = [
         None,
-        # None,
+        None,
         None,
         # None,
     ]
     min_steady_indices: List[Optional[int]] = [
         268,
-        # None,
+        120,
         206,
         # None,
     ]
     max_steady_indices: List[Optional[int]] = [
         None,
-        # None,
+        None,
         None,
         # None,
     ]
     min_trn_steady_indices: List[Optional[int]] = [
         None,
-        # None,
+        None,
         170912,
         # None,
     ]
     max_trn_steady_indices: List[Optional[int]] = [
         None,
-        # None,
+        None,
         None,
         # None,
     ]
@@ -518,6 +518,6 @@ def main() -> None:
         linestyles,
     )
     # fluid(parent_dir / "output", plot_dir)
-    phi_eulerian(plot_dir, [data_names[1]], [labels[1]], output_dir, colours, False)
+    # phi_eulerian(plot_dir, [data_names[1]], [labels[1]], output_dir, colours, False)
     if not globals.on_anvil:
         plt.show()
