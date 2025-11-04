@@ -430,26 +430,31 @@ def main() -> None:
         False,
         # False,
         False,
+        # True,
     ]
     data_names: List[str] = [
         "phi1p5",
         # "phi5p0",
         "phi5p0_new",
+        # "test",
     ]
     labels: List[str] = [
         r"$\phi_{1.5\%}$",
         # r"$\phi_{5\%}$",
         r"$\phi_{5\%}$ new",
+        # r"test",
     ]
     trn: List[bool] = [
         False,
         # True,
         True,
+        # False,
     ]
     Re_tau: List[float] = [
         189.54087993838434,
         # 180,
         180,
+        # 180,
     ]
     parties_data_dir: Path = parent_dir / "data/"
     output_dir: Path = parent_dir / "output/"
@@ -457,31 +462,37 @@ def main() -> None:
         None,
         # None,
         None,
+        # None,
     ]
     max_file_indices: List[Optional[int]] = [
         None,
         # None,
         None,
+        # None,
     ]
     min_steady_indices: List[Optional[int]] = [
         268,
         # None,
         206,
+        # None,
     ]
     max_steady_indices: List[Optional[int]] = [
         None,
         # None,
         None,
+        # None,
     ]
     min_trn_steady_indices: List[Optional[int]] = [
         None,
         # None,
         170912,
+        # None,
     ]
     max_trn_steady_indices: List[Optional[int]] = [
         None,
         # None,
         None,
+        # None,
     ]
     colours: List[str] = ["C0", "C1", "C2", "C3", "C4"]
     markers: List[str] = ["o", "s", "^", "v", "P"]

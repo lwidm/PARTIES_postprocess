@@ -12,6 +12,7 @@ from . import (
     run_phi_eulerian,
     run_double_check,
     run_get_start_steady,
+    run_plot_biggest_floc,
 )
 
 __all__ = [
@@ -22,4 +23,5 @@ __all__ = [
     "run_phi_eulerian",
     "run_double_check",
     "run_get_start_steady",
+    "run_plot_biggest_floc",
 ]

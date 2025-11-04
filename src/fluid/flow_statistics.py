@@ -422,3 +422,100 @@ def process_mean_phi(
     myio.save_to_h5(output_h5, results)
 
     return results
+
+
+def process_mean_phi_xz(
+    parties_data_dir: Path,
+    output_h5: Path,
+    compute_err: bool,
+    min_file_index: Optional[int],
+    max_file_index: Optional[int],
+) -> Dict[str, np.ndarray]:
+
+    fluid_files: List[Path] = myio.list_data_files(
+        parties_data_dir, "Data", min_file_index, max_file_index
+    )
+    n_snapshots: int = len(fluid_files)
+
+    if n_snapshots == 0:
+        raise ValueError(f"no fluid files provided (looking in {parties_data_dir} with min_file_index {min_file_index} and max_file_index {max_file_index})")
+
+    grid: Dict[str, np.ndarray] = get_grid(fluid_files[0])
+
+
+    dset: h5py.Dataset
+    with h5py.File(str(fluid_files[0]), "r") as h5file_sample:
+        dset = h5file_sample["vfw"]  # type: ignore
+        print(dset)
+        vfw_Nz, vfw_Ny, vfw_Nx = dset.shape
+    Nx: int = (vfw_Nx - 1)
+    Ny: int = (vfw_Ny - 1)
+    Nz: int = (vfw_Nz - 1)
+    vfv_dtype = dset.dtype
+
+    results: Dict[str, np.ndarray] = {
+        "yv": grid["yv"][:Ny].copy(),
+        "Phi_mean": np.zeros(Ny, dtype=vfv_dtype),
+        "Phi_mean_norm": np.zeros(Ny, dtype=vfv_dtype),
+    }
+    if compute_err:
+        results.update(
+            {
+                "Phi_err": np.zeros(Ny, dtype=vfv_dtype),
+                "Phi_err_norm": np.zeros(Ny, dtype=vfv_dtype),
+            }
+        )
+
+    # preallocated working buffers
+    vfw_buf: np.ndarray = np.empty(
+        (vfw_Nz - 1, vfw_Ny - 1, vfw_Nx - 1), dtype=vfv_dtype
+    )
+    vfw_mean_buf: np.ndarray = np.empty(Ny, dtype=vfv_dtype)
+    vfw_err_buf: Optional[np.ndarray] = None
+    if compute_err:
+        vfw_err_buf = np.empty(Ny, dtype=vfv_dtype)
+
+    # first pass: accumulate means
+    for fluid_file in tqdm.tqdm(fluid_files, desc="Processing mean phi"):
+        with h5py.File(str(fluid_file), "r") as h5_file:
+            dset = h5_file["vfw"]  # type: ignore
+            dset.read_direct(vfw_buf, np.s_[:-1, :-1, :-1])
+        np.mean(vfw_buf, axis=(0, 1), out=vfw_mean_buf)
+        results["Phi_mean"] += vfw_mean_buf
+        phi_tot: float = np.sum(vfw_mean_buf, axis=None) / float(Ny)
+        np.divide(vfw_mean_buf, phi_tot, out=vfw_mean_buf)
+        results["Phi_mean_norm"] += vfw_mean_buf
+
+    np.divide(results["Phi_mean"], float(n_snapshots), out=results["Phi_mean"])
+    np.divide(
+        results["Phi_mean_norm"], float(n_snapshots), out=results["Phi_mean_norm"]
+    )
+
+    # second pass: compute variance
+    if compute_err:
+        assert vfw_err_buf is not None
+        for fluid_file in tqdm.tqdm(fluid_files, desc="Processing mean phi"):
+            with h5py.File(str(fluid_file), "r") as h5_file:
+                dset = h5_file["vfw"]  # type: ignore
+                dset.read_direct(vfw_buf, np.s_[:-1, :-1, :-1])
+            np.mean(vfw_buf, axis=(0, 1), out=vfw_mean_buf)
+            np.subtract(vfw_mean_buf, results["Phi_mean"], out=vfw_err_buf)
+            np.multiply(vfw_err_buf, vfw_err_buf, out=vfw_err_buf)
+            results["Phi_err"] += vfw_err_buf
+
+            phi_tot: float = np.sum(vfw_mean_buf, axis=None) / Ny
+            np.divide(vfw_mean_buf, phi_tot, out=vfw_mean_buf)
+            np.subtract(vfw_mean_buf, results["Phi_mean_norm"], out=vfw_err_buf)
+            np.multiply(vfw_err_buf, vfw_err_buf, out=vfw_err_buf)
+            results["Phi_err_norm"] += vfw_err_buf
+
+        np.divide(results["Phi_err"], float(n_snapshots), out=results["Phi_err"])
+        np.divide(
+            results["Phi_err_norm"], float(n_snapshots), out=results["Phi_err_norm"]
+        )
+        np.sqrt(results["Phi_err"], out=results["Phi_err"])
+        np.sqrt(results["Phi_err_norm"], out=results["Phi_err_norm"])
+
+    myio.save_to_h5(output_h5, results)
+
+    return results
