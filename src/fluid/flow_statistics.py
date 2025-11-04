@@ -469,7 +469,7 @@ def process_mean_phi_xz(
     vfw_buf: np.ndarray = np.empty(
         (vfw_Nz - 1, vfw_Ny - 1, vfw_Nx - 1), dtype=vfw_dtype
     )
-    vfw_mean_buf: np.ndarray = np.empty(Ny, dtype=vfw_dtype)
+    vfw_mean_buf: np.ndarray = np.empty(Nz, dtype=vfw_dtype)
     vfw_err_buf: Optional[np.ndarray] = None
     if compute_err:
         vfw_err_buf = np.empty(Nz, dtype=vfw_dtype)
@@ -481,7 +481,7 @@ def process_mean_phi_xz(
             dset.read_direct(vfw_buf, np.s_[:-1, :-1, :-1])
         np.mean(vfw_buf, axis=(0, 1), out=vfw_mean_buf)
         results["Phi_mean"] += vfw_mean_buf
-        phi_tot: float = np.sum(vfw_mean_buf, axis=None) / float(Ny)
+        phi_tot: float = np.sum(vfw_mean_buf, axis=None) / float(Nz)
         np.divide(vfw_mean_buf, phi_tot, out=vfw_mean_buf)
         results["Phi_mean_norm"] += vfw_mean_buf
 
@@ -502,7 +502,7 @@ def process_mean_phi_xz(
             np.multiply(vfw_err_buf, vfw_err_buf, out=vfw_err_buf)
             results["Phi_err"] += vfw_err_buf
 
-            phi_tot: float = np.sum(vfw_mean_buf, axis=None) / Ny
+            phi_tot: float = np.sum(vfw_mean_buf, axis=None) / Nz
             np.divide(vfw_mean_buf, phi_tot, out=vfw_mean_buf)
             np.subtract(vfw_mean_buf, results["Phi_mean_norm"], out=vfw_err_buf)
             np.multiply(vfw_err_buf, vfw_err_buf, out=vfw_err_buf)
