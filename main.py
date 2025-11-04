@@ -94,13 +94,13 @@ if __name__ == "__main__":
     #     args.min_file_index,
     #     args.max_file_index,
     # )
-    scripts.run_phi_eulerian.main(
-        args.parties_data_dir,
-        args.output_dir,
-        args.min_file_index,
-        args.max_file_index,
-        compute=(True,),
-    )
+    # scripts.run_phi_eulerian.main(
+    #     args.parties_data_dir,
+    #     args.output_dir,
+    #     args.min_file_index,
+    #     args.max_file_index,
+    #     compute=(True,),
+    # )
     # scripts.run_fluid_wall_analysis.main(
     #     args.parties_data_dir,
     #     args.utexas_data_dir,
@@ -111,5 +111,5 @@ if __name__ == "__main__":
     # )
 
     # scripts.run_get_start_steady.main()
-    # scripts.run_all_plots.main()
+    scripts.run_all_plots.main()
     # scripts.run_plot_biggest_floc.main()

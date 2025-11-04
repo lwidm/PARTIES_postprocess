@@ -445,7 +445,6 @@ def process_mean_phi_xz(
     dset: h5py.Dataset
     with h5py.File(str(fluid_files[0]), "r") as h5file_sample:
         dset = h5file_sample["vfw"]  # type: ignore
-        print(dset)
         vfw_Nz, vfw_Ny, vfw_Nx = dset.shape
     Nx: int = (vfw_Nx - 1)
     Ny: int = (vfw_Ny - 1)
