@@ -376,7 +376,7 @@ def process_mean_phi(
         vfv_err_buf = np.empty(Ny, dtype=vfv_dtype)
 
     # first pass: accumulate means
-    for fluid_file in tqdm.tqdm(fluid_files, desc="Processing mean phi"):
+    for fluid_file in tqdm.tqdm(fluid_files, desc="Processing mean phi - accumulate means"):
         with h5py.File(str(fluid_file), "r") as h5_file:
             dset = h5_file["vfv"]  # type: ignore
             dset.read_direct(vfv_buf, np.s_[:-1, :-1, :-1])
@@ -395,7 +395,7 @@ def process_mean_phi(
     # second pass: compute variance
     if compute_err:
         assert vfv_err_buf is not None
-        for fluid_file in tqdm.tqdm(fluid_files, desc="Processing mean phi"):
+        for fluid_file in tqdm.tqdm(fluid_files, desc="Processing mean phi - compute variance"):
             with h5py.File(str(fluid_file), "r") as h5_file:
                 dset = h5_file["vfv"]  # type: ignore
                 dset.read_direct(vfv_buf, np.s_[:-1, :-1, :-1])
@@ -475,7 +475,7 @@ def process_mean_phi_xz(
         vfw_err_buf = np.empty(Nz, dtype=vfw_dtype)
 
     # first pass: accumulate means
-    for fluid_file in tqdm.tqdm(fluid_files, desc="Processing mean phi"):
+    for fluid_file in tqdm.tqdm(fluid_files, desc="Processing mean phi - accumulate means"):
         with h5py.File(str(fluid_file), "r") as h5_file:
             dset = h5_file["vfw"]  # type: ignore
             dset.read_direct(vfw_buf, np.s_[:-1, :-1, :-1])
@@ -493,7 +493,7 @@ def process_mean_phi_xz(
     # second pass: compute variance
     if compute_err:
         assert vfw_err_buf is not None
-        for fluid_file in tqdm.tqdm(fluid_files, desc="Processing mean phi"):
+        for fluid_file in tqdm.tqdm(fluid_files, desc="Processing mean phi - compute variance"):
             with h5py.File(str(fluid_file), "r") as h5_file:
                 dset = h5_file["vfw"]  # type: ignore
                 dset.read_direct(vfw_buf, np.s_[:-1, :-1, :-1])
