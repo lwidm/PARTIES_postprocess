@@ -518,6 +518,6 @@ def main() -> None:
         linestyles,
     )
     # fluid(parent_dir / "output", plot_dir)
-    # phi_eulerian(plot_dir, [data_names[1]], [labels[1]], output_dir, colours, False)
+    phi_eulerian(plot_dir, [data_names[1]], [labels[1]], output_dir, colours, False)
     if not globals.on_anvil:
         plt.show()
