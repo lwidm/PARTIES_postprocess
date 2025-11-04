@@ -455,7 +455,7 @@ def process_mean_phi_xz(
     results: Dict[str, np.ndarray] = {
         "zw": grid["zw"][:].copy(),
         "Phi_mean": np.zeros(Nz, dtype=vfw_dtype),
-        "Phi_mean_norm": np.zeros(Nu, dtype=vfw_dtype),
+        "Phi_mean_norm": np.zeros(Nz, dtype=vfw_dtype),
     }
     if compute_err:
         results.update(
