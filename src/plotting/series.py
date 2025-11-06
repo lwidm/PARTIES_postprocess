@@ -137,7 +137,7 @@ def floc_pdf(
     probabs_list: List[np.ndarray] = []
     postfixes: List[str] = ["n_p", "D_f", "D_g"]
 
-    with h5py.File(str(floc_dir / "floc_PDF.h5"), "r") as f:
+    with h5py.File(str(floc_dir / "pdf_stats.h5"), "r") as f:
         for i in range(len(postfixes)):
             bin_widths_list.append(f["bin_width_" + postfixes[i]][()])  # type: ignore
 

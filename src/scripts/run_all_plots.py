@@ -9,8 +9,8 @@ from src import globals
 
 from matplotlib import pyplot as plt
 
-parent_dir: Path = Path("/media/usb/UCSB/")
-# parent_dir: Path = Path("./")
+# parent_dir: Path = Path("/media/usb/UCSB/")
+parent_dir: Path = Path("./")
 
 
 def fluid(utexas_dir: Path, plot_dir: Path):
@@ -190,7 +190,7 @@ def floc(
             s_mass_D_f_PDF_err,
             s_mass_D_g_PDF_err,
         ) = plt_series.floc_pdf(
-            floc_dir=output_dir / "flocs",
+            floc_dir=output_dir,
             labels=[label for _ in range(6)],
             colours=[colour for _ in range(6)],
             markers=[marker for _ in range(6)],
@@ -425,73 +425,84 @@ def main() -> None:
 
     plot_dir: Path = Path("./output/plots")
 
-    compute: bool = True
+    compute: bool = False
     compute_flocs: List[bool] = [
-        False,
-        True,
+        # False,
+        # False,
         False,
         # True,
-    ]
-    data_names: List[str] = [
-        "phi1p5",
-        "phi5p0_noCo",
-        "phi5p0_new",
-        # "test",
-    ]
-    labels: List[str] = [
-        r"$\phi_{1.5\%}$",
-        r"$\phi_{5\%}$ no cohesion",
-        r"$\phi_{5\%}$ new",
-        # r"test",
-    ]
-    trn: List[bool] = [
-        False,
-        False,
-        True,
         # False,
     ]
+    data_names: List[str] = [
+        # "phi1p5",
+        # "phi5p0_noCo",
+        "phi5p0_new",
+        # "test",
+        # "phi3p0",
+    ]
+    labels: List[str] = [
+        # r"$\phi_{1.5\%}$",
+        # r"$\phi_{5\%}$ no cohesion",
+        r"$\phi_{5\%}$ new",
+        # r"test",
+        # r"$\phi_{3\%}$",
+    ]
+    trn: List[bool] = [
+        # False,
+        # False,
+        True,
+        # False,
+        # True,
+    ]
     Re_tau: List[float] = [
-        189.54087993838434,
+        # 189.54087993838434,
+        # 180,
         180,
-        180,
+        # 180,
         # 180,
     ]
     parties_data_dir: Path = parent_dir / "data/"
     output_dir: Path = parent_dir / "output/"
     min_file_indices: List[Optional[int]] = [
+        # None,
+        # None,
         None,
-        None,
-        None,
+        # None,
         # None,
     ]
     max_file_indices: List[Optional[int]] = [
+        # None,
+        # None,
         None,
-        None,
-        None,
+        # None,
         # None,
     ]
     min_steady_indices: List[Optional[int]] = [
-        268,
-        120,
+        # 268,
+        # 120,
         206,
+        # None,
         # None,
     ]
     max_steady_indices: List[Optional[int]] = [
+        # None,
+        # None,
         None,
-        None,
-        None,
+        # None,
         # None,
     ]
     min_trn_steady_indices: List[Optional[int]] = [
-        None,
-        None,
+        # None,
+        # None,
         170912,
+        # None,
         # None,
     ]
     max_trn_steady_indices: List[Optional[int]] = [
+        # None,
+        # None,
         None,
-        None,
-        None,
+        # None,
         # None,
     ]
     colours: List[str] = ["C0", "C1", "C2", "C3", "C4"]

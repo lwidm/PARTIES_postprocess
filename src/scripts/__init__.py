@@ -13,6 +13,7 @@ from . import (
     run_double_check,
     run_get_start_steady,
     run_plot_biggest_floc,
+    run_plot_floc_slice,
 )
 
 __all__ = [
@@ -24,4 +25,5 @@ __all__ = [
     "run_double_check",
     "run_get_start_steady",
     "run_plot_biggest_floc",
+    "run_plot_floc_slice",
 ]

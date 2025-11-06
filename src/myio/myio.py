@@ -345,7 +345,7 @@ def read_Re(data_dir: Path) -> float:
         Re: float = params["Re"]  # type: ignore
         return Re
     except KeyError:
-        raise KeyError(r"Either parties.inp not found, or Re not found in parties.inp")
+        raise KeyError(rf"ERROR: In directory {data_dir}: Either parties.inp not found, or Re not found in parties.inp")
 
 
 def read_channel_half_height(data_dir: Path) -> float:

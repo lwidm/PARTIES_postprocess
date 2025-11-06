@@ -242,16 +242,6 @@ def main(
             use_threading,
         )
 
-    floc_stat.calc_PDF(
-        output_dir=output_dir,
-        bin_widths=(1, 1, 1),
-        floc_dir=output_dir,
-        min_file_index=min_steady_index,
-        max_file_index=max_steady_index,
-        num_workers=num_workers,
-        use_threading=False,
-    )
-
     u_tau = Re_tau / Re
     floc_stat.CalcAvgDiam(
         output_dir=output_dir,
