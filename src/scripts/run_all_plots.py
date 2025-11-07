@@ -47,7 +47,8 @@ def fluid(utexas_dir: Path, plot_dir: Path):
         parties_wall_series.append(
             plt_series.u_plus_mean_wall_parties(
                 output_dir / data_names[i] / "fluid" / parties_processed_filename,
-                label=labels[i], colour=colours[i],
+                label=labels[i],
+                colour=colours[i],
                 linestyles=("-", "--"),
             )
         )
@@ -77,63 +78,25 @@ def fluid(utexas_dir: Path, plot_dir: Path):
 
 def floc(
     plot_dir: Path,
-    compute: bool,
-    compute_flocs: List[bool],
+    output_dir: Path,
     data_names: List[str],
     labels: List[str],
-    trn: List[bool],
-    Re_tau: List[float],
-    parties_data_dir: Path,
-    output_dir: Path,
-    min_file_indices: List[Optional[int]],
-    max_file_indices: List[Optional[int]],
-    min_steady_indices: List[Optional[int]],
-    max_steady_indices: List[Optional[int]],
-    min_trn_steady_indices: List[Optional[int]],
-    max_trn_steady_indices: List[Optional[int]],
     colours: List[str],
     markers: List[str],
     linestyles: List[str],
 ) -> None:
 
-    Num_data: int = len(data_names)
-
-    parties_data_dirs: List[Path] = [
-        parties_data_dir / data_name for data_name in data_names
-    ]
     output_dirs: List[Path] = [output_dir / data_name for data_name in data_names]
-
-    if compute:
-        for i in range(len(parties_data_dirs)):
-            min_idx: Optional[int] = min_trn_steady_indices[i] if trn[i] else min_steady_indices[i]
-            max_idx: Optional[int] = max_trn_steady_indices[i] if trn[i] else max_steady_indices[i]
-            scripts.run_floc_analysis.main(
-                parties_data_dir=parties_data_dirs[i],
-                output_dir=output_dirs[i],
-                trn=trn[i],
-                Re_tau=Re_tau[i],
-                process_flocs=compute_flocs[i],
-                min_file_index=min_file_indices[i],
-                max_file_index=max_file_indices[i],
-                min_steady_index=min_idx,
-                max_steady_index=max_idx,
-                num_workers=6,
-                use_threading=False,
-            )
 
     def get_series_floc_evolution(
         output_dir: Path,
         colour: str,
         label: str,
-        min_file_index: Optional[int],
-        max_file_index: Optional[int],
     ) -> PlotSeries:
         s: PlotSeries = plt_series.floc_count_evolution(
-            output_dir / "flocs",
+            output_dir,
             colour,
             label,
-            min_file_index,
-            max_file_index,
             normalised=True,
             reset_time=True,
         )
@@ -143,13 +106,9 @@ def floc(
         output_dir: Path,
         colour: str,
         label: str,
-        min_file_index: Optional[int],
-        max_file_index: Optional[int],
-        min_steady_index: Optional[int],
-        max_steady_index: Optional[int],
     ) -> PlotSeries:
         s: PlotSeries = plt_series.floc_count_evolution_fit(
-            output_dir / "flocs",
+            output_dir,
             colour,
             label,
             normalised=True,
@@ -178,17 +137,17 @@ def floc(
     ]:
         (
             s_n_p_PDF,
-            s_D_f_PDF,
-            s_D_g_PDF,
+            s_D_f_d_particle_PDF,
+            s_D_g_d_particle_PDF,
             s_n_p_PDF_err,
-            s_D_f_PDF_err,
-            s_D_g_PDF_err,
+            s_D_f_d_particle_PDF_err,
+            s_D_g_d_particle_PDF_err,
             s_mass_n_p_PDF,
-            s_mass_D_f_PDF,
-            s_mass_D_g_PDF,
+            s_mass_D_f_d_particle_PDF,
+            s_mass_D_g_d_particle_PDF,
             s_mass_n_p_PDF_err,
-            s_mass_D_f_PDF_err,
-            s_mass_D_g_PDF_err,
+            s_mass_D_f_d_particle_PDF_err,
+            s_mass_D_g_d_particle_PDF_err,
         ) = plt_series.floc_pdf(
             floc_dir=output_dir,
             labels=[label for _ in range(6)],
@@ -198,22 +157,20 @@ def floc(
 
         return (
             s_n_p_PDF,
-            s_D_f_PDF,
-            s_D_g_PDF,
+            s_D_f_d_particle_PDF,
+            s_D_g_d_particle_PDF,
             s_n_p_PDF_err,
-            s_D_f_PDF_err,
-            s_D_g_PDF_err,
+            s_D_f_d_particle_PDF_err,
+            s_D_g_d_particle_PDF_err,
             s_mass_n_p_PDF,
-            s_mass_D_f_PDF,
-            s_mass_D_g_PDF,
+            s_mass_D_f_d_particle_PDF,
+            s_mass_D_g_d_particle_PDF,
             s_mass_n_p_PDF_err,
-            s_mass_D_f_PDF_err,
-            s_mass_D_g_PDF_err,
+            s_mass_D_f_d_particle_PDF_err,
+            s_mass_D_g_d_particle_PDF_err,
         )
 
-    def get_series_avg(
-        output_dir: Path, label: str, colour: str, marker: str
-    ) -> Tuple[
+    def get_series_avg(output_dir: Path, label: str, colour: str, marker: str) -> Tuple[
         PlotSeries,
         PlotSeries,
         PlotSeries,
@@ -224,30 +181,29 @@ def floc(
         PlotSeries,
     ]:
         (
-            s_D_f_avg,
-            s_D_g_avg,
-            s_D_f_mass_avg,
-            s_D_g_mass_avg,
-            s_D_f_err,
-            s_D_g_err,
-            s_D_f_mass_err,
-            s_D_g_mass_err,
+            s_D_f_d_particle_avg,
+            s_D_g_d_particle_avg,
+            s_D_f_d_particle_mass_avg,
+            s_D_g_d_particle_mass_avg,
+            s_D_f_d_particle_err,
+            s_D_g_d_particle_err,
+            s_D_f_d_particle_mass_err,
+            s_D_g_d_particle_mass_err,
         ) = plt_series.floc_avg_dir(
-            floc_dir=output_dir / "flocs",
+            floc_dir=output_dir,
             labels=[label for _ in range(4)],
             colours=[colour for _ in range(4)],
             markers=[marker for _ in range(4)],
-            inner_units=False,
         )
         return (
-            s_D_f_avg,
-            s_D_g_avg,
-            s_D_f_mass_avg,
-            s_D_g_mass_avg,
-            s_D_f_err,
-            s_D_g_err,
-            s_D_f_mass_err,
-            s_D_g_mass_err,
+            s_D_f_d_particle_avg,
+            s_D_g_d_particle_avg,
+            s_D_f_d_particle_mass_avg,
+            s_D_g_d_particle_mass_avg,
+            s_D_f_d_particle_err,
+            s_D_g_d_particle_err,
+            s_D_f_d_particle_mass_err,
+            s_D_g_d_particle_mass_err,
         )
 
     plot_dir.mkdir(parents=True, exist_ok=True)
@@ -278,21 +234,13 @@ def floc(
             output_dirs[i],
             colours[i],
             labels[i],
-            min_file_indices[i],
-            max_file_indices[i],
         )
         s_evo_list.append(s_evo)
 
-        min_idx: Optional[int] = min_trn_steady_indices[i] if trn[i] else min_steady_indices[i]
-        max_idx: Optional[int] = max_trn_steady_indices[i] if trn[i] else max_steady_indices[i]
         s_evo_fit = get_series_floc_evolution_fit(
             output_dirs[i],
             colours[i],
             labels[i],
-            min_file_indices[i],
-            max_file_indices[i],
-            min_idx,
-            max_idx,
         )
         s_evo_fit_list.append(s_evo_fit)
         (
@@ -424,15 +372,6 @@ def phi_eulerian(
 def main() -> None:
 
     plot_dir: Path = Path("./output/plots")
-
-    compute: bool = False
-    compute_flocs: List[bool] = [
-        # False,
-        # False,
-        False,
-        # True,
-        # False,
-    ]
     data_names: List[str] = [
         # "phi1p5",
         # "phi5p0_noCo",
@@ -447,83 +386,15 @@ def main() -> None:
         # r"test",
         # r"$\phi_{3\%}$",
     ]
-    trn: List[bool] = [
-        # False,
-        # False,
-        True,
-        # False,
-        # True,
-    ]
-    Re_tau: List[float] = [
-        # 189.54087993838434,
-        # 180,
-        180,
-        # 180,
-        # 180,
-    ]
-    parties_data_dir: Path = parent_dir / "data/"
     output_dir: Path = parent_dir / "output/"
-    min_file_indices: List[Optional[int]] = [
-        # None,
-        # None,
-        None,
-        # None,
-        # None,
-    ]
-    max_file_indices: List[Optional[int]] = [
-        # None,
-        # None,
-        None,
-        # None,
-        # None,
-    ]
-    min_steady_indices: List[Optional[int]] = [
-        # 268,
-        # 120,
-        206,
-        # None,
-        # None,
-    ]
-    max_steady_indices: List[Optional[int]] = [
-        # None,
-        # None,
-        None,
-        # None,
-        # None,
-    ]
-    min_trn_steady_indices: List[Optional[int]] = [
-        # None,
-        # None,
-        170912,
-        # None,
-        # None,
-    ]
-    max_trn_steady_indices: List[Optional[int]] = [
-        # None,
-        # None,
-        None,
-        # None,
-        # None,
-    ]
     colours: List[str] = ["C0", "C1", "C2", "C3", "C4"]
     markers: List[str] = ["o", "s", "^", "v", "P"]
     linestyles: List[str] = ["-", "--", "-.", ":"]
     floc(
         plot_dir,
-        compute,
-        compute_flocs,
+        output_dir,
         data_names,
         labels,
-        trn,
-        Re_tau,
-        parties_data_dir,
-        output_dir,
-        min_file_indices,
-        max_file_indices,
-        min_steady_indices,
-        max_steady_indices,
-        min_trn_steady_indices,
-        max_trn_steady_indices,
         colours,
         markers,
         linestyles,

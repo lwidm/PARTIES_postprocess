@@ -16,48 +16,38 @@ from src.plotting.tools import (
 
 
 def floc_count_evolution(
-    floc_dir: Path,
+    csv_dir: Path,
     colour: str,
     label: Optional[str],
-    min_file_index: Optional[int],
-    max_file_index: Optional[int],
     normalised: bool,
     reset_time: bool,
 ) -> PlotSeries:
 
-    print(
-        f'Looking for floc files in directory: "{floc_dir}" with min_file_index: {min_file_index} and max_file_index: {max_file_index}'
-    )
-    floc_files: List[Path] = myio.list_data_files(
-        floc_dir, "Flocs", min_file_index, max_file_index
-    )
-    time: np.ndarray = myio.get_time_array(
-        "Flocs",
-        floc_dir,
-        min_file_index,
-        max_file_index,
-        "time",
-    )
-    counts: List[int] = []
+    csv_file: Path
+    if normalised:
+        csv_file = csv_dir / "floc_count_norm.csv"
+    else:
+        csv_file = csv_dir / "floc_count.csv"  
+    if not csv_file.exists():
+        raise FileNotFoundError(
+            f'ERROR: Floc count CSV file not found: "{csv_file}"'
+        )
 
-    if reset_time:
+    time, counts = np.loadtxt(
+            str(csv_file),
+            comments='%',
+            delimiter=',',
+            usecols=(0, 1),
+            skiprows=1,
+            unpack=True
+    )
+
+
+    if reset_time and len(time) > 0:
         time = time - time[0]
 
-    for floc_file in floc_files:
-        with h5py.File(str(floc_file), "r") as f:
-            floc_count = len(np.unique(f["flocs"]["floc_id"][:]))  # type: ignore
-            counts.append(floc_count)
-
-    counts_arr = np.asarray(counts)
-    if normalised:
-        counts_arr = counts_arr.astype(float)
-        N_particles: int
-        with h5py.File(str(floc_files[0]), "r") as f:
-            N_particles = len(f["particles"]["r"][:])  # type: ignore
-        counts_arr /= N_particles
-
     s: PlotSeries = PlotSeries(
-        data={"time": time, "counts": counts_arr},
+        data={"time": time, "counts": counts},
         x_key="time",
         y_key="counts",
         plot_method="plot",
@@ -71,17 +61,69 @@ def floc_count_evolution(
 
 
 def floc_count_evolution_fit(
-    floc_dir: Path,
+    csv_dir: Path,
     colour: str,
     label: Optional[str],
     normalised: bool,
     reset_time: bool,
 ) -> PlotSeries:
 
-    b, Nf_eq, n_particles, time, _ = myio.fit_flocculation_exponential(floc_dir)
+    floc_count_csv: Path
+    if normalised:
+        floc_count_csv = csv_dir / "floc_count_norm.csv"
+    else:
+        floc_count_csv = csv_dir / "floc_count.csv"  
+    if not floc_count_csv.exists():
+        raise FileNotFoundError(
+            f'ERROR: Floc count CSV file not found: "{floc_count_csv}"'
+        )
+    floc_count_fit_csv: Path = csv_dir / "flocculation_fit_parameters.csv"
+    if not floc_count_fit_csv.exists():
+        raise FileNotFoundError(
+            f'ERROR: Floc count fit CSV file not found: "{floc_count_fit_csv}"'
+        )
+
+    time = np.loadtxt(
+            str(floc_count_csv),
+            comments='%',
+            delimiter=',',
+            usecols=0,
+            skiprows=1,
+    )
+
+    fit_data = np.loadtxt(
+            str(floc_count_fit_csv),
+            comments='%',
+            delimiter=',',
+            dtype=str
+    )
+    header_row = fit_data[0, :]
+    data_row = fit_data[1, :]
+    b: float | None = None
+    Nf_eq: int | None= None
+    n_particles: int | None = None
+    for data, key in zip(data_row, header_row):
+        match key:
+            case "b":
+                b = float(data)
+            case "Nf_eq":
+                Nf_eq = int(data)
+            case "n_particles":
+                n_particles = int(data)
+            case _:
+                raise ValueError(f'ERROR: Unknown column header in "{floc_count_fit_csv}". Expected "b", "Nf_eq" or "n_particles", got "{key}"!')
+
+    if b is None:
+        raise ValueError(f'ERROR: Could not obtain "b" from "{floc_count_fit_csv}"!')
+    if Nf_eq is None:
+        raise ValueError(f'ERROR: Could not obtain "Nf_eq" from "{floc_count_fit_csv}"!')
+    if n_particles is None:
+        raise ValueError(f'ERROR: Could not obtain "n_particles" from "{floc_count_fit_csv}"!')
 
     def model(time: np.ndarray, b: float, Nf_eq: float) -> np.ndarray:
-        return (float(n_particles) - float(Nf_eq))*np.exp(-b*(time-time[0])) + float(Nf_eq)
+        return (float(n_particles) - float(Nf_eq)) * np.exp(
+            -b * (time - time[0])
+        ) + float(Nf_eq)
 
     print(f"Floc count evolution fit for {label}: b = {b}, Nf_eq = {Nf_eq}")
 
@@ -203,8 +245,8 @@ def floc_pdf(
     s_D_f, s_D_f_err = create_series(1)
     s_D_g, s_D_g_err = create_series(2)
     s_mass_n_p, s_mass_n_p_err = create_series(3)
-    s_mass_D_f, s_mass_D_f_err = create_series(4)
-    s_mass_D_g, s_mass_D_g_err = create_series(5)
+    s_mass_D_f_d_particle, s_mass_D_f_d_particle_err = create_series(4)
+    s_mass_D_g_d_particle, s_mass_D_g_d_particle_err = create_series(5)
 
     return (
         s_n_p,
@@ -214,11 +256,11 @@ def floc_pdf(
         s_D_f_err,
         s_D_g_err,
         s_mass_n_p,
-        s_mass_D_f,
-        s_mass_D_g,
+        s_mass_D_f_d_particle,
+        s_mass_D_g_d_particle,
         s_mass_n_p_err,
-        s_mass_D_f_err,
-        s_mass_D_g_err,
+        s_mass_D_f_d_particle_err,
+        s_mass_D_g_d_particle_err,
     )
 
 
@@ -227,7 +269,6 @@ def floc_avg_dir(
     labels: List[Optional[str]],
     colours: List[str],
     markers: List[str],
-    inner_units: bool,
 ) -> Tuple[
     PlotSeries,
     PlotSeries,
@@ -240,35 +281,24 @@ def floc_avg_dir(
 ]:
 
     x_data: np.ndarray
-    D_f_avg: np.ndarray
-    D_g_avg: np.ndarray
-    D_f_mass_avg: np.ndarray
-    D_g_mass_avg: np.ndarray
-    std_D_f_avg: np.ndarray
-    std_D_g_avg: np.ndarray
-    std_D_f_mass_avg: np.ndarray
-    std_D_g_mass_avg: np.ndarray
-    with h5py.File(str(floc_dir / "avg_floc_diam.h5"), "r") as f:
-        if inner_units:
-            x_data = f["yp_mean"][:]  # type: ignore
-            D_f_avg = f["inner_D_f_avg"][:]  # type: ignore
-            D_g_avg = f["inner_D_g_avg"][:]  # type: ignore
-            D_f_mass_avg = f["inner_D_f_mass_avg"][:]  # type: ignore
-            D_g_mass_avg = f["inner_D_g_mass_avg"][:]  # type: ignore
-            std_D_f_avg = f["inner_std_D_f_avg"][:]  # type: ignore
-            std_D_g_avg = f["inner_std_D_g_avg"][:]  # type: ignore
-            std_D_f_mass_avg = f["inner_std_D_f_mass_avg"][:]  # type: ignore
-            std_D_g_mass_avg = f["inner_std_D_g_mass_avg"][:]  # type: ignore
-        else:
-            x_data = f["y_mean"][:]  # type: ignore
-            D_f_avg = f["D_f_avg"][:]  # type: ignore
-            D_g_avg = f["D_g_avg"][:]  # type: ignore
-            D_f_mass_avg = f["D_f_mass_avg"][:]  # type: ignore
-            D_g_mass_avg = f["D_g_mass_avg"][:]  # type: ignore
-            std_D_f_avg = f["std_D_f_avg"][:]  # type: ignore
-            std_D_g_avg = f["std_D_g_avg"][:]  # type: ignore
-            std_D_f_mass_avg = f["std_D_f_mass_avg"][:]  # type: ignore
-            std_D_g_mass_avg = f["std_D_g_mass_avg"][:]  # type: ignore
+    D_f_d_particle_avg: np.ndarray
+    D_g_d_particle_avg: np.ndarray
+    D_f_d_particle_mass_avg: np.ndarray
+    D_g_d_particle_mass_avg: np.ndarray
+    std_D_f_d_particle_avg: np.ndarray
+    std_D_g_d_particle_avg: np.ndarray
+    std_D_f_d_particle_mass_avg: np.ndarray
+    std_D_g_d_particle_mass_avg: np.ndarray
+    with h5py.File(str(floc_dir / "avg_diam_stats.h5"), "r") as f:
+        x_data = f["y_mean"][:]  # type: ignore
+        D_f_d_particle_avg = f["D_f_avg"][:]  # type: ignore
+        D_g_d_particle_avg = f["D_g_avg"][:]  # type: ignore
+        D_f_d_particle_mass_avg = f["D_f_mass_avg"][:]  # type: ignore
+        D_g_d_particle_mass_avg = f["D_g_mass_avg"][:]  # type: ignore
+        std_D_f_d_particle_avg = f["std_D_f_avg"][:]  # type: ignore
+        std_D_g_d_particle_avg = f["std_D_g_avg"][:]  # type: ignore
+        std_D_f_d_particle_mass_avg = f["std_D_f_mass_avg"][:]  # type: ignore
+        std_D_g_d_particle_mass_avg = f["std_D_g_mass_avg"][:]  # type: ignore
 
     markeredgewidth: float = 0.5
 
@@ -316,20 +346,28 @@ def floc_avg_dir(
         )
         return s, s_err
 
-    s_D_f_avg, s_D_f_err = create_series(D_f_avg, std_D_f_avg, 0)
-    s_D_g_avg, s_D_g_err = create_series(D_g_avg, std_D_g_avg, 1)
-    s_D_f_mass_avg, s_D_f_mass_err = create_series(D_f_mass_avg, std_D_f_mass_avg, 2)
-    s_D_g_mass_avg, s_D_g_mass_err = create_series(D_g_mass_avg, std_D_g_mass_avg, 3)
+    s_D_f_d_particle_avg, s_D_f_d_particle_err = create_series(
+        D_f_d_particle_avg, std_D_f_d_particle_avg, 0
+    )
+    s_D_g_d_particle_avg, s_D_g_d_particle_err = create_series(
+        D_g_d_particle_avg, std_D_g_d_particle_avg, 1
+    )
+    s_D_f_d_particle_mass_avg, s_D_f_d_particle_mass_err = create_series(
+        D_f_d_particle_mass_avg, std_D_f_d_particle_mass_avg, 2
+    )
+    s_D_g_d_particle_mass_avg, s_D_g_d_particle_mass_err = create_series(
+        D_g_d_particle_mass_avg, std_D_g_d_particle_mass_avg, 3
+    )
 
     return (
-        s_D_f_avg,
-        s_D_g_avg,
-        s_D_f_mass_avg,
-        s_D_g_mass_avg,
-        s_D_f_err,
-        s_D_g_err,
-        s_D_f_mass_err,
-        s_D_g_mass_err,
+        s_D_f_d_particle_avg,
+        s_D_g_d_particle_avg,
+        s_D_f_d_particle_mass_avg,
+        s_D_g_d_particle_mass_avg,
+        s_D_f_d_particle_err,
+        s_D_g_d_particle_err,
+        s_D_f_d_particle_mass_err,
+        s_D_g_d_particle_mass_err,
     )
 
 
@@ -451,22 +489,27 @@ def u_plus_mean_wall_utexas(
 
 
 def normal_stress_wall_parties(
-    parties_data_path: Path,
+    csv_dir: Path,
     label: Optional[str] = None,
     colour: str = "k",
     linestyle_map: Optional[Dict[str, str]] = None,
 ) -> List[PlotSeries]:
 
-    stats, _ = myio.load_from_h5(parties_data_path)
+    if not csv_dir.is_dir():
+        raise ValueError(f'ERROR: "{csv_dir}" is not a directory!')
+    csv_path: Path = csv_dir / "reynolds_stress_wall_normal.csv"
+    if not csv_dir.exists():
+        raise ValueError(f'ERROR: Could not find "{csv_path}" !')
+    yc, uu, ww, k, yv, vv, counts = np.loadtxt(
+            str(csv_path),
+            comments='%',
+            delimiter=',',
+            skiprows=1,
+            unpack=True
+    )
+
     if linestyle_map is None:
         linestyle_map = {"u": "-", "v": "-.", "w": "--", "k": ":"}
-
-    parties_yc_plus = stats["yc_plus"]
-    parties_yv_plus = stats["yv_plus"]
-    parties_upup_plus = stats["upup_plus"]
-    parties_vpvp_plus = stats["vpvp_plus"]
-    parties_wpwp_plus = stats["wpwp_plus"]
-    parties_k_plus = stats["k_plus"]
 
     def gen_label(u: str, which: str) -> str:
         base = f"$\\langle {u}^\\prime {u}^\\prime\\rangle / u_\\tau$ ({which})"
@@ -481,10 +524,8 @@ def normal_stress_wall_parties(
 
     s_u_part = PlotSeries(
         data={
-            "x": parties_yc_plus,
-            "y": parties_upup_plus,
-            "Re": stats.get("Re"),
-            "Re_tau": stats.get("Re_tau"),
+            "x": yc,
+            "y": uu,
         },
         x_key="x",
         y_key="y",
@@ -497,10 +538,8 @@ def normal_stress_wall_parties(
     )
     s_v_part = PlotSeries(
         data={
-            "x": parties_yv_plus,
-            "y": parties_vpvp_plus,
-            "Re": stats.get("Re"),
-            "Re_tau": stats.get("Re_tau"),
+            "x": yv,
+            "y": vv,
         },
         x_key="x",
         y_key="y",
@@ -513,10 +552,8 @@ def normal_stress_wall_parties(
     )
     s_w_part = PlotSeries(
         data={
-            "x": parties_yc_plus,
-            "y": parties_wpwp_plus,
-            "Re": stats.get("Re"),
-            "Re_tau": stats.get("Re_tau"),
+            "x": yc,
+            "y": ww,
         },
         x_key="x",
         y_key="y",
@@ -529,10 +566,8 @@ def normal_stress_wall_parties(
     )
     s_k_part = PlotSeries(
         data={
-            "x": parties_yc_plus,
-            "y": parties_k_plus,
-            "Re": stats.get("Re"),
-            "Re_tau": stats.get("Re_tau"),
+            "x": yc,
+            "y": k,
         },
         x_key="x",
         y_key="y",

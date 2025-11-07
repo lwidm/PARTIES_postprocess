@@ -108,7 +108,9 @@ def velocity_profile_wall(
     output_dir.parent.mkdir(parents=True, exist_ok=True)
 
     if Re_val is not None and Re_tau_val is not None:
-        plot_filename = output_dir / f"Re={Re_val:.0f}_Re_tau={Re_tau_val:.0f}-y+_u+.png"
+        plot_filename = (
+            output_dir / f"Re={Re_val:.0f}_Re_tau={Re_tau_val:.0f}-y+_u+.png"
+        )
     else:
         plot_filename = output_dir / "y+_u+.png"
 
@@ -317,13 +319,21 @@ def _avg_floc_dir(
 
 def avg_D_f(output_dir: Path, series_list: List[PlotSeries], inner_units: bool):
     _avg_floc_dir(
-        output_dir, series_list, r"avg_D_f", r"$\langle D_f \rangle$", inner_units
+        output_dir,
+        series_list,
+        r"avg_D_f",
+        r"$\langle D_f / d_{p} \rangle$",
+        inner_units,
     )
 
 
 def avg_D_g(output_dir: Path, series_list: List[PlotSeries], inner_units: bool):
     _avg_floc_dir(
-        output_dir, series_list, r"avg_D_g", r"$\langle D_g \rangle$", inner_units
+        output_dir,
+        series_list,
+        r"avg_D_g",
+        r"$\langle D_g  / d_{p} \rangle$",
+        inner_units,
     )
 
 
@@ -332,7 +342,7 @@ def mass_avg_D_f(output_dir: Path, series_list: List[PlotSeries], inner_units: b
         output_dir,
         series_list,
         r"mass_avg_D_f",
-        r"$\langle D_f \rangle_\text{mass}$",
+        r"$\langle D_f / d_{p} \rangle_\text{mass}$",
         inner_units,
     )
 
@@ -342,7 +352,7 @@ def mass_avg_D_g(output_dir: Path, series_list: List[PlotSeries], inner_units: b
         output_dir,
         series_list,
         r"mass_avg_D_g",
-        r"$\langle D_g \rangle_\text{mass}$",
+        r"$\langle D_g  / d_{p}\rangle_\text{mass}$",
         inner_units,
     )
 
