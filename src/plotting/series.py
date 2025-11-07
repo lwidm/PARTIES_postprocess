@@ -500,7 +500,7 @@ def normal_stress_wall_parties(
     csv_path: Path = csv_dir / "reynolds_stress_wall_normal.csv"
     if not csv_dir.exists():
         raise ValueError(f'ERROR: Could not find "{csv_path}" !')
-    yc, uu, ww, k, yv, vv, counts = np.loadtxt(
+    yc, uu, ww, k, yv, vv = np.loadtxt(
             str(csv_path),
             comments='%',
             delimiter=',',
