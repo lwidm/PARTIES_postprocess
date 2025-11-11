@@ -13,59 +13,53 @@ from matplotlib import pyplot as plt
 parent_dir: Path = Path("./")
 
 
-def fluid(utexas_dir: Path, plot_dir: Path):
+def fluid(
+    utexas_dir: Path,
+    plot_dir: Path,
+    data_dir: Path,
+    data_names: List[str],
+    labels: List[str],
+):
 
-    # ==============================
-    # Inputs
-    # ==============================
+    data_dirs: List[Path] = [data_dir / data_name for data_name in data_names]
 
-    data_names: List[str] = [
-        # "phi1p5",
-        # "phi5p0",
-        "phi5p0_new",
-    ]
-    labels: List[str] = [
-        # r"$\phi_{1.5\%}$",
-        # r"$\phi_{5\%}$",
-        r"$\phi_{5\%}$ new",
-    ]
-    parties_data_dir: Path = parent_dir / "data/"
-    output_dir: Path = parent_dir / "output/"
     # colours: List[str] = ["C0", "C1", "C2", "C3", "C4"]
-    colours: List[str] = ["k"]
+    colours: List[str] = ["k", "k", "k", "k", "k"]
 
     # ==============================
     # Automation
     # ==============================
 
     Num_data: int = len(data_names)
-    utexas_h5 = utexas_dir / "utexas.h5"
-    parties_processed_filename = "parties_reynolds.h5"
-    utexas_wall_series: List[PlotSeries] = plt_series.u_plus_mean_wall_utexas(utexas_h5)
+    utexas_wall_series: List[PlotSeries] = plt_series.u_plus_mean_utexas(
+        utexas_dir, "utexas", "k", True, True, None
+    )
     parties_wall_series: List[List[PlotSeries]] = []
     for i in range(Num_data):
         parties_wall_series.append(
-            plt_series.u_plus_mean_wall_parties(
-                output_dir / data_names[i] / "fluid" / parties_processed_filename,
+            plt_series.u_plus_mean_parties(
+                data_dirs[i],
                 label=labels[i],
                 colour=colours[i],
-                linestyles=("-", "--"),
+                log_fit=True,
+                visc_fit=False,
+                linestyles=("-", "--", "--"),
             )
         )
 
     all_wall_series: List[PlotSeries] = utexas_wall_series
-    for series in parties_wall_series:
-        all_wall_series += series
+    # for series in parties_wall_series:
+    #     all_wall_series += series
     plt_templ.velocity_profile_wall(plot_dir, all_wall_series)
 
     utexas_stress_series: List[PlotSeries] = plt_series.normal_stress_wall_utexas(
-        utexas_h5
+        utexas_dir, ["o", "d", "^", "s"]
     )
     parties_stress_series: List[List[PlotSeries]] = []
     for i in range(Num_data):
         parties_stress_series.append(
             plt_series.normal_stress_wall_parties(
-                output_dir / data_names[i] / "fluid" / parties_processed_filename,
+                data_dirs[i],
                 label=labels[i],
                 colour=colours[i],
             )
@@ -78,7 +72,7 @@ def fluid(utexas_dir: Path, plot_dir: Path):
 
 def floc(
     plot_dir: Path,
-    output_dir: Path,
+    data_dir: Path,
     data_names: List[str],
     labels: List[str],
     colours: List[str],
@@ -86,15 +80,15 @@ def floc(
     linestyles: List[str],
 ) -> None:
 
-    output_dirs: List[Path] = [output_dir / data_name for data_name in data_names]
+    data_dirs: List[Path] = [data_dir / data_name for data_name in data_names]
 
     def get_series_floc_evolution(
-        output_dir: Path,
+        csv_dir: Path,
         colour: str,
         label: str,
     ) -> PlotSeries:
         s: PlotSeries = plt_series.floc_count_evolution(
-            output_dir,
+            csv_dir,
             colour,
             label,
             normalised=True,
@@ -103,12 +97,12 @@ def floc(
         return s
 
     def get_series_floc_evolution_fit(
-        output_dir: Path,
+        csv_dir: Path,
         colour: str,
         label: str,
     ) -> PlotSeries:
         s: PlotSeries = plt_series.floc_count_evolution_fit(
-            output_dir,
+            csv_dir,
             colour,
             label,
             normalised=True,
@@ -117,7 +111,7 @@ def floc(
         return s
 
     def get_series_pdf(
-        output_dir: Path,
+        data_dir: Path,
         colour: str,
         label: str,
         marker: str,
@@ -149,7 +143,7 @@ def floc(
             s_mass_D_f_d_particle_PDF_err,
             s_mass_D_g_d_particle_PDF_err,
         ) = plt_series.floc_pdf(
-            floc_dir=output_dir,
+            floc_dir=data_dir,
             labels=[label for _ in range(6)],
             colours=[colour for _ in range(6)],
             markers=[marker for _ in range(6)],
@@ -170,7 +164,7 @@ def floc(
             s_mass_D_g_d_particle_PDF_err,
         )
 
-    def get_series_avg(output_dir: Path, label: str, colour: str, marker: str) -> Tuple[
+    def get_series_avg(data_dir: Path, label: str, colour: str, marker: str) -> Tuple[
         PlotSeries,
         PlotSeries,
         PlotSeries,
@@ -190,7 +184,7 @@ def floc(
             s_D_f_d_particle_mass_err,
             s_D_g_d_particle_mass_err,
         ) = plt_series.floc_avg_dir(
-            floc_dir=output_dir,
+            floc_dir=data_dir,
             labels=[label for _ in range(4)],
             colours=[colour for _ in range(4)],
             markers=[marker for _ in range(4)],
@@ -229,16 +223,16 @@ def floc(
     s_avg_Dg_err_list: List[PlotSeries] = []
     s_mass_avg_Df_err_list: List[PlotSeries] = []
     s_mass_avg_Dg_err_list: List[PlotSeries] = []
-    for i in range(len(output_dirs)):
+    for i in range(len(data_dirs)):
         s_evo = get_series_floc_evolution(
-            output_dirs[i],
+            data_dirs[i],
             colours[i],
             labels[i],
         )
         s_evo_list.append(s_evo)
 
         s_evo_fit = get_series_floc_evolution_fit(
-            output_dirs[i],
+            data_dirs[i],
             colours[i],
             labels[i],
         )
@@ -257,7 +251,7 @@ def floc(
             s_Df_mass_err,
             s_Dg_mass_err,
         ) = get_series_pdf(
-            output_dirs[i],
+            data_dirs[i],
             colours[i],
             labels[i],
             markers[i],
@@ -284,7 +278,7 @@ def floc(
             s_err_Dg,
             s_mass_err_Df,
             s_mass_err_Dg,
-        ) = get_series_avg(output_dirs[i], labels[i], colours[i], markers[i])
+        ) = get_series_avg(data_dirs[i], labels[i], colours[i], markers[i])
         s_avg_Df_list.append(s_avg_Df)
         s_avg_Dg_list.append(s_avg_Dg)
         s_mass_avg_Df_list.append(s_mass_avg_Df)
@@ -343,7 +337,6 @@ def phi_eulerian(
     fluid_dirs: List[Path] = [
         output_dir / data_name / "fluid" for data_name in data_names
     ]
-    print(fluid_dirs[0])
 
     s_list: List[PlotSeries] = []
     s_err_list: List[Optional[PlotSeries]] = []
@@ -374,32 +367,28 @@ def main() -> None:
     plot_dir: Path = Path("./output/plots")
     data_names: List[str] = [
         # "phi1p5",
-        # "phi5p0_noCo",
-        "phi5p0_new",
-        # "test",
-        # "phi3p0",
+        # "phi5p0",
+        "test",
     ]
     labels: List[str] = [
         # r"$\phi_{1.5\%}$",
-        # r"$\phi_{5\%}$ no cohesion",
-        r"$\phi_{5\%}$ new",
-        # r"test",
-        # r"$\phi_{3\%}$",
+        # r"$\phi_{5\%}$",
+        r"test",
     ]
-    output_dir: Path = parent_dir / "output/"
+    data_dir: Path = parent_dir / "data/"
     colours: List[str] = ["C0", "C1", "C2", "C3", "C4"]
     markers: List[str] = ["o", "s", "^", "v", "P"]
     linestyles: List[str] = ["-", "--", "-.", ":"]
     floc(
         plot_dir,
-        output_dir,
+        data_dir,
         data_names,
         labels,
         colours,
         markers,
         linestyles,
     )
-    # fluid(parent_dir / "output", plot_dir)
+    fluid(data_dir, plot_dir, data_dir, data_names, labels)
     # phi_eulerian(plot_dir, [data_names[1]], [labels[1]], output_dir, colours, False)
     if not globals.on_anvil:
         plt.show()

@@ -7,7 +7,9 @@ import h5py
 import numpy as np
 import scipy.optimize
 
+from src.theory import law_of_the_wall as low
 from src.myio import myio
+from src.myio import new_myio
 from src.plotting.tools import (
     PlotSeries,
 )
@@ -27,21 +29,11 @@ def floc_count_evolution(
     if normalised:
         csv_file = csv_dir / "floc_count_norm.csv"
     else:
-        csv_file = csv_dir / "floc_count.csv"  
+        csv_file = csv_dir / "floc_count.csv"
     if not csv_file.exists():
-        raise FileNotFoundError(
-            f'ERROR: Floc count CSV file not found: "{csv_file}"'
-        )
+        raise FileNotFoundError(f'ERROR: Floc count CSV file not found: "{csv_file}"')
 
-    time, counts = np.loadtxt(
-            str(csv_file),
-            comments='%',
-            delimiter=',',
-            usecols=(0, 1),
-            skiprows=1,
-            unpack=True
-    )
-
+    time, counts = new_myio.read_csv_columns(csv_file, (0, 1))
 
     if reset_time and len(time) > 0:
         time = time - time[0]
@@ -72,7 +64,7 @@ def floc_count_evolution_fit(
     if normalised:
         floc_count_csv = csv_dir / "floc_count_norm.csv"
     else:
-        floc_count_csv = csv_dir / "floc_count.csv"  
+        floc_count_csv = csv_dir / "floc_count.csv"
     if not floc_count_csv.exists():
         raise FileNotFoundError(
             f'ERROR: Floc count CSV file not found: "{floc_count_csv}"'
@@ -83,42 +75,24 @@ def floc_count_evolution_fit(
             f'ERROR: Floc count fit CSV file not found: "{floc_count_fit_csv}"'
         )
 
-    time = np.loadtxt(
-            str(floc_count_csv),
-            comments='%',
-            delimiter=',',
-            usecols=0,
-            skiprows=1,
-    )
+    (time,) = new_myio.read_csv_columns(floc_count_csv, (0,))
 
-    fit_data = np.loadtxt(
-            str(floc_count_fit_csv),
-            comments='%',
-            delimiter=',',
-            dtype=str
-    )
-    header_row = fit_data[0, :]
-    data_row = fit_data[1, :]
-    b: float | None = None
-    Nf_eq: int | None= None
-    n_particles: int | None = None
-    for data, key in zip(data_row, header_row):
-        match key:
-            case "b":
-                b = float(data)
-            case "Nf_eq":
-                Nf_eq = int(data)
-            case "n_particles":
-                n_particles = int(data)
-            case _:
-                raise ValueError(f'ERROR: Unknown column header in "{floc_count_fit_csv}". Expected "b", "Nf_eq" or "n_particles", got "{key}"!')
+    fit_data = new_myio.read_csv_columns(floc_count_fit_csv, (0, 1, 2))
+
+    b = float(fit_data[0])
+    Nf_eq = int(fit_data[1])
+    n_particles = int(fit_data[2])
 
     if b is None:
         raise ValueError(f'ERROR: Could not obtain "b" from "{floc_count_fit_csv}"!')
     if Nf_eq is None:
-        raise ValueError(f'ERROR: Could not obtain "Nf_eq" from "{floc_count_fit_csv}"!')
+        raise ValueError(
+            f'ERROR: Could not obtain "Nf_eq" from "{floc_count_fit_csv}"!'
+        )
     if n_particles is None:
-        raise ValueError(f'ERROR: Could not obtain "n_particles" from "{floc_count_fit_csv}"!')
+        raise ValueError(
+            f'ERROR: Could not obtain "n_particles" from "{floc_count_fit_csv}"!'
+        )
 
     def model(time: np.ndarray, b: float, Nf_eq: float) -> np.ndarray:
         return (float(n_particles) - float(Nf_eq)) * np.exp(
@@ -374,270 +348,186 @@ def floc_avg_dir(
 # ------------------------- u_plus_mean_wall series -------------------------
 
 
-def u_plus_mean_wall_parties(
-    parties_data_path: Path,
+def u_plus_mean_parties(
+    csv_dir: Path,
     label: str,
     colour: str,
-    linestyles: Optional[Tuple[str, str]] = None,
+    log_fit: bool,
+    visc_fit: bool,
+    linestyles: Optional[Tuple[str, str, str]],
+) -> List[PlotSeries]:
+    yc_plus, U = new_myio.read_csv_columns(
+        csv_dir / "flow_fluctuation_data_inner.csv", (0, 1)
+    )
+    return u_plus_mean(yc_plus, U, label, colour, log_fit, visc_fit, linestyles)
+
+
+def u_plus_mean_utexas(
+    csv_dir: Path,
+    label: str,
+    colour: str,
+    log_fit: bool,
+    visc_fit: bool,
+    linestyles: Optional[Tuple[str, str, str]],
+) -> List[PlotSeries]:
+    yc_plus, U = new_myio.read_csv_columns(
+        csv_dir / "LM_Channel_0180_mean_prof.dat", (1, 2)
+    )
+    return u_plus_mean(yc_plus, U, label, colour, log_fit, visc_fit, linestyles)
+
+
+def u_plus_mean(
+    yc_plus: np.ndarray,
+    U: np.ndarray,
+    label: str,
+    colour: str,
+    log_fit: bool,
+    visc_fit: bool,
+    linestyles: Optional[Tuple[str, str, str]],
 ) -> List[PlotSeries]:
 
-    stats, _ = myio.load_from_h5(parties_data_path)
+    fitted_kappa: float
+    fitted_constant: float
+    fitted_kappa, fitted_constant = low.fit_parameters(yc_plus, U)
+    visc_yc_plus, visc_U, log_yc_plus, log_U = low.generate_profile(
+        yc_plus, fitted_kappa, fitted_constant
+    )
 
     if linestyles is None:
-        linestyles = ("-.", ":")
+        linestyles = ("-.", ":", ":")
 
+    results: List[PlotSeries] = []
     s_parties = PlotSeries(
         data={
-            "x": stats["yc_plus"],
-            "y": stats["U_plus"],
-            **{"Re": stats.get("Re"), "Re_tau": stats.get("Re_tau")},
+            "x": yc_plus,
+            "y": U,
         },
         x_key="x",
         y_key="y",
         plot_method="semilogx",
         kwargs={"label": label, "linestyle": linestyles[0], "color": colour},
     )
-    s_parties_log = PlotSeries(
-        data={
-            "x": stats["parties_log_yc_plus"],
-            "y": stats["parties_log_U_plus"],
-            **{"Re": stats.get("Re"), "Re_tau": stats.get("Re_tau")},
-        },
-        x_key="x",
-        y_key="y",
-        plot_method="semilogx",
-        kwargs={
-            "linestyle": linestyles[1],
-            "linewidth": 0.9,
-            "label": f"Law of the wall ({label})",
-            "color": colour,
-        },
-    )
+    results.append(s_parties)
+    s_parties_visc: Optional[PlotSeries] = None
+    if visc_fit:
+        s_parties_visc = PlotSeries(
+            data={
+                "x": visc_yc_plus,
+                "y": visc_U,
+            },
+            x_key="x",
+            y_key="y",
+            plot_method="semilogx",
+            kwargs={
+                "linestyle": linestyles[1],
+                "linewidth": 0.9,
+                "label": f"Law of the wall ({label})",
+                "color": colour,
+            },
+        )
+        results.append(s_parties_visc)
+    s_parties_log: Optional[PlotSeries] = None
+    if log_fit:
+        s_parties_visc = PlotSeries(
+            data={
+                "x": log_yc_plus,
+                "y": log_U,
+            },
+            x_key="x",
+            y_key="y",
+            plot_method="semilogx",
+            kwargs={
+                "linestyle": linestyles[2],
+                "linewidth": 0.9,
+                "label": f"Law of the wall ({label})",
+                "color": colour,
+            },
+        )
+        results.append(s_parties_visc)
 
-    return [s_parties, s_parties_log]
-
-
-def u_plus_mean_wall_utexas(
-    utexas_data_path: Path,
-    colour_map: Dict[str, str] = {},
-    linestyle_map: Dict[str, str] = {},
-) -> List[PlotSeries]:
-
-    stats, _ = myio.load_from_h5(utexas_data_path)
-
-    if colour_map == {}:
-        colour_map = {
-            "utexas": "k",
-            "utexas_visc": "k",
-        }
-    if linestyle_map == {}:
-        linestyle_map = {
-            "utexas": "-.",
-            "utexas_visc": ":",
-        }
-
-    s_utexas = PlotSeries(
-        data={
-            "x": stats["utexas_y_plus"],
-            "y": stats["utexas_U_plus"],
-            **{"Re": stats.get("Re"), "Re_tau": stats.get("Re_tau")},
-        },
-        x_key="x",
-        y_key="y",
-        plot_method="semilogx",
-        kwargs={
-            "label": "utexas",
-            "linestyle": linestyle_map["utexas"],
-            "color": colour_map["utexas"],
-        },
-    )
-    s_utexas_visc = PlotSeries(
-        data={
-            "x": stats["utexas_viscous_y_plus"],
-            "y": stats["utexas_viscous_U_plus"],
-            **{"Re": stats.get("Re"), "Re_tau": stats.get("Re_tau")},
-        },
-        x_key="x",
-        y_key="y",
-        plot_method="semilogx",
-        kwargs={
-            "label": "Law of the wall (utexas)",
-            "linestyle": linestyle_map["utexas_visc"],
-            "linewidth": 0.9,
-            "color": colour_map["utexas_visc"],
-        },
-    )
-    s_utexas_log = PlotSeries(
-        data={
-            "x": stats["utexas_log_y_plus"],
-            "y": stats["utexas_log_U_plus"],
-            **{"Re": stats.get("Re"), "Re_tau": stats.get("Re_tau")},
-        },
-        x_key="x",
-        y_key="y",
-        plot_method="semilogx",
-        kwargs={
-            "linestyle": linestyle_map["utexas_visc"],
-            "linewidth": 0.9,
-            "color": colour_map["utexas_visc"],
-        },
-    )
-    return [s_utexas, s_utexas_visc, s_utexas_log]
+    return results
 
 
 # ------------------------- normal_stress_wall series -------------------------
 
 
 def normal_stress_wall_parties(
-    csv_dir: Path,
-    label: Optional[str] = None,
-    colour: str = "k",
-    linestyle_map: Optional[Dict[str, str]] = None,
+    csv_dir: Path, colour: str, label: str
 ) -> List[PlotSeries]:
-
-    if not csv_dir.is_dir():
-        raise ValueError(f'ERROR: "{csv_dir}" is not a directory!')
-    csv_path: Path = csv_dir / "reynolds_stress_wall_normal.csv"
-    if not csv_dir.exists():
-        raise ValueError(f'ERROR: Could not find "{csv_path}" !')
-    yc, uu, ww, k, yv, vv = np.loadtxt(
-            str(csv_path),
-            comments='%',
-            delimiter=',',
-            skiprows=1,
-            unpack=True
+    yc, yv, uu, vv, ww, uv = new_myio.read_csv_columns(
+        csv_dir / "flow_fluctuation_data_inner.csv", (0, 1, 2, 3, 4, 5)
     )
 
-    if linestyle_map is None:
-        linestyle_map = {"u": "-", "v": "-.", "w": "--", "k": ":"}
+    stats: dict[str, np.ndarray] = {
+        "yc_plus": yc,
+        "yv_plus": yv,
+        "uu_plus": uu,
+        "vv_plus": vv,
+        "ww_plus": ww,
+        "uv_plus": uv,
+    }
 
-    def gen_label(u: str, which: str) -> str:
-        base = f"$\\langle {u}^\\prime {u}^\\prime\\rangle / u_\\tau$ ({which})"
-        if label:
-            return f"{base} ({label})"
-        return base
-
-    l_u_part = gen_label("u", "parties")
-    l_v_part = gen_label("v", "parties")
-    l_w_part = gen_label("w", "parties")
-    l_k_part = gen_label("k", "parties")
-
-    s_u_part = PlotSeries(
-        data={
-            "x": yc,
-            "y": uu,
-        },
-        x_key="x",
-        y_key="y",
-        plot_method="plot",
-        kwargs={
-            "label": l_u_part,
-            "linestyle": linestyle_map.get("u", "-"),
-            "color": colour,
-        },
-    )
-    s_v_part = PlotSeries(
-        data={
-            "x": yv,
-            "y": vv,
-        },
-        x_key="x",
-        y_key="y",
-        plot_method="plot",
-        kwargs={
-            "label": l_v_part,
-            "linestyle": linestyle_map.get("v", "-."),
-            "color": colour,
-        },
-    )
-    s_w_part = PlotSeries(
-        data={
-            "x": yc,
-            "y": ww,
-        },
-        x_key="x",
-        y_key="y",
-        plot_method="plot",
-        kwargs={
-            "label": l_w_part,
-            "linestyle": linestyle_map.get("w", "--"),
-            "color": colour,
-        },
-    )
-    s_k_part = PlotSeries(
-        data={
-            "x": yc,
-            "y": k,
-        },
-        x_key="x",
-        y_key="y",
-        plot_method="plot",
-        kwargs={
-            "label": l_k_part,
-            "linestyle": linestyle_map.get("k", ":"),
-            "color": colour,
-        },
-    )
-
-    return [s_u_part, s_v_part, s_w_part, s_k_part]
+    colours: list[str] = [colour for _ in range(4)]
+    linestyles: list[str] = ["-", "-.", "--", ":"]
+    markers: list[str] = ["None" for _ in range(4)]
+    return normal_stress_wall(stats, colours, linestyles, markers, label)
 
 
 def normal_stress_wall_utexas(
-    utexas_data_path: Path,
-    colour_map: Dict[str, str] = {},
-    linestyle_map: Dict[str, str] = {},
-    marker_map: Dict[str, str] = {},
+    csv_dir: Path,
+    markers: list[str],
+) -> List[PlotSeries]:
+    yp, uu, vv, ww, uv, uw, vw, k = new_myio.read_csv_columns(
+        csv_dir / "LM_Channel_0180_vel_fluc_prof.dat", (1, 2, 3, 4, 5, 6, 7, 8)
+    )
+
+    stats: dict[str, np.ndarray] = {
+        "yc_plus": yp,
+        "yv_plus": yp,
+        "uu_plus": uu,
+        "vv_plus": vv,
+        "ww_plus": ww,
+        "uv_plus": uv,
+    }
+
+    colours: list[str] = ["k" for _ in range(4)]
+    linestyles: list[str] = ["None" for _ in range(4)]
+    return normal_stress_wall(stats, colours, linestyles, markers, "utexas")
+
+
+def normal_stress_wall(
+    stats: dict[str, np.ndarray],
+    colours: list[str],
+    linestyles: list[str],
+    markers: list[str],
+    label: str,
 ) -> List[PlotSeries]:
 
-    stats, _ = myio.load_from_h5(utexas_data_path)
+    yc_plus: np.ndarray = stats["yc_plus"]
+    yv_plus: np.ndarray = stats["yv_plus"]
+    idx: np.ndarray = np.linspace(0, len(yc_plus) - 1, 40, dtype=int)
+    idx_upup: np.ndarray = np.linspace(0, len(yc_plus) - 1, 70, dtype=int)
 
-    if colour_map == {}:
-        colour_map = {
-            "utexas_upup": "k",
-            "utexas_vpvp": "k",
-            "utexas_wpwp": "k",
-            "utexas_k": "k",
-        }
-    if linestyle_map == {}:
-        linestyle_map = {
-            "utexas_upup": "None",
-            "utexas_vpvp": "None",
-            "utexas_wpwp": "None",
-            "utexas_k": "None",
-        }
-    if marker_map == {}:
-        marker_map = {
-            "utexas_upup": "o",
-            "utexas_vpvp": "d",
-            "utexas_wpwp": "^",
-            "utexas_k": "x",
-        }
+    yc: np.ndarray = yc_plus[idx]
+    yv: np.ndarray = yv_plus[idx]
+    yc_uu: np.ndarray = yc_plus[idx_upup]
 
-    utexas_y_plus: np.ndarray = stats["utexas_y_plus"]
-    idx: np.ndarray = np.linspace(0, len(utexas_y_plus) - 1, 40, dtype=int)
-    idx_upup: np.ndarray = np.linspace(0, len(utexas_y_plus) - 1, 70, dtype=int)
+    uu: np.ndarray = stats["uu_plus"][idx_upup]
+    vv: np.ndarray = stats["vv_plus"][idx]
+    ww: np.ndarray = stats["ww_plus"][idx]
+    uv: np.ndarray = stats["uv_plus"][idx]
 
-    ux_y: np.ndarray = utexas_y_plus[idx]
-    ux_y_upup: np.ndarray = utexas_y_plus[idx_upup]
-
-    ux_upup: np.ndarray = stats["utexas_upup_plus"][idx_upup]
-    ux_vpvp: np.ndarray = stats["utexas_vpvp_plus"][idx]
-    ux_wpwp: np.ndarray = stats["utexas_wpwp_plus"][idx]
-    ux_k: np.ndarray = stats["utexas_k_plus"][idx]
-
-    def create_series(x, y, colour, marker, linestyle, label):
+    def create_series(x, y, colour, marker, linestyle, label_local):
         return PlotSeries(
             data={
                 "x": x,
                 "y": y,
-                "Re": stats.get("Re"),
-                "Re_tau": stats.get("Re_tau"),
             },
             x_key="x",
             y_key="y",
             plot_method="plot",
             kwargs={
-                "label": label,
+                "label": label_local,
                 "marker": marker,
                 "linestyle": linestyle,
                 "color": colour,
@@ -645,40 +535,40 @@ def normal_stress_wall_utexas(
             },
         )
 
-    s_u_tex = create_series(
-        ux_y_upup,
-        ux_upup,
-        colour_map["utexas_upup"],
-        marker_map["utexas_upup"],
-        linestyle_map["utexas_upup"],
-        r"$\langle u^\prime u^\prime \/ u_\tau$ (utexas)",
+    s_uu = create_series(
+        yc_uu,
+        uu,
+        colours[0],
+        markers[0],
+        linestyles[0],
+        rf"$\langle u^\prime u^\prime \/ u_\tau$ ({label})",
     )
-    s_v_tex = create_series(
-        ux_y,
-        ux_vpvp,
-        colour_map["utexas_vpvp"],
-        marker_map["utexas_vpvp"],
-        linestyle_map["utexas_vpvp"],
-        r"$\langle v^\prime v^\prime \/ u_\tau$ (utexas)",
+    s_vv = create_series(
+        yv,
+        vv,
+        colours[1],
+        markers[1],
+        linestyles[1],
+        rf"$\langle v^\prime v^\prime \/ u_\tau$ ({label})",
     )
-    s_w_tex = create_series(
-        ux_y,
-        ux_wpwp,
-        colour_map["utexas_wpwp"],
-        marker_map["utexas_wpwp"],
-        linestyle_map["utexas_wpwp"],
-        r"$\langle w^\prime w^\prime \/ u_\tau$ (utexas)",
+    s_ww = create_series(
+        yc,
+        ww,
+        colours[2],
+        markers[2],
+        linestyles[2],
+        rf"$\langle w^\prime w^\prime \/ u_\tau$ ({label})",
     )
-    s_k_tex = create_series(
-        ux_y,
-        ux_k,
-        colour_map["utexas_k"],
-        marker_map["utexas_k"],
-        linestyle_map["utexas_k"],
-        r"$\langle k \/ u_\tau^2$ (utexas)",
+    s_uv = create_series(
+        yc,
+        uv,
+        colours[3],
+        markers[3],
+        linestyles[3],
+        rf"$\langle w^\prime w^\prime \/ u_\tau$ ({label})",
     )
 
-    return [s_u_tex, s_v_tex, s_w_tex, s_k_tex]
+    return [s_uu, s_vv, s_ww, s_uv]
 
 
 # -------------------- Steady state --------------------

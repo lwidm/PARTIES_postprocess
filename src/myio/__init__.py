@@ -9,7 +9,7 @@ This package provides:
 - utexas: reading of UT Austin data files
 """
 
-from . import myio, myio_torch, utexas
+from . import myio, myio_torch, utexas, new_myio
 
 from .myio import (
     load_columns_from_txt_numpy,
@@ -25,6 +25,7 @@ from .myio_torch import load_columns_from_txt_torch
 __all__ = [
     "myio",
     "myio_torch",
+    "new_myio",
     "utexas",
     "load_columns_from_txt_numpy",
     "load_columns_from_txt_torch",
