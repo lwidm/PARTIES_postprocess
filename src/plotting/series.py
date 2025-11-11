@@ -454,7 +454,7 @@ def u_plus_mean(
 def normal_stress_wall_parties(
     csv_dir: Path, colour: str, label: str
 ) -> List[PlotSeries]:
-    yc, uu, ww, _, yv, vv, uv = new_myio.read_csv_columns(
+    yc, uu, ww, uv, _, yv, vv = new_myio.read_csv_columns(
         csv_dir / "flow_fluctuation_data_inner.csv", (0, 1, 2, 3, 4, 5, 6)
     )
 
