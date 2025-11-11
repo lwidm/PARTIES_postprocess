@@ -53,7 +53,7 @@ def fluid(
     plt_templ.velocity_profile_wall(plot_dir, all_wall_series)
 
     utexas_stress_series: List[PlotSeries] = plt_series.normal_stress_wall_utexas(
-        utexas_dir, ["o", "d", "^", "s"]
+        utexas_dir
     )
     parties_stress_series: List[List[PlotSeries]] = []
     for i in range(Num_data):

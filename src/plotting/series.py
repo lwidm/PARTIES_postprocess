@@ -454,8 +454,8 @@ def u_plus_mean(
 def normal_stress_wall_parties(
     csv_dir: Path, colour: str, label: str
 ) -> List[PlotSeries]:
-    yc, yv, uu, vv, ww, uv = new_myio.read_csv_columns(
-        csv_dir / "flow_fluctuation_data_inner.csv", (0, 1, 2, 3, 4, 5)
+    yc, uu, ww, _, yv, vv, uv = new_myio.read_csv_columns(
+        csv_dir / "flow_fluctuation_data_inner.csv", (0, 1, 2, 3, 4, 5, 6)
     )
 
     stats: dict[str, np.ndarray] = {
@@ -468,14 +468,13 @@ def normal_stress_wall_parties(
     }
 
     colours: list[str] = [colour for _ in range(4)]
-    linestyles: list[str] = ["-", "-.", "--", ":"]
-    markers: list[str] = ["None" for _ in range(4)]
+    linestyles: list[str] = ["None" for _ in range(4)]
+    markers: list[str] = ["o", "d", "^", "s"]
     return normal_stress_wall(stats, colours, linestyles, markers, label)
 
 
 def normal_stress_wall_utexas(
     csv_dir: Path,
-    markers: list[str],
 ) -> List[PlotSeries]:
     yp, uu, vv, ww, uv, uw, vw, k = new_myio.read_csv_columns(
         csv_dir / "LM_Channel_0180_vel_fluc_prof.dat", (1, 2, 3, 4, 5, 6, 7, 8)
@@ -491,7 +490,8 @@ def normal_stress_wall_utexas(
     }
 
     colours: list[str] = ["k" for _ in range(4)]
-    linestyles: list[str] = ["None" for _ in range(4)]
+    linestyles: list[str] = ["-", "-.", "--", ":"]
+    markers: list[str] = ["None" for _ in range(4)]
     return normal_stress_wall(stats, colours, linestyles, markers, "utexas")
 
 
@@ -506,14 +506,15 @@ def normal_stress_wall(
     yc_plus: np.ndarray = stats["yc_plus"]
     yv_plus: np.ndarray = stats["yv_plus"]
     idx: np.ndarray = np.linspace(0, len(yc_plus) - 1, 40, dtype=int)
+    idx_v: np.ndarray = np.linspace(0, len(yv_plus) - 1, 40, dtype=int)
     idx_upup: np.ndarray = np.linspace(0, len(yc_plus) - 1, 70, dtype=int)
 
     yc: np.ndarray = yc_plus[idx]
-    yv: np.ndarray = yv_plus[idx]
+    yv: np.ndarray = yv_plus[idx_v]
     yc_uu: np.ndarray = yc_plus[idx_upup]
 
     uu: np.ndarray = stats["uu_plus"][idx_upup]
-    vv: np.ndarray = stats["vv_plus"][idx]
+    vv: np.ndarray = stats["vv_plus"][idx_v]
     ww: np.ndarray = stats["ww_plus"][idx]
     uv: np.ndarray = stats["uv_plus"][idx]
 
@@ -541,7 +542,7 @@ def normal_stress_wall(
         colours[0],
         markers[0],
         linestyles[0],
-        rf"$\langle u^\prime u^\prime \/ u_\tau$ ({label})",
+        rf"$\langle u^\prime u^\prime \rangle / u_\tau^2$ ({label})",
     )
     s_vv = create_series(
         yv,
@@ -549,7 +550,7 @@ def normal_stress_wall(
         colours[1],
         markers[1],
         linestyles[1],
-        rf"$\langle v^\prime v^\prime \/ u_\tau$ ({label})",
+        rf"$\langle v^\prime v^\prime \rangle / u_\tau^2$ ({label})",
     )
     s_ww = create_series(
         yc,
@@ -557,7 +558,7 @@ def normal_stress_wall(
         colours[2],
         markers[2],
         linestyles[2],
-        rf"$\langle w^\prime w^\prime \/ u_\tau$ ({label})",
+        rf"$\langle w^\prime w^\prime \rangle / u_\tau^2$ ({label})",
     )
     s_uv = create_series(
         yc,
@@ -565,7 +566,7 @@ def normal_stress_wall(
         colours[3],
         markers[3],
         linestyles[3],
-        rf"$\langle w^\prime w^\prime \/ u_\tau$ ({label})",
+        rf"$\langle u^\prime v^\prime \rangle / u_\tau^2$ ({label})",
     )
 
     return [s_uu, s_vv, s_ww, s_uv]
