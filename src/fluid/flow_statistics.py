@@ -379,7 +379,7 @@ def process_mean_phi(
     for fluid_file in tqdm.tqdm(fluid_files, desc="Processing mean phi - accumulate means"):
         with h5py.File(str(fluid_file), "r") as h5_file:
             dset = h5_file["vfv"]  # type: ignore
-            dset.read_direct(vfv_buf, np.s_[:-1, :-1, :-1])
+            dset.read_direct(vfv_buf, np.s_[:-1, :, :-1])
         myio.mirror_and_append_along_y_inplace(vfv_buf, vfv_mirr_buf)
         np.mean(vfv_mirr_buf, axis=(0, 2), out=vfv_mean_buf)
         results["Phi_mean"] += vfv_mean_buf
@@ -398,7 +398,7 @@ def process_mean_phi(
         for fluid_file in tqdm.tqdm(fluid_files, desc="Processing mean phi - compute variance"):
             with h5py.File(str(fluid_file), "r") as h5_file:
                 dset = h5_file["vfv"]  # type: ignore
-                dset.read_direct(vfv_buf, np.s_[:-1, :-1, :-1])
+                dset.read_direct(vfv_buf, np.s_[:-1, :, :-1])
             myio.mirror_and_append_along_y_inplace(vfv_buf, vfv_mirr_buf)
             np.mean(vfv_mirr_buf, axis=(0, 2), out=vfv_mean_buf)
             np.subtract(vfv_mean_buf, results["Phi_mean"], out=vfv_err_buf)
