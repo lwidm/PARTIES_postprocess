@@ -148,7 +148,7 @@ def normal_stress_wall(
         list(series_list),
         legend=True,
         xlabel=r"$y^+$",
-        ylabel="$\\left\\{\\langle u^\\prime u^\\prime \\rangle,\\; \\langle v^\\prime v^\\prime \\rangle,\\; \\langle w^\\prime w^\\prime \\rangle\\}/u_\\tau^2$",
+        ylabel=r"$\left\{\langle u^\prime u^\prime \rangle, \langle v^\prime v^\prime \rangle, \langle w^\prime w^\prime \rangle\right\}/u_\tau^2$",
         figsize=(6.5, 5.5),
         legend_loc="lower right",
         legend_bbox=(1.0, 0.70),

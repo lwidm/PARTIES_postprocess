@@ -23,8 +23,8 @@ def fluid(
 
     data_dirs: List[Path] = [data_dir / data_name for data_name in data_names]
 
-    # colours: List[str] = ["C0", "C1", "C2", "C3", "C4"]
-    colours: List[str] = ["k", "k", "k", "k", "k"]
+    colours: List[str] = ["C0", "C1", "C2", "C3", "C4"]
+    # colours: List[str] = ["k", "k", "k", "k", "k"]
 
     # ==============================
     # Automation
@@ -48,8 +48,8 @@ def fluid(
         )
 
     all_wall_series: List[PlotSeries] = utexas_wall_series
-    # for series in parties_wall_series:
-    #     all_wall_series += series
+    for series in parties_wall_series:
+        all_wall_series += series
     plt_templ.velocity_profile_wall(plot_dir, all_wall_series)
 
     utexas_stress_series: List[PlotSeries] = plt_series.normal_stress_wall_utexas(
@@ -367,13 +367,15 @@ def main() -> None:
     plot_dir: Path = Path("./output/plots")
     data_names: List[str] = [
         # "phi1p5",
+        # "phi3p0",
         # "phi5p0",
-        "test",
+        "test"
     ]
     labels: List[str] = [
         # r"$\phi_{1.5\%}$",
+        # r"$\phi_{3\%}$",
         # r"$\phi_{5\%}$",
-        r"test",
+        "test"
     ]
     data_dir: Path = parent_dir / "data/"
     colours: List[str] = ["C0", "C1", "C2", "C3", "C4"]

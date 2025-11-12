@@ -154,18 +154,17 @@ def floc_pdf(
     postfixes: List[str] = ["n_p", "D_f", "D_g"]
 
     with h5py.File(str(floc_dir / "pdf_stats.h5"), "r") as f:
-        for i in range(len(postfixes)):
-            bin_widths_list.append(f["bin_width_" + postfixes[i]][()])  # type: ignore
+        for key in ["n_p", "D_f", "D_g"]:
+            # means_list.append(f[key]["centers"][:])  # type: ignore
+            means_list.append(f[key]["unweighted"]["bin_means"][:])  # type: ignore
+            std_probab_list.append(f[key]["unweighted"]["probabs_err"][:])  # type: ignore
+            probabs_list.append(f[key]["unweighted"]["probabs_mean"][:])  # type: ignore
 
-            means_list.append(f["means_" + postfixes[i]][:])  # type: ignore
-            std_probab_list.append(f["std_probab_" + postfixes[i]][:])  # type: ignore
-            probabs_list.append(f["probab_" + postfixes[i]][:])  # type: ignore
-
         for i in range(len(postfixes)):
-            bin_widths_list.append(f["bin_width_" + postfixes[i]][()])  # type: ignore
-            means_list.append(f["mass_means_" + postfixes[i]][:])  # type: ignore
-            std_probab_list.append(f["std_mass_probab_" + postfixes[i]][:])  # type: ignore
-            probabs_list.append(f["mass_probab_" + postfixes[i]][:])  # type: ignore
+            # means_list.append(f[key]["centers"][:])  # type: ignore
+            means_list.append(f[key]["mass_weighted"]["bin_means"][:])  # type: ignore
+            std_probab_list.append(f[key]["mass_weighted"]["probabs_err"][:])  # type: ignore
+            probabs_list.append(f[key]["mass_weighted"]["probabs_mean"][:])  # type: ignore
 
     markeredgewidth: float = 0.5
 
@@ -174,7 +173,6 @@ def floc_pdf(
             data={
                 "x": means_list[i],
                 "y": probabs_list[i],
-                "bin_width": bin_widths_list[i],
             },
             x_key="x",
             y_key="y",
@@ -195,7 +193,6 @@ def floc_pdf(
             data={
                 "x": means_list[i],
                 "y": probabs_list[i],
-                "bin_width": bin_widths_list[i],
                 "y_err": std_probab_list[i],
             },
             x_key="x",
@@ -359,7 +356,10 @@ def u_plus_mean_parties(
     yc_plus, U = new_myio.read_csv_columns(
         csv_dir / "flow_fluctuation_data_inner.csv", (0, 1)
     )
-    return u_plus_mean(yc_plus, U, label, colour, log_fit, visc_fit, linestyles)
+
+    mask = yc_plus < 180
+
+    return u_plus_mean(yc_plus[mask], U[mask], label, colour, log_fit, visc_fit, linestyles)
 
 
 def u_plus_mean_utexas(
@@ -518,7 +518,28 @@ def normal_stress_wall(
     ww: np.ndarray = stats["ww_plus"][idx]
     uv: np.ndarray = stats["uv_plus"][idx]
 
+
     def create_series(x, y, colour, marker, linestyle, label_local):
+        markeredgewidth: float = 0.5
+        marker_kwargs: dict = {}
+        if marker != "None":
+            marker_kwargs = {
+                "marker": marker,
+                "markerfacecolor": colour,
+                "markeredgecolor": "k",
+                "markeredgewidth": markeredgewidth,
+                "color": "k",
+                "fillstyle": "full",
+            }
+        plot_kwargs: dict = {
+                "label": label_local,
+                "linestyle": linestyle,
+                "color": colour,
+                "fillstyle": "none",
+        }
+
+        plot_kwargs.update(marker_kwargs)
+
         return PlotSeries(
             data={
                 "x": x,
@@ -527,13 +548,7 @@ def normal_stress_wall(
             x_key="x",
             y_key="y",
             plot_method="plot",
-            kwargs={
-                "label": label_local,
-                "marker": marker,
-                "linestyle": linestyle,
-                "color": colour,
-                "fillstyle": "none",
-            },
+            kwargs=plot_kwargs,
         )
 
     s_uu = create_series(
