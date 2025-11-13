@@ -354,7 +354,7 @@ def u_plus_mean_parties(
     linestyles: Optional[Tuple[str, str, str]],
 ) -> List[PlotSeries]:
     yc_plus, U = new_myio.read_csv_columns(
-        csv_dir / "flow_fluctuation_data_inner.csv", (0, 1)
+        csv_dir / "flow_mean_data_inner.csv", (0, 1)
     )
 
     mask = yc_plus < 180
