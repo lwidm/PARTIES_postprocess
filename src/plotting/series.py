@@ -624,9 +624,28 @@ def Ekin_evolution(
 
 # -------------------- Fluid volume fraction --------------------
 
+def phi_eulerian_ana(
+    csv_dir: Path,
+    colour: str,
+    linestyle: str,
+    label: Optional[str],
+    phi_tot: float | None,
+) -> Tuple[PlotSeries, Optional[PlotSeries]]:
 
-def phi_eulerian(
-    fluid_dir: Path,
+
+    y, Phi = new_myio.read_csv_columns(csv_dir / "particle_eulerian_stats.csv", (0, 1))
+    print(Phi)
+
+
+    if phi_tot is None:
+        Phi *= 100  # convert to %
+    else:
+        Phi /= phi_tot
+
+    return phi_eulerian(y, Phi, None, colour, linestyle, label)
+
+def phi_eulerian_vfu(
+    csv_dir: Path,
     colour: str,
     linestyle: str,
     label: Optional[str],
@@ -634,40 +653,52 @@ def phi_eulerian(
     show_err: bool,
 ) -> Tuple[PlotSeries, Optional[PlotSeries]]:
 
-    mean_phi_h5: Path = fluid_dir / "mean_phi.h5"
-    yv: np.ndarray
-    Phi_mean: np.ndarray
-    Phi_mean_err: Optional[np.ndarray] = None
-    yv: np.ndarray
-    h5_postfix: str = "_norm" if normalised else ""
-    with h5py.File(str(mean_phi_h5), "r") as h5_file:
-        yv = h5_file["yv"][:]  # type: ignore
-        Phi_mean = h5_file["Phi_mean" + h5_postfix][:]  # type: ignore
-        if show_err:
-            Phi_mean_err = h5_file["Phi_err" + h5_postfix][:]  # type: ignore
+
+    if normalised:
+        y, Phi, Phi_err = new_myio.read_csv_columns(
+        csv_dir / "vfu_phi_mean.csv", (0, 3, 4)
+    )
+    else:
+        y, Phi, Phi_err = new_myio.read_csv_columns(
+        csv_dir / "vfu_phi_mean.csv", (0, 1, 2)
+    )
+    print(Phi)
 
     if not normalised:
-        Phi_mean *= 100  # convert to %
+        Phi *= 100  # convert to %
+
+    if not show_err:
+        Phi_err = None
+    return phi_eulerian(y, Phi, Phi_err, colour, linestyle, label)
+
+def phi_eulerian(
+    y: np.ndarray,
+    Phi: np.ndarray,
+    Phi_err: np.ndarray | None,
+    colour: str,
+    linestyle: str,
+    label: Optional[str],
+) -> Tuple[PlotSeries, Optional[PlotSeries]]:
 
     s: PlotSeries = PlotSeries(
-        data={"x": yv, "y": Phi_mean},
+        data={"x": y, "y": Phi},
         x_key="x",
         y_key="y",
         plot_method="plot",
         kwargs={
+            "linewidth": 0.7,
             "label": label,
             "linestyle": linestyle,
             "color": colour,
         },
     )
 
-    if show_err:
-        assert Phi_mean_err is not None
+    if Phi_err is not None:
         s_err: PlotSeries = PlotSeries(
             data={
-                "x": yv,
-                "y": Phi_mean,
-                "y_err": Phi_mean_err,
+                "x": y,
+                "y": Phi,
+                "y_err": Phi_err,
             },
             x_key="x",
             y_key="y",

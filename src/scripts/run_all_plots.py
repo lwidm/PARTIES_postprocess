@@ -328,29 +328,40 @@ def floc(
 
 def phi_eulerian(
     plot_dir: Path,
+    data_dir: Path,
     data_names: List[str],
     labels: List[str],
-    output_dir: Path,
     colours: List[str],
     show_errs: bool,
 ) -> None:
-    fluid_dirs: List[Path] = [
-        output_dir / data_name / "fluid" for data_name in data_names
+    csv_dirs: List[Path] = [
+        data_dir / data_name for data_name in data_names
     ]
 
     s_list: List[PlotSeries] = []
     s_err_list: List[Optional[PlotSeries]] = []
-    for i, fluid_dir in enumerate(fluid_dirs):
-        s, s_err = plt_series.phi_eulerian(
-            fluid_dir=fluid_dir,
+    i = 0
+    for fluid_dir in csv_dirs:
+        s_vfu, s_err_vfu = plt_series.phi_eulerian_vfu(
+            csv_dir=fluid_dir,
             colour=colours[i],
             linestyle="-",
-            label=labels[i],
-            normalised=True,
+            label=labels[i] + " (vfu)",
+            normalised=False,
             show_err=show_errs,
         )
-        s_list.append(s)
-        s_err_list.append(s_err)
+        s_list.append(s_vfu)
+        s_err_list.append(s_err_vfu)
+        s_vfu, s_err_vfu = plt_series.phi_eulerian_ana(
+            csv_dir=fluid_dir,
+            colour=colours[i+1],
+            linestyle="--",
+            label=labels[i] + " (ana)",
+            phi_tot=None,
+        )
+        s_list.append(s_vfu)
+        s_err_list.append(s_err_vfu)
+        i+=2
 
     s_plot: List[PlotSeries] = []
     if show_errs:
@@ -391,6 +402,6 @@ def main() -> None:
         linestyles,
     )
     fluid(data_dir, plot_dir, data_dir, data_names, labels)
-    # phi_eulerian(plot_dir, [data_names[1]], [labels[1]], output_dir, colours, False)
+    phi_eulerian(plot_dir, data_dir, data_names, labels, colours, False)
     if not globals.on_anvil:
         plt.show()
