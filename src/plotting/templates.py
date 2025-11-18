@@ -195,13 +195,14 @@ def fluid_Ekin_evolution(output_dir: Path, series_list) -> None:
 
 def _pdf(
     output_dir: Path,
-    series_list,
+    series_list: list[PlotSeries],
     name: str,
     xlabel: str,
     ylabel: str,
     xmin: float,
     xmax: float,
     ymin: float,
+    ymax: float,
 ) -> None:
     out_path = output_dir / f"{name}.png"
     generic_plot(
@@ -211,7 +212,7 @@ def _pdf(
         xlabel=xlabel,
         ylabel=ylabel,
         xlim=(xmin, xmax),
-        ylim=(ymin, 1.1e0),
+        ylim=(ymin, ymax),
         figsize=(6.5, 5.5),
         legend_loc="lower right",
         legend_bbox=(1.0, 0.80),
@@ -219,7 +220,7 @@ def _pdf(
     )
 
 
-def n_p_pdf(output_dir: Path, series_list):
+def n_p_pdf(output_dir: Path, series_list: list[PlotSeries]) -> None:
     _pdf(
         output_dir,
         series_list,
@@ -229,10 +230,11 @@ def n_p_pdf(output_dir: Path, series_list):
         0.9,
         20,
         1e-3,
+        1.1e0,
     )
 
 
-def D_f_pdf(output_dir: Path, series_list):
+def D_f_pdf(output_dir: Path, series_list: list[PlotSeries]) -> None:
     _pdf(
         output_dir,
         series_list,
@@ -242,10 +244,11 @@ def D_f_pdf(output_dir: Path, series_list):
         0.0,
         20,
         1e-6,
+        1.1e0,
     )
 
 
-def D_g_pdf(output_dir: Path, series_list):
+def D_g_pdf(output_dir: Path, series_list: list[PlotSeries]) -> None:
     _pdf(
         output_dir,
         series_list,
@@ -255,10 +258,11 @@ def D_g_pdf(output_dir: Path, series_list):
         0.0,
         20,
         1e-6,
+        1.1e0,
     )
 
 
-def n_p_mass_pdf(output_dir: Path, series_list):
+def n_p_mass_pdf(output_dir: Path, series_list: list[PlotSeries]) -> None:
     _pdf(
         output_dir,
         series_list,
@@ -268,10 +272,11 @@ def n_p_mass_pdf(output_dir: Path, series_list):
         0.9,
         20,
         1e-3,
+        1.1e0,
     )
 
 
-def D_f_mass_pdf(output_dir: Path, series_list):
+def D_f_mass_pdf(output_dir: Path, series_list: list[PlotSeries]) -> None:
     _pdf(
         output_dir,
         series_list,
@@ -281,10 +286,11 @@ def D_f_mass_pdf(output_dir: Path, series_list):
         0.0,
         20,
         1e-6,
+        1.1e0,
     )
 
 
-def D_g_mass_pdf(output_dir: Path, series_list):
+def D_g_mass_pdf(output_dir: Path, series_list: list[PlotSeries]) -> None:
     _pdf(
         output_dir,
         series_list,
@@ -294,6 +300,7 @@ def D_g_mass_pdf(output_dir: Path, series_list):
         0.0,
         20,
         1e-6,
+        1.1e0,
     )
 
 
@@ -378,4 +385,39 @@ def phi_eulerian(
         figsize=(6.5, 5.5),
         legend_loc="lower right",
         dpi=150,
+    )
+
+
+# -------------------- Lagrangian data pdf --------------------
+
+
+def lagrangian_acceleration_pdf(
+    output_dir: Path, series_list: list[PlotSeries], label: str
+) -> None:
+    _pdf(
+        output_dir=output_dir,
+        series_list=series_list,
+        name=f"lagrangian_acceleration_pdf_{label}",
+        xlabel=r"$a_{p,i} / \sigma_{a_{p,i}}$",
+        ylabel=r"PDF",
+        xmin=-15.0,
+        xmax=15.0,
+        ymin=1e-5,
+        ymax=1.1e0,
+    )
+
+
+def lagrangian_up_pdf(
+    output_dir: Path, series_list: list[PlotSeries], label: str
+) -> None:
+    _pdf(
+        output_dir=output_dir,
+        series_list=series_list,
+        name=f"lagrangian_acceleration_pdf_{label}",
+        xlabel=r"$u^+_{p}$",
+        ylabel=r"PDF",
+        xmin=3.0,
+        xmax=20.0,
+        ymin=1e-5,
+        ymax=0.7,
     )

@@ -1,7 +1,7 @@
 # -- src/plotting/series.py
 
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Literal, Optional, Tuple
 import h5py
 
 import numpy as np
@@ -353,13 +353,13 @@ def u_plus_mean_parties(
     visc_fit: bool,
     linestyles: Optional[Tuple[str, str, str]],
 ) -> List[PlotSeries]:
-    yc_plus, U = new_myio.read_csv_columns(
-        csv_dir / "flow_mean_data_inner.csv", (0, 1)
-    )
+    yc_plus, U = new_myio.read_csv_columns(csv_dir / "flow_mean_data_inner.csv", (0, 1))
 
     mask = yc_plus < 180
 
-    return u_plus_mean(yc_plus[mask], U[mask], label, colour, log_fit, visc_fit, linestyles)
+    return u_plus_mean(
+        yc_plus[mask], U[mask], label, colour, log_fit, visc_fit, linestyles
+    )
 
 
 def u_plus_mean_utexas(
@@ -518,7 +518,6 @@ def normal_stress_wall(
     ww: np.ndarray = stats["ww_plus"][idx]
     uv: np.ndarray = stats["uv_plus"][idx]
 
-
     def create_series(x, y, colour, marker, linestyle, label_local):
         markeredgewidth: float = 0.5
         marker_kwargs: dict = {}
@@ -532,10 +531,10 @@ def normal_stress_wall(
                 "fillstyle": "full",
             }
         plot_kwargs: dict = {
-                "label": label_local,
-                "linestyle": linestyle,
-                "color": colour,
-                "fillstyle": "none",
+            "label": label_local,
+            "linestyle": linestyle,
+            "color": colour,
+            "fillstyle": "none",
         }
 
         plot_kwargs.update(marker_kwargs)
@@ -624,6 +623,7 @@ def Ekin_evolution(
 
 # -------------------- Fluid volume fraction --------------------
 
+
 def phi_eulerian_ana(
     csv_dir: Path,
     colour: str,
@@ -632,10 +632,8 @@ def phi_eulerian_ana(
     phi_tot: float | None,
 ) -> Tuple[PlotSeries, Optional[PlotSeries]]:
 
-
     y, Phi = new_myio.read_csv_columns(csv_dir / "particle_eulerian_stats.csv", (0, 1))
     print(Phi)
-
 
     if phi_tot is None:
         Phi *= 100  # convert to %
@@ -643,6 +641,7 @@ def phi_eulerian_ana(
         Phi /= phi_tot
 
     return phi_eulerian(y, Phi, None, colour, linestyle, label)
+
 
 def phi_eulerian_vfu(
     csv_dir: Path,
@@ -653,15 +652,14 @@ def phi_eulerian_vfu(
     show_err: bool,
 ) -> Tuple[PlotSeries, Optional[PlotSeries]]:
 
-
     if normalised:
         y, Phi, Phi_err = new_myio.read_csv_columns(
-        csv_dir / "vfu_phi_mean.csv", (0, 3, 4)
-    )
+            csv_dir / "vfu_phi_mean.csv", (0, 3, 4)
+        )
     else:
         y, Phi, Phi_err = new_myio.read_csv_columns(
-        csv_dir / "vfu_phi_mean.csv", (0, 1, 2)
-    )
+            csv_dir / "vfu_phi_mean.csv", (0, 1, 2)
+        )
     print(Phi)
 
     if not normalised:
@@ -670,6 +668,7 @@ def phi_eulerian_vfu(
     if not show_err:
         Phi_err = None
     return phi_eulerian(y, Phi, Phi_err, colour, linestyle, label)
+
 
 def phi_eulerian(
     y: np.ndarray,
@@ -716,3 +715,161 @@ def phi_eulerian(
         )
         return s, s_err
     return s, None
+
+
+# -------------------- Lagrangian data pdf --------------------
+
+
+def lagrangian_acceleration_pdf(
+    csv_dir: Path,
+    labels: List[Optional[str]],
+    colours: List[str],
+    markers: List[str],
+) -> Tuple[PlotSeries, PlotSeries, PlotSeries, PlotSeries, PlotSeries, PlotSeries]:
+
+    a: list[np.ndarray] = [np.array([]), np.array([]), np.array([])]
+    PDF: list[np.ndarray] = [np.array([]), np.array([]), np.array([])]
+    err: list[np.ndarray] = [np.array([]), np.array([]), np.array([])]
+    a[0], PDF[0], err[0] = new_myio.read_csv_columns(
+        csv_dir / f"particle_acceleration_pdf_x.csv", (0, 1, 2)
+    )
+    a[1], PDF[1], err[1] = new_myio.read_csv_columns(
+        csv_dir / f"particle_acceleration_pdf_y.csv", (0, 1, 2)
+    )
+    a[2], PDF[2], err[2] = new_myio.read_csv_columns(
+        csv_dir / f"particle_acceleration_pdf_z.csv", (0, 1, 2)
+    )
+
+    markeredgewidth: float = 0.5
+    dir_labels: list[str] = ["x", "y", "z"]
+
+    def create_series(i: int) -> Tuple[PlotSeries, PlotSeries]:
+        local_label: str
+        if labels[i] is None:
+            local_label = f"$a_{{p,{dir_labels[i]} }}$"
+        else:
+            local_label = f"$a_{{p,{dir_labels[i]} }}$ ({labels[i]})"
+
+        s: PlotSeries = PlotSeries(
+            data={
+                "x": a[i],
+                "y": PDF[i],
+            },
+            x_key="x",
+            y_key="y",
+            plot_method="semilogy",
+            kwargs={
+                "label": local_label,
+                "linestyle": "None",
+                "marker": markers[i],
+                # "markerfacecolor": colours[i],
+                "markeredgecolor": colours[i],
+                "markeredgewidth": markeredgewidth,
+                "color": colours[i],
+                "fillstyle": "none",
+            },
+        )
+
+        s_err: PlotSeries = PlotSeries(
+            data={
+                "x": a[i],
+                "y": PDF[i],
+                "y_err": err[i],
+            },
+            x_key="x",
+            y_key="y",
+            plot_method="err_semilogy",
+            kwargs={
+                "color": colours[i],
+                "linestyle": "None",
+                "fmt": "None",
+                "ecolor": colours[i],
+                "elinewidth": 0.6,
+                "capsize": 2,
+                "capthick": 0.8,
+                "barsabove": True,
+            },
+        )
+
+        return s, s_err
+
+    s_ax, s_ax_err = create_series(0)
+    s_ay, s_ay_err = create_series(1)
+    s_az, s_az_err = create_series(2)
+
+    return (
+        s_ax,
+        s_ay,
+        s_az,
+        s_ax_err,
+        s_ay_err,
+        s_az_err,
+    )
+
+
+def lagrangian_u_p_pdf(
+    csv_dir: Path,
+    yp: float,
+    label: Optional[str],
+    colour: str,
+    marker: str,
+) -> Tuple[PlotSeries, PlotSeries]:
+
+    up, PDF, err = new_myio.read_csv_columns(
+        csv_dir / f"particle_u_plus_pdf_{yp}.csv", (0, 1, 2)
+    )
+
+    markeredgewidth: float = 0.5
+    dir_labels: list[str] = ["x", "y", "z"]
+
+    local_label: str
+    if label is None:
+        local_label = f"$y^+ = {yp}$"
+    else:
+        local_label = f"$y^+ = {yp}$ ({label})"
+
+    s_up: PlotSeries = PlotSeries(
+        data={
+            "x": up,
+            "y": PDF,
+        },
+        x_key="x",
+        y_key="y",
+        plot_method="plot",
+        kwargs={
+            "label": local_label,
+            "linestyle": "None",
+            "marker": marker,
+            # "markerfacecolor": colours[i],
+            "markeredgecolor": colour,
+            "markeredgewidth": markeredgewidth,
+            "color": colour,
+            "fillstyle": "none",
+        },
+    )
+
+    s_err: PlotSeries = PlotSeries(
+        data={
+            "x": up,
+            "y": PDF,
+            "y_err": err,
+        },
+        x_key="x",
+        y_key="y",
+        plot_method="err_plot",
+        kwargs={
+            "color": colour,
+            "linestyle": "None",
+            "fmt": "None",
+            "ecolor": colour,
+            "elinewidth": 0.6,
+            "capsize": 2,
+            "capthick": 0.8,
+            "barsabove": True,
+        },
+    )
+
+    return (
+        s_up,
+        s_err,
+    )

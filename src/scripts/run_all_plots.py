@@ -334,9 +334,7 @@ def phi_eulerian(
     colours: List[str],
     show_errs: bool,
 ) -> None:
-    csv_dirs: List[Path] = [
-        data_dir / data_name for data_name in data_names
-    ]
+    csv_dirs: List[Path] = [data_dir / data_name for data_name in data_names]
 
     s_list: List[PlotSeries] = []
     s_err_list: List[Optional[PlotSeries]] = []
@@ -354,14 +352,14 @@ def phi_eulerian(
         s_err_list.append(s_err_vfu)
         s_vfu, s_err_vfu = plt_series.phi_eulerian_ana(
             csv_dir=fluid_dir,
-            colour=colours[i+1],
+            colour=colours[i + 1],
             linestyle="--",
             label=labels[i] + " (ana)",
             phi_tot=None,
         )
         s_list.append(s_vfu)
         s_err_list.append(s_err_vfu)
-        i+=2
+        i += 2
 
     s_plot: List[PlotSeries] = []
     if show_errs:
@@ -371,6 +369,54 @@ def phi_eulerian(
     s_plot += s_list
 
     plt_templ.phi_eulerian(output_dir=plot_dir, series_list=s_plot, normalised=True)
+
+
+def lagrangian_data(
+    plot_dir: Path,
+    data_dir: Path,
+    data_names: List[str],
+    labels: List[str],
+    colours: List[str],
+    markers: List[str],
+    show_errs: bool,
+) -> None:
+    csv_dirs: List[Path] = [data_dir / data_name for data_name in data_names]
+
+    s_a_list: list[list[PlotSeries]] = []
+    s_a_err_list: list[list[PlotSeries]] = []
+
+    s_up_list: list[list[PlotSeries]] = []
+    s_up_err_list: list[list[PlotSeries]] = []
+
+    for i, csv_dir in enumerate(csv_dirs):
+
+        s_ax, s_ay, s_az, s_ax_err, s_ay_err, s_az_err = (
+            plt_series.lagrangian_acceleration_pdf(
+                csv_dir=csv_dir,
+                labels=[None, None, None],
+                colours=colours,
+                markers=markers,
+            )
+        )
+        s_a_list.append([s_ax, s_ay, s_az])
+        s_a_err_list.append([s_ax_err, s_ay_err, s_az_err])
+
+        s_up_list.append([])
+        s_up_err_list.append([])
+        for j, yp in enumerate([5.0, 30.0, 180.0]):
+            s_up, s_up_err = plt_series.lagrangian_u_p_pdf(
+                csv_dir=csv_dir, yp=yp, label=None, colour=colours[j], marker=markers[j]
+            )
+            s_up_list[i].append(s_up)
+            s_up_err_list[i].append(s_up_err)
+
+    if show_errs:
+        s_a_list = s_a_err_list + s_a_list
+        s_up_list = s_up_err_list + s_up_list
+
+    for i, csv_dir in enumerate(csv_dirs):
+        plt_templ.lagrangian_acceleration_pdf(plot_dir, s_a_list[i], labels[i])
+        plt_templ.lagrangian_up_pdf(plot_dir, s_up_list[i], labels[i])
 
 
 def main() -> None:
@@ -392,16 +438,25 @@ def main() -> None:
     colours: List[str] = ["C0", "C1", "C2", "C3", "C4"]
     markers: List[str] = ["o", "s", "^", "v", "P"]
     linestyles: List[str] = ["-", "--", "-.", ":"]
-    floc(
+    # floc(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     colours,
+    #     markers,
+    #     linestyles,
+    # )
+    # fluid(data_dir, plot_dir, data_dir, data_names, labels)
+    # phi_eulerian(plot_dir, data_dir, data_names, labels, colours, False)
+    lagrangian_data(
         plot_dir,
         data_dir,
         data_names,
         labels,
         colours,
         markers,
-        linestyles,
+        show_errs=False,
     )
-    fluid(data_dir, plot_dir, data_dir, data_names, labels)
-    phi_eulerian(plot_dir, data_dir, data_names, labels, colours, False)
     if not globals.on_anvil:
         plt.show()
