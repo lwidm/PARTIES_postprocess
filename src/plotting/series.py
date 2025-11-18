@@ -725,7 +725,9 @@ def lagrangian_acceleration_pdf(
     labels: List[Optional[str]],
     colours: List[str],
     markers: List[str],
-) -> Tuple[PlotSeries, PlotSeries, PlotSeries, PlotSeries, PlotSeries, PlotSeries]:
+) -> Tuple[
+    PlotSeries, PlotSeries, PlotSeries, PlotSeries, PlotSeries, PlotSeries, PlotSeries
+]:
 
     a: list[np.ndarray] = [np.array([]), np.array([]), np.array([])]
     PDF: list[np.ndarray] = [np.array([]), np.array([]), np.array([])]
@@ -739,6 +741,16 @@ def lagrangian_acceleration_pdf(
     a[2], PDF[2], err[2] = new_myio.read_csv_columns(
         csv_dir / f"particle_acceleration_pdf_z.csv", (0, 1, 2)
     )
+
+    a_min: float = min([np.min(a_arr) for a_arr in a])
+    a_max: float = max([np.max(a_arr) for a_arr in a])
+    num: int = int((a_max - a_min) // 0.05)
+    a_fit: np.ndarray = np.linspace(a_min, a_max, num, endpoint=True)
+
+    def standard_normal_gaussian(x: np.ndarray) -> np.ndarray:
+        return (1 / np.sqrt(2 * np.pi)) * np.exp(-0.5 * x ** 2)
+
+    PDF_fit: np.ndarray = standard_normal_gaussian(a_fit)
 
     markeredgewidth: float = 0.5
     dir_labels: list[str] = ["x", "y", "z"]
@@ -793,6 +805,24 @@ def lagrangian_acceleration_pdf(
 
         return s, s_err
 
+    s_fit: PlotSeries = PlotSeries(
+        data={
+            "x": a_fit,
+            "y": PDF_fit,
+        },
+        x_key="x",
+        y_key="y",
+        plot_method="semilogy",
+        kwargs={
+            "label": "gaussian",
+            "linestyle": "None",
+            "marker": None,
+            "color": "red",
+            "linewidth": 0.5,
+            "linestyle": "--",
+        },
+    )
+
     s_ax, s_ax_err = create_series(0)
     s_ay, s_ay_err = create_series(1)
     s_az, s_az_err = create_series(2)
@@ -804,6 +834,7 @@ def lagrangian_acceleration_pdf(
         s_ax_err,
         s_ay_err,
         s_az_err,
+        s_fit,
     )
 
 

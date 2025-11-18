@@ -383,6 +383,7 @@ def lagrangian_data(
     csv_dirs: List[Path] = [data_dir / data_name for data_name in data_names]
 
     s_a_list: list[list[PlotSeries]] = []
+    s_a_fit_list: list[PlotSeries] = []
     s_a_err_list: list[list[PlotSeries]] = []
 
     s_up_list: list[list[PlotSeries]] = []
@@ -390,7 +391,7 @@ def lagrangian_data(
 
     for i, csv_dir in enumerate(csv_dirs):
 
-        s_ax, s_ay, s_az, s_ax_err, s_ay_err, s_az_err = (
+        s_ax, s_ay, s_az, s_ax_err, s_ay_err, s_az_err, s_a_fit = (
             plt_series.lagrangian_acceleration_pdf(
                 csv_dir=csv_dir,
                 labels=[None, None, None],
@@ -399,6 +400,7 @@ def lagrangian_data(
             )
         )
         s_a_list.append([s_ax, s_ay, s_az])
+        s_a_fit_list.append(s_a_fit)
         s_a_err_list.append([s_ax_err, s_ay_err, s_az_err])
 
         s_up_list.append([])
@@ -415,7 +417,9 @@ def lagrangian_data(
         s_up_list = s_up_err_list + s_up_list
 
     for i, csv_dir in enumerate(csv_dirs):
-        plt_templ.lagrangian_acceleration_pdf(plot_dir, s_a_list[i], labels[i])
+        plt_templ.lagrangian_acceleration_pdf(
+            plot_dir, [s_a_fit_list[i]] + s_a_list[i], labels[i]
+        )
         plt_templ.lagrangian_up_pdf(plot_dir, s_up_list[i], labels[i])
 
 
@@ -458,5 +462,6 @@ def main() -> None:
         markers,
         show_errs=False,
     )
+
     if not globals.on_anvil:
         plt.show()
