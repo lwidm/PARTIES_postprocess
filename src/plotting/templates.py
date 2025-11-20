@@ -199,7 +199,7 @@ def _pdf(
     name: str,
     xlabel: str,
     ylabel: str,
-    xmin: float| None,
+    xmin: float | None,
     xmax: float | None,
     ymin: float | None,
     ymax: float | None,
@@ -429,5 +429,29 @@ def lagrangian_up_pdf(
         xmin=None,
         xmax=None,
         ymin=1e-5,
+        ymax=None,
+    )
+
+
+# -------------------- familiy tree --------------------
+
+
+def family_tree_breakup_formation_pdf(
+    output_dir: Path, series_list: list[PlotSeries], label: str | None
+) -> None:
+    name: str
+    if label is not None:
+        name = f"family_tree_breakup_formation_pdf_{label}"
+    else:
+        name = f"family_tree_breakup_formation_pdf"
+    _pdf(
+        output_dir=output_dir,
+        series_list=series_list,
+        name=name,
+        xlabel=r"$y / L $",
+        ylabel=r"PDF",
+        xmin=None,
+        xmax=1,
+        ymin=0,
         ymax=None,
     )

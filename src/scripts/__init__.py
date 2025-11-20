@@ -7,15 +7,15 @@ Subpackage all scripts
 from . import (
     run_all_plots,
     run_double_check,
-    run_get_start_steady,
     run_plot_biggest_floc,
     run_plot_floc_slice,
+    run_fam_tree,
 )
 
 __all__ = [
     "run_all_plots",
     "run_double_check",
-    "run_get_start_steady",
     "run_plot_biggest_floc",
     "run_plot_floc_slice",
+    "run_fam_tree",
 ]

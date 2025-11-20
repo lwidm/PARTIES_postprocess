@@ -6,8 +6,6 @@ from matplotlib import pyplot as plt
 import configparser
 from typing import Any
 
-from src.myio import myio
-
 parent_dir: Path = Path("/media/usb/UCSB/")
 # parent_dir: Path = Path("./")
 

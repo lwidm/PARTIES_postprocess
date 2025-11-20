@@ -1,6 +1,6 @@
 import h5py
 from pathlib import Path
-from src.myio import myio
+from src.myio import utils
 from typing import List
 import numpy as np
 from matplotlib import pyplot as plt
@@ -12,8 +12,8 @@ parent_dir: Path = Path("/media/usb/UCSB")
 def main() -> None:
 
     floc_dir: Path = parent_dir / "output" / "phi5p0_new" / "flocs_new"
-    floc_files: List[Path] = myio.list_data_files(floc_dir, "Flocs", None, None)
-    particle_files: List[Path] = myio.list_data_files(floc_dir, "Particles", None, None)
+    floc_files: List[Path] = utils.find_data_files(floc_dir, "Flocs_*")
+    particle_files: List[Path] = utils.find_data_files(floc_dir, "Particles_*")
 
     xmin: int
     xmax: int

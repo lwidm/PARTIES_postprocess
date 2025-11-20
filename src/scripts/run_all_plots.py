@@ -1,7 +1,6 @@
 from typing import Optional, Tuple, List
 from pathlib import Path
 
-from src import scripts
 from src.plotting.tools import PlotSeries
 from src.plotting import series as plt_series
 from src.plotting import templates as plt_templ
@@ -404,16 +403,18 @@ def lagrangian_data(
         if not separate_plots:
             colours_local = [colours[i] for _ in range(3)]
             labels_local = [labels[i] for _ in range(3)]
+            markers_local = markers
         else:
             colours_local = colours
             labels_local = [None for _ in range(3)]
+            markers_local = markers
 
         s_ax, s_ay, s_az, s_ax_err, s_ay_err, s_az_err, s_a_fit = (
             plt_series.lagrangian_acceleration_pdf(
                 csv_dir=csv_dir,
                 labels=labels_local,
                 colours=colours_local,
-                markers=markers,
+                markers=markers_local,
             )
         )
         s_a_list.append([s_ax, s_ay, s_az])
@@ -428,7 +429,7 @@ def lagrangian_data(
                 yp=yp,
                 label=labels_local[j],
                 colour=colours_local[j],
-                marker=markers[j],
+                marker=markers_local[j],
             )
             s_up_list[i].append(s_up)
             s_up_err_list[i].append(s_up_err)
@@ -467,6 +468,59 @@ def lagrangian_data(
         plt_templ.lagrangian_up_pdf(plot_dir, s_up_all_list, "all")
 
 
+def fam_tree(
+    plot_dir: Path,
+    data_dir: Path,
+    data_names: List[str],
+    labels: List[str],
+    colours: List[str],
+    markers: List[str],
+    separate_plots: bool,
+) -> None:
+    csv_dirs: List[Path] = [data_dir / data_name for data_name in data_names]
+
+    s_list: list[list[PlotSeries]] = []
+
+    for i, csv_dir in enumerate(csv_dirs):
+
+        labels_local: List[str | None]
+        if not separate_plots:
+            labels_local = [labels[i] for _ in range(2)]
+            markers_local = markers
+            colours_local = [colours[i] for _ in range(2)]
+        else:
+            labels_local = [None for _ in range(2)]
+            markers_local = markers
+            colours_local = colours
+
+        s_formation = plt_series.family_tree_breakup_formation_pdf(
+            csv_dir=csv_dir,
+            label=labels_local[0],
+            colour=colours_local[0],
+            marker=markers_local[0],
+            type="formation",
+        )
+        s_breakup = plt_series.family_tree_breakup_formation_pdf(
+            csv_dir=csv_dir,
+            label=labels_local[1],
+            colour=colours_local[1],
+            marker=markers_local[1],
+            type="breakup",
+        )
+        s_list.append([s_breakup, s_formation])
+
+    if separate_plots:
+        for i, csv_dir in enumerate(csv_dirs):
+            plt_templ.family_tree_breakup_formation_pdf(plot_dir, s_list[i], labels[i])
+    else:
+        s_list_all: List[PlotSeries] = []
+        for i, csv_dir in enumerate(csv_dirs):
+            s_list_all += [s_list[i][0]]
+        for i, csv_dir in enumerate(csv_dirs):
+            s_list_all += [s_list[i][1]]
+        plt_templ.family_tree_breakup_formation_pdf(plot_dir, s_list_all, None)
+
+
 def main() -> None:
 
     plot_dir: Path = Path("./output/plots")
@@ -488,26 +542,35 @@ def main() -> None:
     colours: List[str] = ["C0", "C1", "C2", "C3", "C4"]
     markers: List[str] = ["o", "s", "^", "v", "P"]
     linestyles: List[str] = ["-", "--", "-.", ":"]
-    floc(
+    # floc(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     colours,
+    #     markers,
+    #     linestyles,
+    # )
+    # fluid(data_dir, plot_dir, data_dir, data_names, labels)
+    # phi_eulerian(plot_dir, data_dir, data_names, labels, colours, False)
+    # lagrangian_data(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     colours,
+    #     markers,
+    #     show_errs=False,
+    #     separate_plots=False,
+    # )
+    fam_tree(
         plot_dir,
         data_dir,
         data_names,
         labels,
         colours,
         markers,
-        linestyles,
-    )
-    fluid(data_dir, plot_dir, data_dir, data_names, labels)
-    phi_eulerian(plot_dir, data_dir, data_names, labels, colours, False)
-    lagrangian_data(
-        plot_dir,
-        data_dir,
-        data_names,
-        labels,
-        colours,
-        markers,
-        show_errs=False,
-        separate_plots=False,
+        separate_plots=True,
     )
 
     if not globals.on_anvil:
