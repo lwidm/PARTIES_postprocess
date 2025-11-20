@@ -633,7 +633,6 @@ def phi_eulerian_ana(
 ) -> Tuple[PlotSeries, Optional[PlotSeries]]:
 
     y, Phi = new_myio.read_csv_columns(csv_dir / "particle_eulerian_stats.csv", (0, 1))
-    print(Phi)
 
     if phi_tot is None:
         Phi *= 100  # convert to %
@@ -660,7 +659,6 @@ def phi_eulerian_vfu(
         y, Phi, Phi_err = new_myio.read_csv_columns(
             csv_dir / "vfu_phi_mean.csv", (0, 1, 2)
         )
-    print(Phi)
 
     if not normalised:
         Phi *= 100  # convert to %
@@ -748,7 +746,7 @@ def lagrangian_acceleration_pdf(
     a_fit: np.ndarray = np.linspace(a_min, a_max, num, endpoint=True)
 
     def standard_normal_gaussian(x: np.ndarray) -> np.ndarray:
-        return (1 / np.sqrt(2 * np.pi)) * np.exp(-0.5 * x ** 2)
+        return (1 / np.sqrt(2 * np.pi)) * np.exp(-0.5 * x**2)
 
     PDF_fit: np.ndarray = standard_normal_gaussian(a_fit)
 
@@ -840,24 +838,33 @@ def lagrangian_acceleration_pdf(
 
 def lagrangian_u_p_pdf(
     csv_dir: Path,
-    yp: float,
+    yp: float | None,
     label: Optional[str],
     colour: str,
     marker: str,
 ) -> Tuple[PlotSeries, PlotSeries]:
 
-    up, PDF, err = new_myio.read_csv_columns(
-        csv_dir / f"particle_u_plus_pdf_{yp}.csv", (0, 1, 2)
-    )
+    csv_file: Path
+    if yp is not None:
+        csv_file = csv_dir / f"particle_u_plus_pdf_{yp}.csv"
+    else:
+        csv_file = csv_dir / f"particle_u_plus_pdf.csv"
+    up, PDF, err = new_myio.read_csv_columns(csv_file, (0, 1, 2))
 
     markeredgewidth: float = 0.5
     dir_labels: list[str] = ["x", "y", "z"]
 
     local_label: str
-    if label is None:
-        local_label = f"$y^+ = {yp}$"
+    if yp is None:
+        if label is None:
+            raise ValueError("If yp is None then label can not be None")
+        else:
+            local_label = label
     else:
-        local_label = f"$y^+ = {yp}$ ({label})"
+        if label is None:
+            local_label = f"$y^+ = {yp}$"
+        else:
+            local_label = f"$y^+ = {yp}$ ({label})"
 
     s_up: PlotSeries = PlotSeries(
         data={

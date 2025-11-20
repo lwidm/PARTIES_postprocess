@@ -6,7 +6,6 @@ Subpackage all scripts
 
 from . import (
     run_all_plots,
-    run_phi_eulerian,
     run_double_check,
     run_get_start_steady,
     run_plot_biggest_floc,
@@ -15,7 +14,6 @@ from . import (
 
 __all__ = [
     "run_all_plots",
-    "run_phi_eulerian",
     "run_double_check",
     "run_get_start_steady",
     "run_plot_biggest_floc",

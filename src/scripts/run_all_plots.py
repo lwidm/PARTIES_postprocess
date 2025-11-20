@@ -344,22 +344,26 @@ def phi_eulerian(
             csv_dir=fluid_dir,
             colour=colours[i],
             linestyle="-",
-            label=labels[i] + " (vfu)",
-            normalised=False,
+            # label=labels[i] + " (vfu)",
+            label=labels[i],
+            normalised=True,
             show_err=show_errs,
         )
         s_list.append(s_vfu)
         s_err_list.append(s_err_vfu)
-        s_vfu, s_err_vfu = plt_series.phi_eulerian_ana(
-            csv_dir=fluid_dir,
-            colour=colours[i + 1],
-            linestyle="--",
-            label=labels[i] + " (ana)",
-            phi_tot=None,
-        )
-        s_list.append(s_vfu)
-        s_err_list.append(s_err_vfu)
-        i += 2
+
+        # s_vfu, s_err_vfu = plt_series.phi_eulerian_ana(
+        #     csv_dir=fluid_dir,
+        #     colour=colours[i + 1],
+        #     linestyle="--",
+        #     label=labels[i] + " (ana)",
+        #     phi_tot=None,
+        # )
+        # s_list.append(s_vfu)
+        # s_err_list.append(s_err_vfu)
+
+        # i += 2
+        i += 1
 
     s_plot: List[PlotSeries] = []
     if show_errs:
@@ -379,6 +383,7 @@ def lagrangian_data(
     colours: List[str],
     markers: List[str],
     show_errs: bool,
+    separate_plots: bool,
 ) -> None:
     csv_dirs: List[Path] = [data_dir / data_name for data_name in data_names]
 
@@ -389,13 +394,25 @@ def lagrangian_data(
     s_up_list: list[list[PlotSeries]] = []
     s_up_err_list: list[list[PlotSeries]] = []
 
+    s_up_all_list: list[PlotSeries] = []
+    s_up_err_all_list: list[PlotSeries] = []
+
     for i, csv_dir in enumerate(csv_dirs):
+
+        colours_local: List[str]
+        labels_local: List[str | None]
+        if not separate_plots:
+            colours_local = [colours[i] for _ in range(3)]
+            labels_local = [labels[i] for _ in range(3)]
+        else:
+            colours_local = colours
+            labels_local = [None for _ in range(3)]
 
         s_ax, s_ay, s_az, s_ax_err, s_ay_err, s_az_err, s_a_fit = (
             plt_series.lagrangian_acceleration_pdf(
                 csv_dir=csv_dir,
-                labels=[None, None, None],
-                colours=colours,
+                labels=labels_local,
+                colours=colours_local,
                 markers=markers,
             )
         )
@@ -407,20 +424,47 @@ def lagrangian_data(
         s_up_err_list.append([])
         for j, yp in enumerate([5.0, 30.0, 180.0]):
             s_up, s_up_err = plt_series.lagrangian_u_p_pdf(
-                csv_dir=csv_dir, yp=yp, label=None, colour=colours[j], marker=markers[j]
+                csv_dir=csv_dir,
+                yp=yp,
+                label=labels_local[j],
+                colour=colours_local[j],
+                marker=markers[j],
             )
             s_up_list[i].append(s_up)
             s_up_err_list[i].append(s_up_err)
 
-    if show_errs:
-        s_a_list = s_a_err_list + s_a_list
-        s_up_list = s_up_err_list + s_up_list
-
-    for i, csv_dir in enumerate(csv_dirs):
-        plt_templ.lagrangian_acceleration_pdf(
-            plot_dir, [s_a_fit_list[i]] + s_a_list[i], labels[i]
+        s_up_all, s_up_err_all = plt_series.lagrangian_u_p_pdf(
+            csv_dir=csv_dir,
+            yp=None,
+            label=labels_local[i],
+            colour=colours_local[i],
+            marker=markers[i],
         )
-        plt_templ.lagrangian_up_pdf(plot_dir, s_up_list[i], labels[i])
+        s_up_all_list.append(s_up_all)
+        s_up_err_all_list.append(s_up_err_all)
+
+    if show_errs:
+        for i, csv_dir in enumerate(csv_dirs):
+            s_a_list[i] = s_a_err_list[i] + s_a_list[i]
+            s_up_list[i] = s_up_err_list[i] + s_up_list[i]
+        s_up_all_list = s_up_err_all_list + s_up_all_list
+
+    if separate_plots:
+        for i, csv_dir in enumerate(csv_dirs):
+            plt_templ.lagrangian_acceleration_pdf(
+                plot_dir, [s_a_fit_list[i]] + s_a_list[i], labels[i]
+            )
+            plt_templ.lagrangian_up_pdf(plot_dir, s_up_list[i], labels[i])
+            plt_templ.lagrangian_up_pdf(plot_dir, [s_up_all_list[i]], labels[i])
+    else:
+        s_a_plot: List[PlotSeries] = [s_a_fit_list[0]]
+        s_up_plot: List[PlotSeries] = []
+        for i, csv_dir in enumerate(csv_dirs):
+            s_a_plot += s_a_list[i]
+            s_up_plot += s_up_list[i]
+        plt_templ.lagrangian_acceleration_pdf(plot_dir, s_a_plot, None)
+        plt_templ.lagrangian_up_pdf(plot_dir, s_up_plot, None)
+        plt_templ.lagrangian_up_pdf(plot_dir, s_up_all_list, "all")
 
 
 def main() -> None:
@@ -428,31 +472,33 @@ def main() -> None:
     plot_dir: Path = Path("./output/plots")
     data_names: List[str] = [
         # "phi1p5",
-        # "phi3p0",
-        # "phi5p0",
-        "test"
+        "phi3p0",
+        "phi5p0",
+        "phi5p0_noCo",
+        # "test"
     ]
     labels: List[str] = [
         # r"$\phi_{1.5\%}$",
-        # r"$\phi_{3\%}$",
-        # r"$\phi_{5\%}$",
-        "test"
+        r"$\phi_{3\%}$",
+        r"$\phi_{5\%}$",
+        r"$\phi_{5\%}$ no cohesion",
+        # "test"
     ]
     data_dir: Path = parent_dir / "data/"
     colours: List[str] = ["C0", "C1", "C2", "C3", "C4"]
     markers: List[str] = ["o", "s", "^", "v", "P"]
     linestyles: List[str] = ["-", "--", "-.", ":"]
-    # floc(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names,
-    #     labels,
-    #     colours,
-    #     markers,
-    #     linestyles,
-    # )
-    # fluid(data_dir, plot_dir, data_dir, data_names, labels)
-    # phi_eulerian(plot_dir, data_dir, data_names, labels, colours, False)
+    floc(
+        plot_dir,
+        data_dir,
+        data_names,
+        labels,
+        colours,
+        markers,
+        linestyles,
+    )
+    fluid(data_dir, plot_dir, data_dir, data_names, labels)
+    phi_eulerian(plot_dir, data_dir, data_names, labels, colours, False)
     lagrangian_data(
         plot_dir,
         data_dir,
@@ -461,6 +507,7 @@ def main() -> None:
         colours,
         markers,
         show_errs=False,
+        separate_plots=False,
     )
 
     if not globals.on_anvil:

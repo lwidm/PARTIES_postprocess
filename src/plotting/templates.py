@@ -199,10 +199,10 @@ def _pdf(
     name: str,
     xlabel: str,
     ylabel: str,
-    xmin: float,
-    xmax: float,
-    ymin: float,
-    ymax: float,
+    xmin: float| None,
+    xmax: float | None,
+    ymin: float | None,
+    ymax: float | None,
 ) -> None:
     out_path = output_dir / f"{name}.png"
     generic_plot(
@@ -392,12 +392,17 @@ def phi_eulerian(
 
 
 def lagrangian_acceleration_pdf(
-    output_dir: Path, series_list: list[PlotSeries], label: str
+    output_dir: Path, series_list: list[PlotSeries], label: str | None
 ) -> None:
+    name: str
+    if label is not None:
+        name = f"lagrangian_acceleration_pdf_{label}"
+    else:
+        name = f"lagrangian_acceleration_pdf"
     _pdf(
         output_dir=output_dir,
         series_list=series_list,
-        name=f"lagrangian_acceleration_pdf_{label}",
+        name=name,
         xlabel=r"$a_{p,i} / \sigma_{a_{p,i}}$",
         ylabel=r"PDF",
         xmin=-15.0,
@@ -408,16 +413,21 @@ def lagrangian_acceleration_pdf(
 
 
 def lagrangian_up_pdf(
-    output_dir: Path, series_list: list[PlotSeries], label: str
+    output_dir: Path, series_list: list[PlotSeries], label: str | None
 ) -> None:
+    name: str
+    if label is not None:
+        name = f"lagrangian_up_pdf_{label}"
+    else:
+        name = f"lagrangian_up_pdf"
     _pdf(
         output_dir=output_dir,
         series_list=series_list,
-        name=f"lagrangian_acceleration_pdf_{label}",
+        name=name,
         xlabel=r"$u^+_{p}$",
         ylabel=r"PDF",
-        xmin=3.0,
-        xmax=20.0,
+        xmin=None,
+        xmax=None,
         ymin=1e-5,
-        ymax=0.7,
+        ymax=None,
     )
