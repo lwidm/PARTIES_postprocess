@@ -4,7 +4,9 @@ import numpy as np
 from src import myio
 
 
-def _compute_single_pdf(data_name: str, out_dir: Path):
+def _compute_single_pdf(
+    data_name: str, out_dir: Path, U_mean: float, L: float, d_p: float
+):
     pickle_dir: Path = Path("./data") / data_name
     metadata_file: Path = Path("./data") / data_name / "metadata.ini"
     if not pickle_dir.exists():
@@ -16,7 +18,10 @@ def _compute_single_pdf(data_name: str, out_dir: Path):
             pickle_dir=pickle_dir,
             metadata_file=metadata_file,
             fields=["breakup", "formation"],
-            bin_widths={"breakup": 0.01, "formation": 0.01},
+            bin_widths={"breakup": 0.04, "formation": 0.04},
+            U_mean=U_mean,
+            L=L,
+            d_p=d_p,
         )
     )
 
@@ -27,9 +32,18 @@ def _compute_single_pdf(data_name: str, out_dir: Path):
 
 
 def main():
-    data_names: list[str] = ["phi5p0_noCo", "phi5p0", "phi3p0"]
-    for data_name in data_names:
-        _compute_single_pdf(data_name, Path("./data") / data_name)
+    data_names: list[str] = [
+        "phi5p0_noCo",
+        "phi5p0",
+        "phi3p0",
+    ]
+    U_mean: list[float] = [1.0 for _ in data_names]
+    L: list[float] = [1.0 for _ in data_names]
+    d_p: list[float] = [0.03225806 for _ in data_names]
+    for i, data_name in enumerate(data_names):
+        _compute_single_pdf(
+            data_name, Path("./data") / data_name, U_mean[i], L[i], d_p[i]
+        )
 
 
 if __name__ == "__name__":

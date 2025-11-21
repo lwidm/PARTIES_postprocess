@@ -10,7 +10,18 @@ import colorsys
 
 NumericArray = Union[np.ndarray, float, int]
 PlotMethod = Literal[
-    "plot", "semilogx", "semilogy", "loglog", "pcolormesh", "imshow", "scatter", "bar", "err_plot", "err_semilogx", "err_semilogy", "err_loglog"
+    "plot",
+    "semilogx",
+    "semilogy",
+    "loglog",
+    "pcolormesh",
+    "imshow",
+    "scatter",
+    "bar",
+    "err_plot",
+    "err_semilogx",
+    "err_semilogy",
+    "err_loglog",
 ]
 
 
@@ -24,6 +35,24 @@ class PlotSeries:
 
 
 SeriesLike = Union[PlotSeries, Sequence[PlotSeries]]
+
+default_kwargs: dict[str, dict] = {
+    "kLineWidth": {"linewidth": 0.7},  # default linewidth for generic plots
+    "kBarLineWidth": {"linewidth": 1.0},  # default linewidth for bar plots
+    "kELineWidth": {"linewidth": 0.6},  # default elinwidth (linewidth for errorbars)
+    "kECapSize": {"capsize": 2.0},  # default capsize (cap size for errorbars)
+    "kECapThick": {"capthick": 0.8},  # default capthick (cap thinkness for errorbars)
+    "kBarsAbove": {"barsabove": True},  # default barsabove
+    "kMarkerSize": {"markersize": 5.0},  # default markersize
+}
+
+
+def _add_default_kwargs(defaults: list[str], plot_kwargs: dict) -> None:
+    for default in defaults:
+        keys = default_kwargs[default].keys()
+        for key in keys:
+            if key not in plot_kwargs:
+                plot_kwargs[key] = default_kwargs[default][key]
 
 
 # ------------------------- rc / axis helpers -------------------------
@@ -75,6 +104,7 @@ def _extract_xy(
 def _hex_to_rgb01(hexcolor):
     return mcolors.to_rgb(hexcolor)
 
+
 def _adjust_color(hexcolor, lighter=0.0, sat_mul=1.0):
     """
     Return an RGB tuple (0..1) that is the input color shifted in lightness
@@ -87,9 +117,20 @@ def _adjust_color(hexcolor, lighter=0.0, sat_mul=1.0):
     r2, g2, b2 = colorsys.hls_to_rgb(h, l, s)
     return (r2, g2, b2)
 
+
 def _plot_one(ax: Axes, series: PlotSeries) -> None:
     method: PlotMethod = series.plot_method or "plot"
-    if method in ("plot", "semilogx", "semilogy", "loglog", "scatter", "err_plot", "err_semilogx", "err_semilogy", "err_loglog"):
+    if method in (
+        "plot",
+        "semilogx",
+        "semilogy",
+        "loglog",
+        "scatter",
+        "err_plot",
+        "err_semilogx",
+        "err_semilogy",
+        "err_loglog",
+    ):
         x, y = _extract_xy(series)
         ax_values_tuple: Tuple
         if x is None:
@@ -100,7 +141,9 @@ def _plot_one(ax: Axes, series: PlotSeries) -> None:
             ax_values_tuple = (y,)
         else:
             ax_values_tuple = (x, y)
+
         plot_kwargs = series.kwargs
+        _add_default_kwargs(["kLineWidth", "kMarkerSize"], plot_kwargs)
 
         if method == "plot":
             ax.plot(*(ax_values_tuple), **plot_kwargs)
@@ -111,22 +154,34 @@ def _plot_one(ax: Axes, series: PlotSeries) -> None:
         elif method == "loglog":
             ax.loglog(x, y, **plot_kwargs)
         elif method in ["err_semilogx", "err_semilogy", "err_plot", "err_loglog"]:
+            _add_default_kwargs(["kELineWidth", "kECapSize", "kECapThick", "kBarsAbove"], plot_kwargs)
             if "x_err" in series.data and "y_err" in series.data:
-                ax.errorbar(*(ax_values_tuple), xerr=series.data["x_err"], yerr=series.data["y_err"], **plot_kwargs)
+                ax.errorbar(
+                    *(ax_values_tuple),
+                    xerr=series.data["x_err"],
+                    yerr=series.data["y_err"],
+                    **plot_kwargs
+                )
             elif "x_err" in series.data:
-                ax.errorbar(*(ax_values_tuple), xerr=series.data["x_err"], **plot_kwargs)
+                ax.errorbar(
+                    *(ax_values_tuple), xerr=series.data["x_err"], **plot_kwargs
+                )
             elif "y_err" in series.data:
-                ax.errorbar(*(ax_values_tuple), yerr=series.data["y_err"], **plot_kwargs)
+                ax.errorbar(
+                    *(ax_values_tuple), yerr=series.data["y_err"], **plot_kwargs
+                )
             else:
-                raise ValueError('Either "x_err" or "y_err" must be defined in PlotSeries data dict')
+                raise ValueError(
+                    'Either "x_err" or "y_err" must be defined in PlotSeries data dict'
+                )
 
             if method == "err_semilogx":
-                ax.set_xscale('log')
+                ax.set_xscale("log")
             elif method == "err_semilogy":
-                ax.set_yscale('log')
+                ax.set_yscale("log")
             elif method == "err_loglog":
-                ax.set_xscale('log')
-                ax.set_yscale('log')
+                ax.set_xscale("log")
+                ax.set_yscale("log")
         elif method == "scatter":
             if x is None or y is None:
                 raise ValueError(
@@ -135,20 +190,35 @@ def _plot_one(ax: Axes, series: PlotSeries) -> None:
             ax.scatter(x, y, **plot_kwargs)
 
     elif method == "bar":
-        plot_kwargs = series.kwargs
+        plot_kwargs: dict = series.kwargs
+        _add_default_kwargs(["kBarLineWidth"], plot_kwargs)
         counts: np.ndarray = series.data["counts"]
         edges: np.ndarray = series.data["edges"]
         widths = edges[1:] - edges[:-1]
-        edge_lighter=-0.18
-        edge_sat=1.3
+        edge_lighter = -0.18
+        edge_sat = 1.3
         base_colour: Optional[str] = series.kwargs["color"]
         if base_colour is None:
             base_colour = "red"
         face_alpha: float = 0.38
         face_rgb: Tuple[float, float, float] = _hex_to_rgb01(base_colour)
-        face_rgba: Tuple[float, float, float, float] = (face_rgb[0], face_rgb[1], face_rgb[2], face_alpha)
-        edge_rgb: Tuple[float, float, float] =  _adjust_color(base_colour, lighter=edge_lighter, sat_mul=edge_sat)
-        plot_kwargs.update({"align": "edge", "facecolor": face_rgba, "edgecolor": edge_rgb, "linewidth": 2.8, "zorder": 2})
+        face_rgba: Tuple[float, float, float, float] = (
+            face_rgb[0],
+            face_rgb[1],
+            face_rgb[2],
+            face_alpha,
+        )
+        edge_rgb: Tuple[float, float, float] = _adjust_color(
+            base_colour, lighter=edge_lighter, sat_mul=edge_sat
+        )
+        plot_kwargs.update(
+            {
+                "align": "edge",
+                "facecolor": face_rgba,
+                "edgecolor": edge_rgb,
+                "zorder": 2,
+            }
+        )
         ax.bar(edges[:-1], counts, width=widths, **plot_kwargs)
     elif method == "pcolormesh":
         plot_kwargs = series.kwargs
@@ -179,7 +249,7 @@ def _plot_one(ax: Axes, series: PlotSeries) -> None:
 def generic_plot(
     output_path: Path,
     series_list: Sequence[PlotSeries],
-    legend:bool,
+    legend: bool,
     figsize: Tuple[float, float] = (6.5, 5.5),
     xlabel: Optional[str] = None,
     ylabel: Optional[str] = None,
@@ -219,4 +289,3 @@ def generic_plot(
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(str(output_path), dpi=dpi)
-

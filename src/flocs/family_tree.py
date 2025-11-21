@@ -15,6 +15,7 @@ from src.statistics import (
     calc_PDF,
 )
 
+
 class FlocData(TypedDict):
     floc_x: dict[int, float]
     floc_y: dict[int, float]
@@ -50,9 +51,11 @@ FamilyTreeType = dict[int, FlocRecord]
 class AccessFlocBreakupLocation(AccessorWithMass):
     name_: str = "AccessFlocBreakupLocation"
     t_steady_: float
+    dt_: float
 
-    def __init__(self, t_steady):
+    def __init__(self, t_steady: float, dt: float) -> None:
         self.t_steady_ = t_steady
+        self.dt_ = dt
 
     def __call__(
         self, f: h5py.File | dict, mask: np.ndarray | None
@@ -70,6 +73,7 @@ class AccessFlocBreakupLocation(AccessorWithMass):
                 if (
                     len(floc_record["children"]) > 1
                     and floc_record["end_time"] >= self.t_steady_
+                    and floc_record["end_time"] - floc_record["start_time"] >= self.dt_
                 ):
                     y_breakup.append(floc_record["y_end"])
                     mass.append(floc_record["size"])
@@ -86,9 +90,11 @@ class AccessFlocBreakupLocation(AccessorWithMass):
 class AccessFlocFormationLocation(AccessorWithMass):
     name_: str = "AccessFlocFormationLocation"
     t_steady_: float
+    dt_: float
 
-    def __init__(self, t_steady):
+    def __init__(self, t_steady: float, dt: float) -> None:
         self.t_steady_ = t_steady
+        self.dt_ = dt
 
     def __call__(
         self, f: h5py.File | dict, mask: np.ndarray | None
@@ -106,6 +112,7 @@ class AccessFlocFormationLocation(AccessorWithMass):
                 if (
                     len(floc_record["parents"]) > 1
                     and floc_record["start_time"] >= self.t_steady_
+                    and floc_record["end_time"] - floc_record["start_time"] >= self.dt_
                 ):
                     y_breakup.append(floc_record["y_start"])
                     mass.append(floc_record["size"])
@@ -124,6 +131,9 @@ def calc_famtree_pdf_steadystate(
     metadata_file: Path,
     fields: list[str],
     bin_widths: dict[str, float],
+    U_mean: float,
+    L: float,
+    d_p: float,
 ) -> dict[str, dict[str, np.ndarray | dict[str, np.ndarray]]]:
 
     metadata_dict: dict[str, dict[str, float | int | str]] = metadata.read_metadata(
@@ -133,9 +143,16 @@ def calc_famtree_pdf_steadystate(
 
     files: list[Path] = [pickle_dir / "family_tree.pkl"]
 
+    poisseulle_u = lambda y: 3 / 2 * U_mean * (1 - ((y - L) / L) ** 2)
+    poisseulle_du_dy = lambda y: -3 * U_mean * (y - L) / L**2
+    max_poisseulle_du_dy = 3 * U_mean / L
+
+    min_floc_lifetime = 2*d_p / (d_p * max_poisseulle_du_dy)
+    min_floc_lifetime *= 4
+
     field_accessors = {
-        "breakup": AccessFlocBreakupLocation(t_steady),
-        "formation": AccessFlocFormationLocation(t_steady),
+        "breakup": AccessFlocBreakupLocation(t_steady, min_floc_lifetime),
+        "formation": AccessFlocFormationLocation(t_steady, min_floc_lifetime),
     }
 
     filter_predicate = NoFilterPredicate()

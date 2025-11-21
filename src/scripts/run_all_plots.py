@@ -475,11 +475,18 @@ def fam_tree(
     labels: List[str],
     colours: List[str],
     markers: List[str],
+    linestyles: List[str],
     separate_plots: bool,
 ) -> None:
     csv_dirs: List[Path] = [data_dir / data_name for data_name in data_names]
 
     s_list: list[list[PlotSeries]] = []
+
+    use_markers: bool = False
+    if use_markers:
+        linestyles = ["None" for _ in range(2)]
+    else:
+        markers = ["None" for _ in range(2)]
 
     for i, csv_dir in enumerate(csv_dirs):
 
@@ -487,17 +494,20 @@ def fam_tree(
         if not separate_plots:
             labels_local = [labels[i] for _ in range(2)]
             markers_local = markers
+            linestyles_local = linestyles
             colours_local = [colours[i] for _ in range(2)]
         else:
             labels_local = [None for _ in range(2)]
             markers_local = markers
             colours_local = colours
+            linestyles_local = linestyles
 
         s_formation = plt_series.family_tree_breakup_formation_pdf(
             csv_dir=csv_dir,
             label=labels_local[0],
             colour=colours_local[0],
             marker=markers_local[0],
+            linestyle=linestyles_local[0],
             type="formation",
         )
         s_breakup = plt_series.family_tree_breakup_formation_pdf(
@@ -505,6 +515,7 @@ def fam_tree(
             label=labels_local[1],
             colour=colours_local[1],
             marker=markers_local[1],
+            linestyle=linestyles_local[1],
             type="breakup",
         )
         s_list.append([s_breakup, s_formation])
@@ -542,27 +553,27 @@ def main() -> None:
     colours: List[str] = ["C0", "C1", "C2", "C3", "C4"]
     markers: List[str] = ["o", "s", "^", "v", "P"]
     linestyles: List[str] = ["-", "--", "-.", ":"]
-    # floc(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names,
-    #     labels,
-    #     colours,
-    #     markers,
-    #     linestyles,
-    # )
-    # fluid(data_dir, plot_dir, data_dir, data_names, labels)
-    # phi_eulerian(plot_dir, data_dir, data_names, labels, colours, False)
-    # lagrangian_data(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names,
-    #     labels,
-    #     colours,
-    #     markers,
-    #     show_errs=False,
-    #     separate_plots=False,
-    # )
+    floc(
+        plot_dir,
+        data_dir,
+        data_names,
+        labels,
+        colours,
+        markers,
+        linestyles,
+    )
+    fluid(data_dir, plot_dir, data_dir, data_names, labels)
+    phi_eulerian(plot_dir, data_dir, data_names, labels, colours, False)
+    lagrangian_data(
+        plot_dir,
+        data_dir,
+        data_names,
+        labels,
+        colours,
+        markers,
+        show_errs=False,
+        separate_plots=False,
+    )
     fam_tree(
         plot_dir,
         data_dir,
@@ -570,6 +581,7 @@ def main() -> None:
         labels,
         colours,
         markers,
+        linestyles,
         separate_plots=True,
     )
 

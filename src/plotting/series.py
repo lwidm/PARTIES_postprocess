@@ -31,7 +31,7 @@ def floc_count_evolution(
     if not csv_file.exists():
         raise FileNotFoundError(f'ERROR: Floc count CSV file not found: "{csv_file}"')
 
-    time, counts = lwidmer.read_csv_columns(csv_file, (0, 1))
+    time, counts = lwidmer.read_csv_columns(csv_file, (0, 1), remove_nan=1)
 
     if reset_time and len(time) > 0:
         time = time - time[0]
@@ -73,9 +73,9 @@ def floc_count_evolution_fit(
             f'ERROR: Floc count fit CSV file not found: "{floc_count_fit_csv}"'
         )
 
-    (time,) = lwidmer.read_csv_columns(floc_count_csv, (0,))
+    (time,) = lwidmer.read_csv_columns(floc_count_csv, (0,), remove_nan=1 )
 
-    fit_data = lwidmer.read_csv_columns(floc_count_fit_csv, (0, 1, 2))
+    fit_data = lwidmer.read_csv_columns(floc_count_fit_csv, (0, 1, 2), remove_nan=1)
 
     b = float(fit_data[0])
     Nf_eq = int(fit_data[1])
@@ -201,10 +201,6 @@ def floc_pdf(
                 "linestyle": "None",
                 "fmt": "None",
                 "ecolor": "k",
-                "elinewidth": 0.6,
-                "capsize": 2,
-                "capthick": 0.8,
-                "barsabove": True,
             },
         )
 
@@ -307,10 +303,6 @@ def floc_avg_dir(
                 "linestyle": "None",
                 "fmt": "None",
                 "ecolor": "k",
-                "elinewidth": 0.6,
-                "capsize": 2,
-                "capthick": 0.8,
-                "barsabove": True,
             },
         )
         return s, s_err
@@ -351,7 +343,7 @@ def u_plus_mean_parties(
     visc_fit: bool,
     linestyles: Optional[Tuple[str, str, str]],
 ) -> List[PlotSeries]:
-    yc_plus, U = lwidmer.read_csv_columns(csv_dir / "flow_mean_data_inner.csv", (0, 1))
+    yc_plus, U = lwidmer.read_csv_columns(csv_dir / "flow_mean_data_inner.csv", (0, 1), remove_nan=1)
 
     mask = yc_plus < 180
 
@@ -369,7 +361,7 @@ def u_plus_mean_utexas(
     linestyles: Optional[Tuple[str, str, str]],
 ) -> List[PlotSeries]:
     yc_plus, U = lwidmer.read_csv_columns(
-        csv_dir / "LM_Channel_0180_mean_prof.dat", (1, 2)
+        csv_dir / "LM_Channel_0180_mean_prof.dat", (1, 2), remove_nan=1
     )
     return u_plus_mean(yc_plus, U, label, colour, log_fit, visc_fit, linestyles)
 
@@ -453,7 +445,7 @@ def normal_stress_wall_parties(
     csv_dir: Path, colour: str, label: str
 ) -> List[PlotSeries]:
     yc, uu, ww, uv, _, yv, vv = lwidmer.read_csv_columns(
-        csv_dir / "flow_fluctuation_data_inner.csv", (0, 1, 2, 3, 4, 5, 6)
+        csv_dir / "flow_fluctuation_data_inner.csv", (0, 1, 2, 3, 4, 5, 6), remove_nan=1
     )
 
     stats: dict[str, np.ndarray] = {
@@ -475,7 +467,7 @@ def normal_stress_wall_utexas(
     csv_dir: Path,
 ) -> List[PlotSeries]:
     yp, uu, vv, ww, uv, uw, vw, k = lwidmer.read_csv_columns(
-        csv_dir / "LM_Channel_0180_vel_fluc_prof.dat", (1, 2, 3, 4, 5, 6, 7, 8)
+        csv_dir / "LM_Channel_0180_vel_fluc_prof.dat", (1, 2, 3, 4, 5, 6, 7, 8), remove_nan=1
     )
 
     stats: dict[str, np.ndarray] = {
@@ -630,7 +622,7 @@ def phi_eulerian_ana(
     phi_tot: float | None,
 ) -> Tuple[PlotSeries, Optional[PlotSeries]]:
 
-    y, Phi = lwidmer.read_csv_columns(csv_dir / "particle_eulerian_stats.csv", (0, 1))
+    y, Phi = lwidmer.read_csv_columns(csv_dir / "particle_eulerian_stats.csv", (0, 1), remove_nan=1)
 
     if phi_tot is None:
         Phi *= 100  # convert to %
@@ -651,11 +643,11 @@ def phi_eulerian_vfu(
 
     if normalised:
         y, Phi, Phi_err = lwidmer.read_csv_columns(
-            csv_dir / "vfu_phi_mean.csv", (0, 3, 4)
+            csv_dir / "vfu_phi_mean.csv", (0, 3, 4), remove_nan=1
         )
     else:
         y, Phi, Phi_err = lwidmer.read_csv_columns(
-            csv_dir / "vfu_phi_mean.csv", (0, 1, 2)
+            csv_dir / "vfu_phi_mean.csv", (0, 1, 2), remove_nan=1
         )
 
     if not normalised:
@@ -681,7 +673,6 @@ def phi_eulerian(
         y_key="y",
         plot_method="plot",
         kwargs={
-            "linewidth": 0.7,
             "label": label,
             "linestyle": linestyle,
             "color": colour,
@@ -703,10 +694,6 @@ def phi_eulerian(
                 "linestyle": "None",
                 "fmt": "None",
                 "ecolor": "k",
-                "elinewidth": 0.6,
-                "capsize": 2,
-                "capthick": 0.8,
-                "barsabove": True,
             },
         )
         return s, s_err
@@ -729,17 +716,17 @@ def lagrangian_acceleration_pdf(
     PDF: list[np.ndarray] = [np.array([]), np.array([]), np.array([])]
     err: list[np.ndarray] = [np.array([]), np.array([]), np.array([])]
     a[0], PDF[0], err[0] = lwidmer.read_csv_columns(
-        csv_dir / f"particle_acceleration_pdf_x.csv", (0, 1, 2)
+        csv_dir / f"particle_acceleration_pdf_x.csv", (0, 1, 2), remove_nan=2
     )
     a[1], PDF[1], err[1] = lwidmer.read_csv_columns(
-        csv_dir / f"particle_acceleration_pdf_y.csv", (0, 1, 2)
+        csv_dir / f"particle_acceleration_pdf_y.csv", (0, 1, 2), remove_nan=2
     )
     a[2], PDF[2], err[2] = lwidmer.read_csv_columns(
-        csv_dir / f"particle_acceleration_pdf_z.csv", (0, 1, 2)
+        csv_dir / f"particle_acceleration_pdf_z.csv", (0, 1, 2), remove_nan=2
     )
 
-    a_min: float = min([np.min(a_arr) for a_arr in a])
-    a_max: float = max([np.max(a_arr) for a_arr in a])
+    a_min: float = min([np.nanmin(a_arr) for a_arr in a])
+    a_max: float = max([np.nanmax(a_arr) for a_arr in a])
     num: int = int((a_max - a_min) // 0.05)
     a_fit: np.ndarray = np.linspace(a_min, a_max, num, endpoint=True)
 
@@ -792,10 +779,6 @@ def lagrangian_acceleration_pdf(
                 "linestyle": "None",
                 "fmt": "None",
                 "ecolor": colours[i],
-                "elinewidth": 0.6,
-                "capsize": 2,
-                "capthick": 0.8,
-                "barsabove": True,
             },
         )
 
@@ -847,7 +830,7 @@ def lagrangian_u_p_pdf(
         csv_file = csv_dir / f"particle_u_plus_pdf_{yp}.csv"
     else:
         csv_file = csv_dir / f"particle_u_plus_pdf.csv"
-    up, PDF, err = lwidmer.read_csv_columns(csv_file, (0, 1, 2))
+    up, PDF, err = lwidmer.read_csv_columns(csv_file, (0, 1, 2), remove_nan=2)
 
     markeredgewidth: float = 0.5
     dir_labels: list[str] = ["x", "y", "z"]
@@ -898,10 +881,6 @@ def lagrangian_u_p_pdf(
             "linestyle": "None",
             "fmt": "None",
             "ecolor": colour,
-            "elinewidth": 0.6,
-            "capsize": 2,
-            "capthick": 0.8,
-            "barsabove": True,
         },
     )
 
@@ -919,12 +898,14 @@ def family_tree_breakup_formation_pdf(
     label: Optional[str],
     colour: str,
     marker: str,
+    linestyle: str,
     type: Literal["breakup", "formation"],
 ) -> PlotSeries:
 
     y: np.ndarray
     PDF: np.ndarray
-    y, PDF = lwidmer.read_csv_columns(csv_dir / f"floc_{type}_pdf.csv", (0, 1))
+    y, edges, PDF = lwidmer.read_csv_columns(csv_dir / f"floc_{type}_pdf.csv", (0, 1, 2), remove_nan=1)
+    print(f"len(y)={len(y)}, len(edges)={len(edges)}, len(PDF)={len(PDF)}")
 
     markeredgewidth: float = 0.5
     dir_labels: list[str] = ["x", "y", "z"]
@@ -935,18 +916,20 @@ def family_tree_breakup_formation_pdf(
     else:
         local_label = f"{type} ({label})"
 
-    s: PlotSeries = PlotSeries(
+
+    s_plot: PlotSeries = PlotSeries(
         data={
             "x": y,
             "y": PDF,
         },
         x_key="x",
         y_key="y",
-        plot_method="plot",
+        plot_method="bar",
         kwargs={
             "label": local_label,
-            "linestyle": "None",
+            "linestyle": linestyle,
             "marker": marker,
+            "markersize": 5,
             "markerfacecolor": colour,
             "markeredgecolor": "k",
             "markeredgewidth": markeredgewidth,
@@ -955,4 +938,17 @@ def family_tree_breakup_formation_pdf(
         },
     )
 
-    return s
+    s_bar: PlotSeries = PlotSeries(
+        data={
+            "edges": edges,
+            "counts": PDF,
+        },
+        x_key="x",
+        y_key="y",
+        plot_method="bar",
+        kwargs={
+            "label": local_label,
+            "color": colour,
+        },
+    )
+    return s_bar
