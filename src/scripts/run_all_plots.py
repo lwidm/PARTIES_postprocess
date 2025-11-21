@@ -18,11 +18,22 @@ def fluid(
     data_dir: Path,
     data_names: List[str],
     labels: List[str],
+    use_markers: bool,
 ):
 
     data_dirs: List[Path] = [data_dir / data_name for data_name in data_names]
 
+    linestyles_utexas: list[str] = ["-", "-.", "--", ":"]
+    utexas_colour: str = "k"
+    if use_markers:
+        linestyles: list[str] = [":" for _ in range(4)]
+    else:
+        linestyles: list[str] = linestyles_utexas
     colours: List[str] = ["C0", "C1", "C2", "C3", "C4"]
+    if use_markers:
+        markers: list[str] = ["o", "d", "^", "s"]
+    else:
+        markers: list[str] = ["None" for _ in range(len(linestyles_utexas))]
     # colours: List[str] = ["k", "k", "k", "k", "k"]
 
     # ==============================
@@ -52,20 +63,41 @@ def fluid(
     plt_templ.velocity_profile_wall(plot_dir, all_wall_series)
 
     utexas_stress_series: List[PlotSeries] = plt_series.normal_stress_wall_utexas(
-        utexas_dir
+        utexas_dir, linestyles_utexas, utexas_colour
     )
     parties_stress_series: List[List[PlotSeries]] = []
     for i in range(Num_data):
         parties_stress_series.append(
             plt_series.normal_stress_wall_parties(
                 data_dirs[i],
+                linestyles=linestyles,
+                markers=markers,
                 label=labels[i],
                 colour=colours[i],
             )
         )
+    colours_proxy: list[str] = colours
+    colours_proxy[Num_data] = "k"
+    marker_cases: list[str]
+    linestyle_cases: list[str]
+    if use_markers:
+        marker_cases = ["s" for _ in range(Num_data)] + ["None"]
+        linestyle_cases = ["None" for _ in range(Num_data)] + ["-"]
+    else:
+        marker_cases = ["s" for _ in range(Num_data + 1)]
+        linestyle_cases = ["None" for _ in range(Num_data + 1)]
+    proxy_series = plt_series.normal_stress_wall_label_proxies(
+        linestyles=linestyles_utexas,
+        markers=markers,
+        labels=labels + ["utexas"],
+        colours=colours_proxy,
+        marker_cases=marker_cases,
+        linestyle_cases=linestyle_cases,
+    )
     all_stress_series: List[PlotSeries] = utexas_stress_series
     for series in parties_stress_series:
         all_stress_series += series
+    all_stress_series += proxy_series
     plt_templ.normal_stress_wall(plot_dir, all_stress_series)
 
 
@@ -553,37 +585,38 @@ def main() -> None:
     colours: List[str] = ["C0", "C1", "C2", "C3", "C4"]
     markers: List[str] = ["o", "s", "^", "v", "P"]
     linestyles: List[str] = ["-", "--", "-.", ":"]
-    floc(
-        plot_dir,
-        data_dir,
-        data_names,
-        labels,
-        colours,
-        markers,
-        linestyles,
-    )
-    fluid(data_dir, plot_dir, data_dir, data_names, labels)
-    phi_eulerian(plot_dir, data_dir, data_names, labels, colours, False)
-    lagrangian_data(
-        plot_dir,
-        data_dir,
-        data_names,
-        labels,
-        colours,
-        markers,
-        show_errs=False,
-        separate_plots=False,
-    )
-    fam_tree(
-        plot_dir,
-        data_dir,
-        data_names,
-        labels,
-        colours,
-        markers,
-        linestyles,
-        separate_plots=True,
-    )
+    # floc(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     colours,
+    #     markers,
+    #     linestyles,
+    # )
+    fluid(data_dir, plot_dir, data_dir, data_names, labels, use_markers=True)
+    fluid(data_dir, plot_dir, data_dir, data_names, labels, use_markers=False)
+    # phi_eulerian(plot_dir, data_dir, data_names, labels, colours, False)
+    # lagrangian_data(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     colours,
+    #     markers,
+    #     show_errs=False,
+    #     separate_plots=False,
+    # )
+    # fam_tree(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     colours,
+    #     markers,
+    #     linestyles,
+    #     separate_plots=True,
+    # )
 
     if not globals.on_anvil:
         plt.show()
