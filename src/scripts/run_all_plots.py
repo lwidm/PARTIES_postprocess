@@ -11,38 +11,45 @@ from matplotlib import pyplot as plt
 # parent_dir: Path = Path("/media/usb/UCSB/")
 parent_dir: Path = Path("./")
 
-
-def fluid(
+def fuild_velocity_profile(
     utexas_dir: Path,
     plot_dir: Path,
     data_dir: Path,
     data_names: List[str],
     labels: List[str],
+    colours: List[str],
     use_markers: bool,
 ):
-
     data_dirs: List[Path] = [data_dir / data_name for data_name in data_names]
-
-    linestyles_utexas: list[str] = ["-", "-.", "--", ":"]
-    utexas_colour: str = "k"
-    if use_markers:
-        linestyles: list[str] = [":" for _ in range(4)]
-    else:
-        linestyles: list[str] = linestyles_utexas
-    colours: List[str] = ["C0", "C1", "C2", "C3", "C4"]
-    if use_markers:
-        markers: list[str] = ["o", "d", "^", "s"]
-    else:
-        markers: list[str] = ["None" for _ in range(len(linestyles_utexas))]
-    # colours: List[str] = ["k", "k", "k", "k", "k"]
-
-    # ==============================
-    # Automation
-    # ==============================
-
     Num_data: int = len(data_names)
+    linestyles: tuple[str, str, str] = ("-", ":", ":")
+
+    separate_labels: bool = False
+
+    use_label_texas: bool = False
+    use_label_log_fit_texas: bool = False
+    use_label_visc_fit_texas: bool = False
+    use_label: bool = False
+    use_label_log_fit: bool = False
+    use_label_visc_fit: bool = False
+    if separate_labels:
+        use_label_texas = True
+        use_label_log_fit_texas = True
+        use_label_visc_fit_texas = False
+        use_label = True
+        use_label_log_fit = True
+        use_label_visc_fit = False
+
     utexas_wall_series: List[PlotSeries] = plt_series.u_plus_mean_utexas(
-        utexas_dir, "utexas", "k", True, True, None
+        utexas_dir,
+        "utexas",
+        "k",
+        True,
+        True,
+        use_label_texas,
+        use_label_log_fit_texas,
+        use_label_visc_fit_texas,
+        linestyles,
     )
     parties_wall_series: List[List[PlotSeries]] = []
     for i in range(Num_data):
@@ -53,14 +60,57 @@ def fluid(
                 colour=colours[i],
                 log_fit=True,
                 visc_fit=False,
-                linestyles=("-", "--", "--"),
+                use_label=use_label,
+                use_label_log_fit=use_label_log_fit,
+                use_label_visc_fit=use_label_visc_fit,
+                linestyles=linestyles,
             )
         )
 
     all_wall_series: List[PlotSeries] = utexas_wall_series
     for series in parties_wall_series:
         all_wall_series += series
+
+    if not separate_labels:
+        colours_proxy: list[str] = colours
+        colours_proxy[Num_data] = "k"
+        proxy_series = plt_series.u_plus_proxies(
+            linestyles=list(linestyles),
+            labels=labels + ["utexas"],
+            colours=colours_proxy,
+        )
+        all_wall_series += proxy_series
+
     plt_templ.velocity_profile_wall(plot_dir, all_wall_series)
+
+def fluid_wall_normal(
+    utexas_dir: Path,
+    plot_dir: Path,
+    data_dir: Path,
+    data_names: List[str],
+    labels: List[str],
+    colours: List[str],
+    use_markers: bool,
+):
+
+    data_dirs: List[Path] = [data_dir / data_name for data_name in data_names]
+    Num_data: int = len(data_names)
+
+    linestyles_utexas: list[str] = ["-", "-.", "--", ":"]
+    utexas_colour: str = "k"
+    if use_markers:
+        linestyles: list[str] = [":" for _ in range(4)]
+    else:
+        linestyles: list[str] = linestyles_utexas
+    if use_markers:
+        markers: list[str] = ["o", "d", "^", "s"]
+    else:
+        markers: list[str] = ["None" for _ in range(len(linestyles_utexas))]
+    # colours: List[str] = ["k", "k", "k", "k", "k"]
+
+    # ==============================
+    # Automation
+    # ==============================
 
     utexas_stress_series: List[PlotSeries] = plt_series.normal_stress_wall_utexas(
         utexas_dir, linestyles_utexas, utexas_colour
@@ -433,12 +483,12 @@ def lagrangian_data(
         colours_local: List[str]
         labels_local: List[str | None]
         if not separate_plots:
-            colours_local = [colours[i] for _ in range(3)]
-            labels_local = [labels[i] for _ in range(3)]
+            colours_local = [colours[i] for _ in range(max(3, len(csv_dirs)))]
+            labels_local = [labels[i] for _ in range(max(3, len(csv_dirs)))]
             markers_local = markers
         else:
             colours_local = colours
-            labels_local = [None for _ in range(3)]
+            labels_local = [None for _ in range(max(3, len(csv_dirs)))]
             markers_local = markers
 
         s_ax, s_ay, s_az, s_ax_err, s_ay_err, s_az_err, s_a_fit = (
@@ -568,55 +618,56 @@ def main() -> None:
 
     plot_dir: Path = Path("./output/plots")
     data_names: List[str] = [
-        # "phi1p5",
+        "phi5p0_noCo",
+        "phi1p5",
         "phi3p0",
         "phi5p0",
-        "phi5p0_noCo",
         # "test"
     ]
     labels: List[str] = [
-        # r"$\phi_{1.5\%}$",
+        r"$\phi_{5\%}$ no cohesion",
+        r"$\phi_{1.5\%}$",
         r"$\phi_{3\%}$",
         r"$\phi_{5\%}$",
-        r"$\phi_{5\%}$ no cohesion",
         # "test"
     ]
     data_dir: Path = parent_dir / "data/"
     colours: List[str] = ["C0", "C1", "C2", "C3", "C4"]
     markers: List[str] = ["o", "s", "^", "v", "P"]
     linestyles: List[str] = ["-", "--", "-.", ":"]
-    # floc(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names,
-    #     labels,
-    #     colours,
-    #     markers,
-    #     linestyles,
-    # )
-    fluid(data_dir, plot_dir, data_dir, data_names, labels, use_markers=True)
-    fluid(data_dir, plot_dir, data_dir, data_names, labels, use_markers=False)
-    # phi_eulerian(plot_dir, data_dir, data_names, labels, colours, False)
-    # lagrangian_data(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names,
-    #     labels,
-    #     colours,
-    #     markers,
-    #     show_errs=False,
-    #     separate_plots=False,
-    # )
-    # fam_tree(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names,
-    #     labels,
-    #     colours,
-    #     markers,
-    #     linestyles,
-    #     separate_plots=True,
-    # )
+    floc(
+        plot_dir,
+        data_dir,
+        data_names,
+        labels,
+        colours,
+        markers,
+        linestyles,
+    )
+    fluid_wall_normal(data_dir, plot_dir, data_dir, data_names, labels, colours, use_markers=True)
+    fluid_wall_normal(data_dir, plot_dir, data_dir, data_names, labels, colours, use_markers=False)
+    fuild_velocity_profile(data_dir, plot_dir, data_dir, data_names, labels, colours, use_markers=True)
+    phi_eulerian(plot_dir, data_dir, data_names, labels, colours, False)
+    lagrangian_data(
+        plot_dir,
+        data_dir,
+        data_names,
+        labels,
+        colours,
+        markers,
+        show_errs=False,
+        separate_plots=False,
+    )
+    fam_tree(
+        plot_dir,
+        data_dir,
+        data_names,
+        labels,
+        colours,
+        markers,
+        linestyles,
+        separate_plots=True,
+    )
 
     if not globals.on_anvil:
         plt.show()

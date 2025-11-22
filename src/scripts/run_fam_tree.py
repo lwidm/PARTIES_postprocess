@@ -34,8 +34,9 @@ def _compute_single_pdf(
 def main():
     data_names: list[str] = [
         "phi5p0_noCo",
-        "phi5p0",
+        "phi1p5",
         "phi3p0",
+        "phi5p0",
     ]
     U_mean: list[float] = [1.0 for _ in data_names]
     L: list[float] = [1.0 for _ in data_names]

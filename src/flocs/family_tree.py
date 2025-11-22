@@ -149,6 +149,7 @@ def calc_famtree_pdf_steadystate(
 
     min_floc_lifetime = 2*d_p / (d_p * max_poisseulle_du_dy)
     min_floc_lifetime *= 4
+    print(min_floc_lifetime)
 
     field_accessors = {
         "breakup": AccessFlocBreakupLocation(t_steady, min_floc_lifetime),

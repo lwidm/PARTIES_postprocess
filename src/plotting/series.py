@@ -341,7 +341,10 @@ def u_plus_mean_parties(
     colour: str,
     log_fit: bool,
     visc_fit: bool,
-    linestyles: Optional[Tuple[str, str, str]],
+    use_label: bool,
+    use_label_log_fit: bool,
+    use_label_visc_fit: bool,
+    linestyles: Tuple[str, str, str],
 ) -> List[PlotSeries]:
     yc_plus, U = lwidmer.read_csv_columns(
         csv_dir / "flow_mean_data_inner.csv", (0, 1), remove_nan=1
@@ -350,7 +353,16 @@ def u_plus_mean_parties(
     mask = yc_plus < 180
 
     return u_plus_mean(
-        yc_plus[mask], U[mask], label, colour, log_fit, visc_fit, linestyles
+        yc_plus[mask],
+        U[mask],
+        label,
+        colour,
+        log_fit,
+        visc_fit,
+        use_label,
+        use_label_log_fit,
+        use_label_visc_fit,
+        linestyles,
     )
 
 
@@ -360,12 +372,26 @@ def u_plus_mean_utexas(
     colour: str,
     log_fit: bool,
     visc_fit: bool,
-    linestyles: Optional[Tuple[str, str, str]],
+    use_label: bool,
+    use_label_log_fit: bool,
+    use_label_visc_fit: bool,
+    linestyles: Tuple[str, str, str],
 ) -> List[PlotSeries]:
     yc_plus, U = lwidmer.read_csv_columns(
         csv_dir / "LM_Channel_0180_mean_prof.dat", (1, 2), remove_nan=1
     )
-    return u_plus_mean(yc_plus, U, label, colour, log_fit, visc_fit, linestyles)
+    return u_plus_mean(
+        yc_plus,
+        U,
+        label,
+        colour,
+        log_fit,
+        visc_fit,
+        use_label,
+        use_label_log_fit,
+        use_label_visc_fit,
+        linestyles,
+    )
 
 
 def u_plus_mean(
@@ -375,8 +401,13 @@ def u_plus_mean(
     colour: str,
     log_fit: bool,
     visc_fit: bool,
-    linestyles: Optional[Tuple[str, str, str]],
+    use_label: bool,
+    use_label_log_fit: bool,
+    use_label_visc_fit: bool,
+    linestyles: Tuple[str, str, str],
 ) -> List[PlotSeries]:
+
+    label_local: str
 
     fitted_kappa: float
     fitted_constant: float
@@ -385,10 +416,11 @@ def u_plus_mean(
         yc_plus, fitted_kappa, fitted_constant
     )
 
-    if linestyles is None:
-        linestyles = ("-.", ":", ":")
-
     results: List[PlotSeries] = []
+    if use_label:
+        label_local = label
+    else:
+        label_local = ""
     s_parties = PlotSeries(
         data={
             "x": yc_plus,
@@ -397,10 +429,15 @@ def u_plus_mean(
         x_key="x",
         y_key="y",
         plot_method="semilogx",
-        kwargs={"label": label, "linestyle": linestyles[0], "color": colour},
+        kwargs={"label": label_local, "linestyle": linestyles[0], "color": colour},
     )
     results.append(s_parties)
+
     s_parties_visc: Optional[PlotSeries] = None
+    if use_label_visc_fit:
+        label_local = f"Law of the wall ({label})"
+    else:
+        label_local = ""
     if visc_fit:
         s_parties_visc = PlotSeries(
             data={
@@ -413,12 +450,17 @@ def u_plus_mean(
             kwargs={
                 "linestyle": linestyles[1],
                 "linewidth": 0.9,
-                "label": f"Law of the wall ({label})",
+                "label": label_local,
                 "color": colour,
             },
         )
         results.append(s_parties_visc)
+
     s_parties_log: Optional[PlotSeries] = None
+    if use_label_log_fit:
+        label_local = f"Law of the wall ({label})"
+    else:
+        label_local = ""
     if log_fit:
         s_parties_visc = PlotSeries(
             data={
@@ -431,13 +473,82 @@ def u_plus_mean(
             kwargs={
                 "linestyle": linestyles[2],
                 "linewidth": 0.9,
-                "label": f"Law of the wall ({label})",
+                "label": label_local,
                 "color": colour,
             },
         )
         results.append(s_parties_visc)
 
     return results
+
+def u_plus_proxies(
+    linestyles: list[str], labels: list[str], colours: list[str]
+) -> list[PlotSeries]:
+    quantities: list[tuple[str, str]] = [
+        ("Numerical", linestyles[0]),
+        ("Law of the wall", linestyles[1]),
+    ]
+
+    cases: list[tuple[str, str]] = []
+    for i in range(len(labels)):
+        cases.append((labels[i], colours[i]))
+
+    def create_proxy_series(
+        colour: str,
+        colour_face: str,
+        fillstyle: str,
+        linestyle: str,
+        marker: str,
+        markeredgewidth: float,
+        label: str,
+    ):
+        marker_kwargs: dict = {}
+        if marker != "None":
+            marker_kwargs = {
+                "marker": marker,
+                "markerfacecolor": colour_face,
+                "markeredgecolor": "k",
+                "markeredgewidth": markeredgewidth,
+                "color": "k",
+                "fillstyle": fillstyle,
+            }
+        plot_kwargs: dict = {
+            "label": label,
+            "linestyle": linestyle,
+            "color": colour,
+            "fillstyle": "none",
+        }
+        plot_kwargs.update(marker_kwargs)
+        return PlotSeries(
+            data={
+                "x": [-2, -1],
+                "y": [-2, -1],
+            },
+            x_key="x",
+            y_key="y",
+            plot_method="plot",
+            kwargs=plot_kwargs,
+        )
+
+    s_quantities: list[PlotSeries] = []
+    s_cases: list[PlotSeries] = []
+
+    for i in range(len(quantities)):
+        s_quantities.append(
+            create_proxy_series(
+                "k",
+                "white",
+                "none",
+                quantities[i][1],
+                "none",
+                0.5,
+                quantities[i][0],
+            )
+        )
+    for case in cases:
+        s_cases.append(create_proxy_series(case[1], case[1], "full", "None", "s", 0, case[0]))
+
+    return s_quantities + s_cases
 
 
 # ------------------------- normal_stress_wall series -------------------------
@@ -464,7 +575,9 @@ def normal_stress_wall_parties(
 
 
 def normal_stress_wall_utexas(
-    csv_dir: Path, linestyles: list[str], colour: str,
+    csv_dir: Path,
+    linestyles: list[str],
+    colour: str,
 ) -> List[PlotSeries]:
     yp, uu, vv, ww, uv, uw, vw, k = lwidmer.read_csv_columns(
         csv_dir / "LM_Channel_0180_vel_fluc_prof.dat",
@@ -1020,7 +1133,7 @@ def family_tree_breakup_formation_pdf(
         },
         x_key="x",
         y_key="y",
-        plot_method="bar",
+        plot_method="plot",
         kwargs={
             "label": local_label,
             "linestyle": linestyle,
@@ -1048,3 +1161,4 @@ def family_tree_breakup_formation_pdf(
         },
     )
     return s_bar
+    # return s_plot

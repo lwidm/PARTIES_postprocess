@@ -3,3 +3,4 @@ venv*
 **/.null-ls*
 **/.mypy_cache
 log_ana.*
+paraview
