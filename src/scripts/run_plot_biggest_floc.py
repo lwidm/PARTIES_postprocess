@@ -6,8 +6,10 @@ from matplotlib import pyplot as plt
 import configparser
 from typing import Any
 
-parent_dir: Path = Path("/media/usb/UCSB/")
-# parent_dir: Path = Path("./")
+from src import myio
+
+# parent_dir: Path = Path("/media/usb/UCSB/")
+parent_dir: Path = Path("./")
 
 
 def get_top_flocs(
@@ -17,9 +19,9 @@ def get_top_flocs(
 
     for file_idx, floc_file in enumerate(floc_files):
         with h5py.File(str(floc_file), "r") as f:
-            Df_arr: np.ndarray = f["flocs/D_f"][:]  # type: ignore
-            floc_id_arr: np.ndarray = f["flocs/floc_id"][:]  # type: ignore
-            time_val: float = f["flocs/time"][()][0]  # type: ignore
+            Df_arr: np.ndarray = f["D_f"][:]  # type: ignore
+            floc_id_arr: np.ndarray = f["floc_id"][:]  # type: ignore
+            time_val: float = f["time"][()][0]  # type: ignore
 
             for i in range(len(Df_arr)):
                 all_flocs.append((Df_arr[i], floc_id_arr[i], file_idx, floc_file, time_val))
@@ -33,7 +35,7 @@ def get_top_flocs(
     unique_flocs.sort(key=lambda x: x[0])
     unique_flocs = unique_flocs[::-1]
 
-    unique_flocs = all_flocs
+    # unique_flocs = all_flocs
 
     return unique_flocs[:n_flocs]
 
@@ -42,11 +44,11 @@ def get_floc_particles(
     floc_file: Path, floc_id: int
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     with h5py.File(str(floc_file), "r") as f:
-        x_all: np.ndarray = f["particles/x"][:]  # type: ignore
-        y_all: np.ndarray = f["particles/y"][:]  # type: ignore
-        z_all: np.ndarray = f["particles/z"][:]  # type: ignore
-        r_all: np.ndarray = f["particles/r"][:]  # type: ignore
-        id_all: np.ndarray = f["particles/floc_id"][:]  # type: ignore
+        x_all: np.ndarray = f["x"][:]  # type: ignore
+        y_all: np.ndarray = f["y"][:]  # type: ignore
+        z_all: np.ndarray = f["z"][:]  # type: ignore
+        r_all: np.ndarray = f["r"][:]  # type: ignore
+        id_all: np.ndarray = f["floc_id"][:]  # type: ignore
 
         mask = id_all == floc_id
         x = x_all[mask]
@@ -58,27 +60,20 @@ def get_floc_particles(
 
 
 def main() -> None:
-    # name: str = "phi5p0_new"
-    name: str = "test"
-    parties_inp_path: Path = parent_dir / "data" / name / "parties.inp"
-    floc_path: Path = parent_dir / "output" / name / "flocs"
+    plot_dir: Path = parent_dir / "output" / "plots"
+    name: str = "phi5p0"
+    metadata_path: Path = parent_dir / "data" / name / "metadata.ini"
+    floc_path: Path = parent_dir / "data" / name / "flocs"
 
     # ========== get domain info =========
-    config: configparser.ConfigParser = configparser.ConfigParser(
-        inline_comment_prefixes="#"
-    )
-    config.optionxform = lambda option: option  # type: ignore
-    config.read(parties_inp_path)
-    if not config.has_section("geometry"):
-        raise ValueError(
-            f'Failed to obtain phi: Could not find [geometry] field in "parties.inp" at "{parties_inp_path}"'
-        )
-    geom: dict[str, Any] = dict(config["geometry"])
+    metadata = myio.metadata.read_metadata(metadata_path)
+    geom: dict[str, Any] = dict(metadata["Domain"])
     for key in geom:
-        geom[key] = int(geom[key])
+        geom[key] = float(geom[key])
 
     # ========== get top N flocs =========
-    floc_files: List[Path] = myio.list_data_files(floc_path, "Flocs", None, None)
+    floc_files: List[Path] = myio.utils.find_data_files(floc_path, "Particles_*")
+
 
     N = 11
 
@@ -89,16 +84,23 @@ def main() -> None:
         print(f"  {i+1}. Df={Df:.4f}, ID={floc_id}, Time={time_val:.2f}, File={file_path.name}")
 
     # ========== create three subplots =========
-    fig, axes = plt.subplots(2, 2, figsize=(12, 8))
-    ax_xy = axes[0, 0]  # Top left: XY slice
-    ax_zy = axes[0, 1]  # Top right: YZ slice  
-    ax_xz = axes[1, 0]  # Bottom left: XZ slice
-    ax_legend = axes[1, 1]
+    all_plots = False
+    show_legend = False
+    if all_plots:
+        fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+        ax_xy = axes[0, 0]  # Top left: XY slice
+        ax_zy = axes[0, 1]  # Top right: YZ slice  
+        ax_xz = axes[1, 0]  # Bottom left: XZ slice
+        ax_legend = axes[1, 1]
+    else:
+        fig, axes = plt.subplots(1, 1, figsize=(8, 4))
+        ax_xz = axes
 
     colors = plt.cm.viridis(np.linspace(0, 1, N))
 
     all_handles = []
     all_labels = []
+
 
     for i, (Df, floc_id, _, file_path, time_val) in enumerate(top_flocs):
         x, y, z, r = get_floc_particles(file_path, floc_id)
@@ -117,7 +119,8 @@ def main() -> None:
                 facecolor=colors[i],
                 label=label if j == 0 else "",
             )
-            ax_xy.add_patch(circle_xy)
+            if all_plots:
+                ax_xy.add_patch(circle_xy)
 
         for j in range(len(y)):
             circle_yz = plt.Circle(
@@ -129,7 +132,8 @@ def main() -> None:
                 facecolor=colors[i],
                 label=label if j == 0 else "",  # Label only once per floc
             )
-            ax_zy.add_patch(circle_yz)
+            if all_plots:
+                ax_zy.add_patch(circle_yz)
 
         for j in range(len(x)):
             circle_xz = plt.Circle(
@@ -145,19 +149,20 @@ def main() -> None:
         all_handles.append(plt.Circle((0, 0), 1, fill=True, alpha=0.7, facecolor=colors[i]))
         all_labels.append(label)
 
-    ax_xy.set_aspect(1)
-    ax_xy.set_xlim(geom["xmin"], geom["xmax"])
-    ax_xy.set_ylim(geom["ymin"], geom["ymax"])
-    ax_xy.set_xlabel("X")
-    ax_xy.set_ylabel("Y")
-    ax_xy.set_title("XY Slice")
+    if all_plots:
+        ax_xy.set_aspect(1)
+        ax_xy.set_xlim(geom["xmin"], geom["xmax"])
+        ax_xy.set_ylim(geom["ymin"], geom["ymax"])
+        ax_xy.set_xlabel("X")
+        ax_xy.set_ylabel("Y")
+        ax_xy.set_title("XY Slice")
 
-    ax_zy.set_aspect(1)
-    ax_zy.set_xlim(geom["zmin"], geom["zmax"])
-    ax_zy.set_ylim(geom["ymin"], geom["ymax"])
-    ax_zy.set_xlabel("Z")
-    ax_zy.set_ylabel("Y")
-    ax_zy.set_title("ZY Slice")
+        ax_zy.set_aspect(1)
+        ax_zy.set_xlim(geom["zmin"], geom["zmax"])
+        ax_zy.set_ylim(geom["ymin"], geom["ymax"])
+        ax_zy.set_xlabel("Z")
+        ax_zy.set_ylabel("Y")
+        ax_zy.set_title("ZY Slice")
 
     ax_xz.set_aspect(1)
     ax_xz.set_xlim(geom["xmin"], geom["xmax"])
@@ -166,14 +171,22 @@ def main() -> None:
     ax_xz.set_ylabel("Z")
     ax_xz.set_title("XZ Slice")
 
-    handles_xy, labels_xy = ax_xy.get_legend_handles_labels()
+    handles_xy, labels_xy = ax_xz.get_legend_handles_labels()
     by_label_xy = dict(zip(labels_xy, handles_xy))
 
-    ax_legend.axis('off')
-    ax_legend.legend(all_handles, all_labels, loc='center')
+    if show_legend:
+        if all_plots:
+            ax_legend.axis('off')
+            ax_legend.legend(all_handles, all_labels, loc='center')
+        else:
+            plt.legend(all_handles, all_labels, loc='best')
 
     plt.tight_layout()
     plt.show()
+    if all_plots:
+        fig.savefig(str(plot_dir / f"max_flocsize_all.png"))
+    else:
+        fig.savefig(str(plot_dir / f"max_flocsize.png"))
 
 
 if __name__ == "__main__":

@@ -37,7 +37,7 @@ class PlotSeries:
 SeriesLike = Union[PlotSeries, Sequence[PlotSeries]]
 
 default_kwargs: dict[str, dict] = {
-    "kLineWidth": {"linewidth": 0.7},  # default linewidth for generic plots
+    "kLineWidth": {"linewidth": 0.9},  # default linewidth for generic plots
     "kBarLineWidth": {"linewidth": 1.0},  # default linewidth for bar plots
     "kELineWidth": {"linewidth": 0.6},  # default elinwidth (linewidth for errorbars)
     "kECapSize": {"capsize": 2.0},  # default capsize (cap size for errorbars)

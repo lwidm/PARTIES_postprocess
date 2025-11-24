@@ -120,6 +120,7 @@ def velocity_profile_wall(
 def normal_stress_wall(
     output_dir: Path,
     series_list: Sequence[PlotSeries],
+    use_marker: bool,
 ) -> None:
     xmin: float = 0.0
     xmax: Optional[float] = None
@@ -143,8 +144,11 @@ def normal_stress_wall(
     if xmax is not None:
         xlim = (xmin, min(xmax, 80.0))
 
+    name: str = "wall_normal_stress.png"
+    if use_marker:
+        name: str = "wall_normal_stress_marker.png"
     generic_plot(
-        output_dir / "wall_normal_stress.png",
+        output_dir / name,
         list(series_list),
         legend=True,
         xlabel=r"$y^+$",
@@ -214,8 +218,8 @@ def _pdf(
         xlim=(xmin, xmax),
         ylim=(ymin, ymax),
         figsize=(6.5, 5.5),
-        legend_loc="lower right",
-        legend_bbox=(1.0, 0.80),
+        legend_loc="best",
+        # legend_bbox=(1.0, 0.80),
         dpi=150,
     )
 
@@ -318,8 +322,8 @@ def _avg_floc_dir(
         xlabel=xlabel,
         ylabel=ylabel,
         figsize=(6.5, 5.5),
-        legend_loc="lower right",
-        legend_bbox=(1.0, 0.80),
+        legend_loc="best",
+        # legend_bbox=(1.0, 0.80),
         dpi=150,
     )
 
@@ -383,7 +387,7 @@ def phi_eulerian(
         xlabel=xlabel,
         ylabel=ylabel,
         figsize=(6.5, 5.5),
-        legend_loc="lower right",
+        legend_loc="lower center",
         dpi=150,
     )
 

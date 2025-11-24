@@ -6,12 +6,16 @@ import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib.colors as colors
 
-parent_dir: Path = Path("/media/usb/UCSB")
+# parent_dir: Path = Path("/media/usb/UCSB")
+parent_dir: Path = Path("./")
 
 
 def main() -> None:
 
-    floc_dir: Path = parent_dir / "output" / "phi5p0_new" / "flocs_new"
+    name: str = "phi5p0"
+    plot_dir: Path = parent_dir / "output" / "plots"
+    metadata_path: Path = parent_dir / "data" / name / "metadata.ini"
+    floc_dir: Path = parent_dir / "data" / name / "flocs"
     floc_files: List[Path] = utils.find_data_files(floc_dir, "Flocs_*")
     particle_files: List[Path] = utils.find_data_files(floc_dir, "Particles_*")
 
@@ -35,9 +39,9 @@ def main() -> None:
         zmin = f["domain/zmin"][()][0]  # type: ignore
         zmax = f["domain/zmax"][()][0]  # type: ignore
 
-        x = f["x"][:]  # type: ignore
-        y = f["y"][:]  # type: ignore
-        z = f["z"][:]  # type: ignore
+        x = f["x_f"][:]  # type: ignore
+        y = f["y_f"][:]  # type: ignore
+        z = f["z_f"][:]  # type: ignore
         n_p = f["n_p"][:]  # type: ignore
         floc_ids = f["floc_id"][:]  # type: ignore
         D_f = f["D_f"][:]  # type: ignore
@@ -67,9 +71,9 @@ def main() -> None:
     r: np.ndarray
     particle_floc_ids: np.ndarray
     with h5py.File(str(particle_files[-1]), "r") as f:
-        xp = f["x_p"][:]  # type: ignore
-        yp = f["y_p"][:]  # type: ignore
-        zp = f["z_p"][:]  # type: ignore
+        xp = f["x"][:]  # type: ignore
+        yp = f["y"][:]  # type: ignore
+        zp = f["z"][:]  # type: ignore
         r = f["r"][:]  # type: ignore
         particle_floc_ids = f["floc_id"][:]  # type: ignore
 
@@ -141,6 +145,8 @@ def main() -> None:
 
     plt.tight_layout()
     plt.show()
+
+    fig.savefig(str(plot_dir / f"flow_slice_{name}.png"))
 
 
 if __name__ == "__main__":

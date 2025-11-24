@@ -7,6 +7,7 @@ PyQt5
 snakeviz
 tqdm
 configparser
+seaborn
 
 scipy-stubs
 h5py-stubs
