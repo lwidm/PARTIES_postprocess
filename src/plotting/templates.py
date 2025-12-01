@@ -1,6 +1,6 @@
 # -- src/plotting/templates.py
 from pathlib import Path
-from typing import List, Optional, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple, Literal
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -108,11 +108,9 @@ def velocity_profile_wall(
     output_dir.parent.mkdir(parents=True, exist_ok=True)
 
     if Re_val is not None and Re_tau_val is not None:
-        plot_filename = (
-            output_dir / f"Re={Re_val:.0f}_Re_tau={Re_tau_val:.0f}-y+_u+.png"
-        )
+        plot_filename = output_dir / f"Re={Re_val:.0f}_Re_tau={Re_tau_val:.0f}-y+_u+"
     else:
-        plot_filename = output_dir / "y+_u+.png"
+        plot_filename = output_dir / "y+_u+"
 
     fig.savefig(str(plot_filename), dpi=dpi)
 
@@ -144,9 +142,9 @@ def normal_stress_wall(
     if xmax is not None:
         xlim = (xmin, min(xmax, 80.0))
 
-    name: str = "wall_normal_stress.png"
+    name: str = "wall_normal_stress"
     if use_marker:
-        name: str = "wall_normal_stress_marker.png"
+        name: str = "wall_normal_stress_marker"
     generic_plot(
         output_dir / name,
         list(series_list),
@@ -165,7 +163,7 @@ def normal_stress_wall(
 def floc_count_evolution(
     output_dir: Path, series_list: Sequence[PlotSeries], normalised: bool
 ) -> None:
-    out_path = output_dir / "floc_count_evolution.png"
+    out_path = output_dir / "floc_count_evolution"
     ylabel: str = r"\#Flocs"
     if normalised:
         ylabel = r"(\#Flocs) / (\#Particles)"
@@ -183,7 +181,7 @@ def floc_count_evolution(
 
 
 def fluid_Ekin_evolution(output_dir: Path, series_list) -> None:
-    out_path = output_dir / "E_kin_evolution.png"
+    out_path = output_dir / "E_kin_evolution"
     generic_plot(
         out_path,
         list(series_list),
@@ -208,7 +206,7 @@ def _pdf(
     ymin: float | None,
     ymax: float | None,
 ) -> None:
-    out_path = output_dir / f"{name}.png"
+    out_path = output_dir / f"{name}"
     generic_plot(
         out_path,
         list(series_list),
@@ -314,7 +312,7 @@ def _avg_floc_dir(
     xlabel: str = r"$y = \tilde y/L$ [-]"
     if inner_units:
         xlabel: str = r"$y^+$"
-    out_path = output_dir / f"{name}.png"
+    out_path = output_dir / f"{name}"
     generic_plot(
         out_path,
         list(series_list),
@@ -374,7 +372,7 @@ def mass_avg_D_g(output_dir: Path, series_list: List[PlotSeries], inner_units: b
 def phi_eulerian(
     output_dir: Path, series_list: List[PlotSeries], normalised: bool
 ) -> None:
-    out_path: Path = output_dir / f"phi_eulerian{"_norm" if normalised else ""}.png"
+    out_path: Path = output_dir / f"phi_eulerian{"_norm" if normalised else ""}"
     xlabel: str = r"$y = \tilde y/L$ [-]"
     ylabel: str = r"$\langle \phi \rangle$ [%]"
     if normalised:
@@ -441,13 +439,20 @@ def lagrangian_up_pdf(
 
 
 def family_tree_breakup_formation_pdf(
-    output_dir: Path, series_list: list[PlotSeries], label: str | None
+    output_dir: Path,
+    series_list: list[PlotSeries],
+    label: str | None,
+    filtered_unfiltered: Literal[
+        1, 2, 3
+    ],  # 1 just filtered, 2 superimpose filterd unfiltered, 3 just unfiltred
 ) -> None:
-    name: str
+    name = f"family_tree_breakup_formation_pdf"
+    if filtered_unfiltered==2:
+        name += "_superimposed"
+    if filtered_unfiltered==3:
+        name += "_unfiltered"
     if label is not None:
-        name = f"family_tree_breakup_formation_pdf_{label}"
-    else:
-        name = f"family_tree_breakup_formation_pdf"
+        name += f"_{label}"
     _pdf(
         output_dir=output_dir,
         series_list=series_list,

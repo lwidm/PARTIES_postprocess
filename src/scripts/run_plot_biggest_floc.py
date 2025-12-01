@@ -84,8 +84,8 @@ def main() -> None:
         print(f"  {i+1}. Df={Df:.4f}, ID={floc_id}, Time={time_val:.2f}, File={file_path.name}")
 
     # ========== create three subplots =========
-    all_plots = False
-    show_legend = False
+    all_plots = True
+    show_legend = True
     if all_plots:
         fig, axes = plt.subplots(2, 2, figsize=(12, 8))
         ax_xy = axes[0, 0]  # Top left: XY slice
@@ -94,7 +94,10 @@ def main() -> None:
         ax_legend = axes[1, 1]
     else:
         fig, axes = plt.subplots(1, 1, figsize=(8, 4))
+        ax_xy = axes
+        ax_zy = axes
         ax_xz = axes
+        ax_legend = axes
 
     colors = plt.cm.viridis(np.linspace(0, 1, N))
 
@@ -184,9 +187,9 @@ def main() -> None:
     plt.tight_layout()
     plt.show()
     if all_plots:
-        fig.savefig(str(plot_dir / f"max_flocsize_all.png"))
+        fig.savefig(str(plot_dir / f"max_flocsize_all"))
     else:
-        fig.savefig(str(plot_dir / f"max_flocsize.png"))
+        fig.savefig(str(plot_dir / f"max_flocsize"))
 
 
 if __name__ == "__main__":

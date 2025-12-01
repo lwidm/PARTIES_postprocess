@@ -2,6 +2,7 @@
 *.h5
 **.png
 **.h5
+plots
 flocs
 fluid
 RUN*

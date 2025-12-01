@@ -288,4 +288,5 @@ def generic_plot(
     ax = format_plot_axes(ax)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(str(output_path), dpi=dpi)
+    fig.savefig(str(output_path) + ".png", dpi=dpi)
+    fig.savefig(str(output_path)+ ".eps", dpi=dpi)

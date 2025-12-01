@@ -146,7 +146,7 @@ def main() -> None:
     plt.tight_layout()
     plt.show()
 
-    fig.savefig(str(plot_dir / f"flow_slice_{name}.png"))
+    fig.savefig(str(plot_dir / f"flow_slice_{name}"))
 
 
 if __name__ == "__main__":

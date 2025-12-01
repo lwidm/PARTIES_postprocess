@@ -82,6 +82,7 @@ def save_floc_breakup_formation_pdf(
     output_dir: Path,
     type: Literal["breakup", "formation"],
     stats: dict,
+    filtered_t_min: bool
 ) -> dict[str, np.ndarray]:
 
     y: np.ndarray = stats[type]["unweighted"]["bin_means"]  # type: ignore
@@ -89,9 +90,13 @@ def save_floc_breakup_formation_pdf(
     PDF: np.ndarray = stats[type]["unweighted"]["probabs_mean"]  # type: ignore
     # err: np.ndarray = stats[type]["unweighted"]["probabs_err"]  # type: ignore
 
+    filtered_line = ""
+    if filtered_t_min:
+        filtered_line = ", where a flocs that live longer then the maximum predicted contact time between two non cohesive particles in a poisseuille flow"
+
     header_lines = [
         "==================================================================",
-        f"The wall normal distribution of the floc {type}",
+        f"The wall normal distribution of the floc {type}{filtered_line}",
         "==================================================================",
         "",
         "Column descriptions:",
@@ -110,8 +115,9 @@ def save_floc_breakup_formation_pdf(
     }
 
     if output_dir is not None:
+        name: str = f"floc_{type}_filtered_pdf.csv" if filtered_t_min else f"floc_{type}_non_filtered_pdf.csv"
         output_dir.mkdir(exist_ok=True)
-        csv_file: Path = output_dir / f"floc_{type}_pdf.csv"
+        csv_file: Path = output_dir / name
         output.save_to_csv(csv_file, result, header_lines)
 
     return result

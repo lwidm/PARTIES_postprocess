@@ -134,6 +134,7 @@ def calc_famtree_pdf_steadystate(
     U_mean: float,
     L: float,
     d_p: float,
+    filter_t_min: bool,
 ) -> dict[str, dict[str, np.ndarray | dict[str, np.ndarray]]]:
 
     metadata_dict: dict[str, dict[str, float | int | str]] = metadata.read_metadata(
@@ -149,7 +150,9 @@ def calc_famtree_pdf_steadystate(
 
     min_floc_lifetime = 2*d_p / (d_p * max_poisseulle_du_dy)
     min_floc_lifetime *= 4
-    print(min_floc_lifetime)
+    if not filter_t_min:
+        min_floc_lifetime = 0.0
+    print(f"Used minimum floc lifetime t_min= {min_floc_lifetime}")
 
     field_accessors = {
         "breakup": AccessFlocBreakupLocation(t_steady, min_floc_lifetime),

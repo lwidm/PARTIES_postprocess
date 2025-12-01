@@ -1181,12 +1181,14 @@ def family_tree_breakup_formation_pdf(
     marker: str,
     linestyle: str,
     type: Literal["breakup", "formation"],
-) -> PlotSeries:
+    filtered_t_min: bool,
+) -> Tuple[PlotSeries, PlotSeries]:
 
     y: np.ndarray
     PDF: np.ndarray
+    name: str = f"floc_{type}_filtered_pdf.csv" if filtered_t_min else f"floc_{type}_non_filtered_pdf.csv"
     y, edges, PDF = lwidmer.read_csv_columns(
-        csv_dir / f"floc_{type}_pdf.csv", (0, 1, 2), remove_nan=1
+        csv_dir / name, (0, 1, 2), remove_nan=1
     )
     print(f"len(y)={len(y)}, len(edges)={len(edges)}, len(PDF)={len(PDF)}")
 
@@ -1233,5 +1235,4 @@ def family_tree_breakup_formation_pdf(
             "color": colour,
         },
     )
-    return s_bar
-    # return s_plot
+    return s_bar, s_plot

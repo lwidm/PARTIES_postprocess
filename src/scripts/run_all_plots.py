@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Literal
 from pathlib import Path
 import numpy as np
 import seaborn as sns
@@ -589,10 +589,14 @@ def fam_tree(
     markers: List[str],
     linestyles: List[str],
     separate_plots: bool,
+    unfiltered: Literal[
+        1, 2, 3
+    ],  # 1 dont show them, 2 superimpose them, 3 separately plot them
 ) -> None:
     csv_dirs: List[Path] = [data_dir / data_name for data_name in data_names]
 
-    s_list: list[list[PlotSeries]] = []
+    s_list_filtered: list[list[PlotSeries]] = []
+    s_list_unfiltered: list[list[PlotSeries]] = []
 
     use_markers: bool = False
     if use_markers:
@@ -614,34 +618,97 @@ def fam_tree(
             colours_local = colours
             linestyles_local = linestyles
 
-        s_formation = plt_series.family_tree_breakup_formation_pdf(
+        s_formation_filtered, _ = plt_series.family_tree_breakup_formation_pdf(
             csv_dir=csv_dir,
             label=labels_local[0],
             colour=colours_local[0],
             marker=markers_local[0],
             linestyle=linestyles_local[0],
             type="formation",
+            filtered_t_min=True,
         )
-        s_breakup = plt_series.family_tree_breakup_formation_pdf(
+        s_breakup_filtered, _ = plt_series.family_tree_breakup_formation_pdf(
             csv_dir=csv_dir,
             label=labels_local[1],
             colour=colours_local[1],
             marker=markers_local[1],
             linestyle=linestyles_local[1],
             type="breakup",
+            filtered_t_min=True,
         )
-        s_list.append([s_breakup, s_formation])
+        s_formation_unfiltered = plt_series.family_tree_breakup_formation_pdf(
+            csv_dir=csv_dir,
+            label=labels_local[0],
+            colour=colours_local[0],
+            marker=markers_local[0],
+            linestyle=linestyles_local[0],
+            type="formation",
+            filtered_t_min=False,
+        )
+        s_breakup_unfiltered = plt_series.family_tree_breakup_formation_pdf(
+            csv_dir=csv_dir,
+            label=labels_local[1],
+            colour=colours_local[1],
+            marker=markers_local[1],
+            linestyle=linestyles_local[1],
+            type="breakup",
+            filtered_t_min=False,
+        )
+        s_list_filtered.append([s_breakup_filtered, s_formation_filtered])
+        if unfiltered == 2:
+            s_list_unfiltered.append(
+                [s_breakup_unfiltered[1], s_formation_unfiltered[1]]
+            )
+        elif unfiltered == 3:
+            s_list_unfiltered.append(
+                [s_breakup_unfiltered[0], s_formation_unfiltered[0]]
+            )
 
     if separate_plots:
         for i, csv_dir in enumerate(csv_dirs):
-            plt_templ.family_tree_breakup_formation_pdf(plot_dir, s_list[i], labels[i])
+            if unfiltered == 1:
+                plt_templ.family_tree_breakup_formation_pdf(
+                    plot_dir, s_list_filtered[i], labels[i], 1
+                )
+            elif unfiltered == 2:
+                plt_templ.family_tree_breakup_formation_pdf(
+                    plot_dir, s_list_filtered[i] + s_list_unfiltered[i], labels[i], 2
+                )
+            elif unfiltered == 3:
+                plt_templ.family_tree_breakup_formation_pdf(
+                    plot_dir, s_list_filtered[i], labels[i], 1
+                )
+                plt_templ.family_tree_breakup_formation_pdf(
+                    plot_dir, s_list_unfiltered[i], labels[i], 3
+                )
     else:
         s_list_all: List[PlotSeries] = []
+        s_list_all_unfiltered: List[PlotSeries] = []
         for i, csv_dir in enumerate(csv_dirs):
-            s_list_all += [s_list[i][0]]
+            if unfiltered == 1:
+                s_list_all += [s_list_filtered[i][0]]
+            elif unfiltered == 2:
+                s_list_all += [s_list_filtered[i][0], s_list_unfiltered[i][0]]
+            elif unfiltered == 3:
+                s_list_all += [s_list_filtered[i][0]]
+                s_list_all_unfiltered += [s_list_unfiltered[i][0]]
         for i, csv_dir in enumerate(csv_dirs):
-            s_list_all += [s_list[i][1]]
-        plt_templ.family_tree_breakup_formation_pdf(plot_dir, s_list_all, None)
+            if unfiltered == 1:
+                s_list_all += [s_list_filtered[i][1]]
+            elif unfiltered == 2:
+                s_list_all += [s_list_filtered[i][1], s_list_unfiltered[i][1]]
+            elif unfiltered == 3:
+                s_list_all += [s_list_filtered[i][1]]
+                s_list_all_unfiltered += [s_list_unfiltered[i][1]]
+        if unfiltered == 1:
+            plt_templ.family_tree_breakup_formation_pdf(plot_dir, s_list_all, None, 1)
+        elif unfiltered == 2:
+            plt_templ.family_tree_breakup_formation_pdf(plot_dir, s_list_all, None, 2)
+        elif unfiltered == 3:
+            plt_templ.family_tree_breakup_formation_pdf(plot_dir, s_list_all, None, 1)
+            plt_templ.family_tree_breakup_formation_pdf(
+                plot_dir, s_list_all_unfiltered, None, 3
+            )
 
 
 def main() -> None:
@@ -672,40 +739,41 @@ def main() -> None:
     # ]
     colours: list[str | Tuple[float, float, float, float]] = list(cb_palette)
     colours_fam_tree: list[str | Tuple[float, float, float, float]] = [
-        blue_cmap(0.55), red_cmap(0.55)
+        blue_cmap(0.55),
+        red_cmap(0.55),
     ]
     markers: List[str] = ["o", "s", "^", "v", "P"]
     linestyles: List[str] = ["-", "--", "-.", ":"]
-    floc(
-        plot_dir,
-        data_dir,
-        data_names,
-        labels,
-        colours,
-        markers,
-        linestyles,
-        plot_evo_fit=False,
-    )
-    fluid_wall_normal(
-        data_dir, plot_dir, data_dir, data_names, labels, colours, use_markers=True
-    )
-    fluid_wall_normal(
-        data_dir, plot_dir, data_dir, data_names, labels, colours, use_markers=False
-    )
-    fuild_velocity_profile(
-        data_dir, plot_dir, data_dir, data_names, labels, colours, use_markers=True
-    )
-    phi_eulerian(plot_dir, data_dir, data_names, labels, colours, False)
-    lagrangian_data(
-        plot_dir,
-        data_dir,
-        data_names,
-        labels,
-        colours,
-        markers,
-        show_errs=False,
-        separate_plots=False,
-    )
+    # floc(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     colours,
+    #     markers,
+    #     linestyles,
+    #     plot_evo_fit=False,
+    # )
+    # fluid_wall_normal(
+    #     data_dir, plot_dir, data_dir, data_names, labels, colours, use_markers=True
+    # )
+    # fluid_wall_normal(
+    #     data_dir, plot_dir, data_dir, data_names, labels, colours, use_markers=False
+    # )
+    # fuild_velocity_profile(
+    #     data_dir, plot_dir, data_dir, data_names, labels, colours, use_markers=True
+    # )
+    # phi_eulerian(plot_dir, data_dir, data_names, labels, colours, False)
+    # lagrangian_data(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     colours,
+    #     markers,
+    #     show_errs=False,
+    #     separate_plots=False,
+    # )
     fam_tree(
         plot_dir,
         data_dir,
@@ -715,6 +783,7 @@ def main() -> None:
         markers,
         linestyles,
         separate_plots=True,
+        unfiltered=3,
     )
 
     if not globals.on_anvil:
