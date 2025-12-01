@@ -82,7 +82,8 @@ def save_floc_breakup_formation_pdf(
     output_dir: Path,
     type: Literal["breakup", "formation"],
     stats: dict,
-    filtered_t_min: bool
+    filtered_t_min: bool,
+    name: str | None,
 ) -> dict[str, np.ndarray]:
 
     y: np.ndarray = stats[type]["unweighted"]["bin_means"]  # type: ignore
@@ -115,7 +116,8 @@ def save_floc_breakup_formation_pdf(
     }
 
     if output_dir is not None:
-        name: str = f"floc_{type}_filtered_pdf.csv" if filtered_t_min else f"floc_{type}_non_filtered_pdf.csv"
+        if name is None:
+            name = f"floc_{type}_filtered_pdf.csv" if filtered_t_min else f"floc_{type}_non_filtered_pdf.csv"
         output_dir.mkdir(exist_ok=True)
         csv_file: Path = output_dir / name
         output.save_to_csv(csv_file, result, header_lines)

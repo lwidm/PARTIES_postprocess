@@ -22,14 +22,14 @@ def _compute_single_pdf(
             U_mean=U_mean,
             L=L,
             d_p=d_p,
-            filter_t_min=True
+            filter_t_min=None
         )
     )
 
     pdf_stats_out = myio.output.prepare_dict_for_h5save(pdf_stats)  # type: ignore
-    myio.output.save_to_h5(out_dir / "lagrangian_acceleration_filtered_pdf.h5", pdf_stats_out)
-    myio.lwidmer.save_floc_breakup_formation_pdf(out_dir, "breakup", pdf_stats, True)
-    myio.lwidmer.save_floc_breakup_formation_pdf(out_dir, "formation", pdf_stats, True)
+    myio.output.save_to_h5(out_dir / "floc_breakup_formation_filtered_pdf.h5", pdf_stats_out)
+    myio.lwidmer.save_floc_breakup_formation_pdf(out_dir, "breakup", pdf_stats, True, None)
+    myio.lwidmer.save_floc_breakup_formation_pdf(out_dir, "formation", pdf_stats, True, None)
 
     pdf_stats: dict[str, dict[str, np.ndarray | dict[str, np.ndarray]]] = (
         family_tree.calc_famtree_pdf_steadystate(
@@ -40,14 +40,14 @@ def _compute_single_pdf(
             U_mean=U_mean,
             L=L,
             d_p=d_p,
-            filter_t_min=False
+            filter_t_min=0.0
         )
     )
 
     pdf_stats_out = myio.output.prepare_dict_for_h5save(pdf_stats)  # type: ignore
-    myio.output.save_to_h5(out_dir / "lagrangian_acceleration_non_filtered_pdf.h5", pdf_stats_out)
-    myio.lwidmer.save_floc_breakup_formation_pdf(out_dir, "breakup", pdf_stats, False)
-    myio.lwidmer.save_floc_breakup_formation_pdf(out_dir, "formation", pdf_stats, False)
+    myio.output.save_to_h5(out_dir / "floc_breakup_formation_unfiltered_pdf.h5", pdf_stats_out)
+    myio.lwidmer.save_floc_breakup_formation_pdf(out_dir, "breakup", pdf_stats, False, None)
+    myio.lwidmer.save_floc_breakup_formation_pdf(out_dir, "formation", pdf_stats, False, None)
 
 
 def main():

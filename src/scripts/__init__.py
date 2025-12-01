@@ -10,6 +10,7 @@ from . import (
     run_plot_biggest_floc,
     run_plot_floc_slice,
     run_fam_tree,
+    run_floc_timescales,
 )
 
 __all__ = [
@@ -18,4 +19,5 @@ __all__ = [
     "run_plot_biggest_floc",
     "run_plot_floc_slice",
     "run_fam_tree",
+    "run_floc_timescales",
 ]

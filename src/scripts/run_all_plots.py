@@ -1,7 +1,8 @@
-from typing import Optional, Tuple, List, Literal
+from typing import Optional, Tuple, List, Literal, Callable
 from pathlib import Path
 import numpy as np
 import seaborn as sns
+import re
 
 from src.plotting.tools import PlotSeries
 from src.plotting import series as plt_series
@@ -9,6 +10,10 @@ from src.plotting import templates as plt_templ
 from src import globals
 
 from matplotlib import pyplot as plt
+from matplotlib.colors import Colormap
+from matplotlib.axes import Axes
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import Normalize, Colormap
 
 # parent_dir: Path = Path("/media/usb/UCSB/")
 parent_dir: Path = Path("./")
@@ -626,6 +631,8 @@ def fam_tree(
             linestyle=linestyles_local[0],
             type="formation",
             filtered_t_min=True,
+            name=None,
+            show_label=True,
         )
         s_breakup_filtered, _ = plt_series.family_tree_breakup_formation_pdf(
             csv_dir=csv_dir,
@@ -635,6 +642,8 @@ def fam_tree(
             linestyle=linestyles_local[1],
             type="breakup",
             filtered_t_min=True,
+            name=None,
+            show_label=True,
         )
         s_formation_unfiltered = plt_series.family_tree_breakup_formation_pdf(
             csv_dir=csv_dir,
@@ -644,6 +653,8 @@ def fam_tree(
             linestyle=linestyles_local[0],
             type="formation",
             filtered_t_min=False,
+            name=None,
+            show_label=True,
         )
         s_breakup_unfiltered = plt_series.family_tree_breakup_formation_pdf(
             csv_dir=csv_dir,
@@ -653,6 +664,8 @@ def fam_tree(
             linestyle=linestyles_local[1],
             type="breakup",
             filtered_t_min=False,
+            name=None,
+            show_label=True,
         )
         s_list_filtered.append([s_breakup_filtered, s_formation_filtered])
         if unfiltered == 2:
@@ -709,6 +722,152 @@ def fam_tree(
             plt_templ.family_tree_breakup_formation_pdf(
                 plot_dir, s_list_all_unfiltered, None, 3
             )
+
+
+def floc_timescale(
+    plot_dir: Path,
+    data_dir: Path,
+    data_names: List[str],
+    labels: List[str],
+    cmap_breakup: Colormap,
+    cmap_formation: Colormap,
+) -> None:
+    csv_dirs: List[Path] = [data_dir / data_name for data_name in data_names]
+
+    s_list: list[list[PlotSeries]] = [[] for _ in range(len(csv_dirs))]
+    colorbar_funcs_list: list[list[Callable[[Axes], None]]] = []
+    min_color_val = 0.3
+
+    for i, csv_dir in enumerate(csv_dirs):
+
+        files = list((csv_dir / "floc_timescale").glob("*breakup_t_min=*.csv"))
+        timescales: list[float] = []
+        for file in files:
+            match = re.search(r"t_min=(\d+\.\d+)", file.name)
+            if match:
+                timescales.append(float(match.group(1)))
+
+        timescales = sorted(set(timescales))
+
+        max_t = max(timescales)
+
+        colours_formation: list[str | Tuple[float, float, float, float]] = [
+            cmap_formation(t_min / max_t * (1 - min_color_val) + min_color_val)
+            for t_min in timescales
+        ]
+        colours_breakup: list[str | Tuple[float, float, float, float]] = [
+            cmap_breakup(t_min / max_t * (1 - min_color_val) + min_color_val)
+            for t_min in timescales
+        ]
+
+        colorbar_funcs = create_colorbar_functions(
+            timescales, max_t, cmap_formation, cmap_breakup, min_val=min_color_val
+        )
+        colorbar_funcs_list.append(colorbar_funcs)
+
+        labels_local: List[str | None]
+
+        for j, t_min in enumerate(timescales):
+            _, s_formation = plt_series.family_tree_breakup_formation_pdf(
+                csv_dir=csv_dir / "floc_timescale",
+                # label=f"$t_{{floc,min}} = {t_min}$",
+                label=None,
+                colour=colours_formation[j],
+                marker="None",
+                linestyle="-",
+                type="formation",
+                filtered_t_min=True,
+                name=f"formation_t_min={t_min}.csv",
+                show_label=False,
+            )
+            _, s_breakup = plt_series.family_tree_breakup_formation_pdf(
+                csv_dir=csv_dir / "floc_timescale",
+                label=None,
+                colour=colours_breakup[j],
+                marker="None",
+                linestyle="-",
+                type="breakup",
+                filtered_t_min=True,
+                name=f"breakup_t_min={t_min}.csv",
+                show_label=False,
+            )
+            s_list[i].append(s_breakup)
+            s_list[i].append(s_formation)
+
+        _, s_formation_estimate = plt_series.family_tree_breakup_formation_pdf(
+            csv_dir=csv_dir / "floc_timescale",
+            label=f"$formation: t_{{floc,min}} = $ poiseulle estimate",
+            colour="k",
+            marker="None",
+            linestyle="-",
+            type="formation",
+            filtered_t_min=True,
+            name=f"formation_t_min=poisseulle.csv",
+            show_label=True,
+        )
+        _, s_breakup_estimate = plt_series.family_tree_breakup_formation_pdf(
+            csv_dir=csv_dir / "floc_timescale",
+            label=f"$breakup: t_{{floc,min}} = $ poiseulle estimate",
+            colour="k",
+            marker="None",
+            linestyle="--",
+            type="breakup",
+            filtered_t_min=True,
+            name=f"breakup_t_min=poisseulle.csv",
+            show_label=True,
+        )
+
+        s_list[i].append(s_breakup_estimate)
+        s_list[i].append(s_formation_estimate)
+
+    for i, csv_dir in enumerate(csv_dirs):
+        plt_templ.floc_timescale(
+            plot_dir, s_list[i], labels[i], additional_objects=colorbar_funcs_list[i]
+        )
+
+
+def create_colorbar_functions(
+    timescales: List[float],
+    max_t: float,
+    cmap_formation: Colormap,
+    cmap_breakup: Colormap,
+    min_val: float,
+) -> List[Callable[[Axes], None]]:
+
+    fraction: float = 1.2
+
+    def add_formation_colorbar(ax: Axes) -> None:
+        fig = ax.get_figure()
+        width = 0.3 * fraction  # 0.3 is base width at top
+        left = 0.85 - width  # Center in right half
+        cax = fig.add_axes([left, 0.75, width, 0.03])  # type: ignore
+        effective_max = max_t / (1 - min_val)
+        norm = Normalize(vmin=-min_val*effective_max, vmax=effective_max)
+        sm = ScalarMappable(norm=norm, cmap=cmap_formation)
+        sm.set_array([])
+        sm.set_clim(0, max_t)
+        cbar = plt.colorbar(sm, cax=cax, ax=ax, orientation="horizontal")
+        cbar.set_label("Formation", fontsize=10)
+        cbar.ax.xaxis.set_ticks([])
+
+    def add_breakup_colorbar(ax: Axes) -> None:
+        fig = ax.get_figure()
+        width = 0.3 * fraction
+        left = 0.85 - width
+        cax = fig.add_axes([left, 0.65, width, 0.03])  # Below formation # type: ignore
+        effective_max = max_t / (1 - min_val)
+        norm = Normalize(vmin=-min_val*effective_max, vmax=effective_max)
+        sm = ScalarMappable(norm=norm, cmap=cmap_breakup)
+        sm.set_array([])
+        sm.set_clim(0, max_t)
+        cbar = plt.colorbar(sm, cax=cax, ax=ax, orientation="horizontal")
+        cbar.set_label("Breakup", fontsize=10)
+        tick_positions = [0, max_t]
+        tick_labels = ["0", f"{max_t:.2f}"]
+        cbar.set_ticks(tick_positions)
+        cbar.set_ticklabels(tick_labels, fontsize=8)
+
+    return [add_formation_colorbar, add_breakup_colorbar]
 
 
 def main() -> None:
@@ -774,16 +933,24 @@ def main() -> None:
     #     show_errs=False,
     #     separate_plots=False,
     # )
-    fam_tree(
-        plot_dir,
-        data_dir,
-        data_names,
-        labels,
-        colours_fam_tree,
-        markers,
-        linestyles,
-        separate_plots=True,
-        unfiltered=3,
+    # fam_tree(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     colours_fam_tree,
+    #     markers,
+    #     linestyles,
+    #     separate_plots=True,
+    #     unfiltered=3,
+    # )
+    floc_timescale(
+        plot_dir=plot_dir,
+        data_dir=data_dir,
+        data_names=data_names,
+        labels=labels,
+        cmap_breakup=red_cmap,
+        cmap_formation=blue_cmap,
     )
 
     if not globals.on_anvil:

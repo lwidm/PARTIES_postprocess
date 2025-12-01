@@ -522,7 +522,9 @@ def u_plus_mean(
 
 
 def u_plus_proxies(
-    linestyles: list[str], labels: list[str], colours: List[str | Tuple[float, float, float, float]]
+    linestyles: list[str],
+    labels: list[str],
+    colours: List[str | Tuple[float, float, float, float]],
 ) -> list[PlotSeries]:
     quantities: list[tuple[str, str]] = [
         ("Numerical", linestyles[0]),
@@ -560,7 +562,11 @@ def u_plus_proxies(
 
 
 def normal_stress_wall_parties(
-    csv_dir: Path, linestyles: list[str], markers: list[str], colour: str | Tuple[float, float, float, float], label: str
+    csv_dir: Path,
+    linestyles: list[str],
+    markers: list[str],
+    colour: str | Tuple[float, float, float, float],
+    label: str,
 ) -> List[PlotSeries]:
     yc, uu, ww, uv, _, yv, vv = lwidmer.read_csv_columns(
         csv_dir / "flow_fluctuation_data_inner.csv", (0, 1, 2, 3, 4, 5, 6), remove_nan=1
@@ -575,7 +581,7 @@ def normal_stress_wall_parties(
         "uv_plus": uv,
     }
 
-    colours: list[str| Tuple[float, float, float, float]] = [colour for _ in range(4)]
+    colours: list[str | Tuple[float, float, float, float]] = [colour for _ in range(4)]
     return normal_stress_wall(stats, colours, linestyles, markers, label, False)
 
 
@@ -1080,6 +1086,7 @@ def lagrangian_u_p_pdf(
         s_err,
     )
 
+
 def lagrangian_acceleration_pdf_proxies(
     markers: list[str],
     labels: list[str],
@@ -1087,9 +1094,9 @@ def lagrangian_acceleration_pdf_proxies(
     marker_cases: list[str],
 ) -> list[PlotSeries]:
     quantities: list[tuple[str, str]] = [
-        ('$a_{p,x}$', markers[0]),
-        ('$a_{p,y}$', markers[1]),
-        ('$a_{p,z}$', markers[2]),
+        ("$a_{p,x}$", markers[0]),
+        ("$a_{p,y}$", markers[1]),
+        ("$a_{p,z}$", markers[2]),
     ]
 
     cases: list[tuple[str, str, str | Tuple[float, float, float, float]]] = []
@@ -1126,6 +1133,7 @@ def lagrangian_acceleration_pdf_proxies(
 
     return s_quantities + s_cases
 
+
 def lagrangian_up_pdf_proxies(
     markers: list[str],
     labels: list[str],
@@ -1135,7 +1143,7 @@ def lagrangian_up_pdf_proxies(
 ) -> list[PlotSeries]:
     quantities: list[tuple[str, str]] = []
     for i, yp in enumerate(yp_list):
-        quantities.append((f'$y^+ = {yp}$', markers[i]))
+        quantities.append((f"$y^+ = {yp}$", markers[i]))
 
     cases: list[tuple[str, str, str | Tuple[float, float, float, float]]] = []
     for i, label in enumerate(labels):
@@ -1171,6 +1179,7 @@ def lagrangian_up_pdf_proxies(
 
     return s_quantities + s_cases
 
+
 # -------------------- familiy tree --------------------
 
 
@@ -1182,24 +1191,32 @@ def family_tree_breakup_formation_pdf(
     linestyle: str,
     type: Literal["breakup", "formation"],
     filtered_t_min: bool,
+    name: str | None,
+    show_label: bool,
 ) -> Tuple[PlotSeries, PlotSeries]:
 
     y: np.ndarray
     PDF: np.ndarray
-    name: str = f"floc_{type}_filtered_pdf.csv" if filtered_t_min else f"floc_{type}_non_filtered_pdf.csv"
-    y, edges, PDF = lwidmer.read_csv_columns(
-        csv_dir / name, (0, 1, 2), remove_nan=1
-    )
+    if name is None:
+        name = (
+            f"floc_{type}_filtered_pdf.csv"
+            if filtered_t_min
+            else f"floc_{type}_non_filtered_pdf.csv"
+        )
+    y, edges, PDF = lwidmer.read_csv_columns(csv_dir / name, (0, 1, 2), remove_nan=1)
     print(f"len(y)={len(y)}, len(edges)={len(edges)}, len(PDF)={len(PDF)}")
 
     markeredgewidth: float = 0.5
     dir_labels: list[str] = ["x", "y", "z"]
 
     local_label: str
-    if label is None:
-        local_label = f"{type}"
+    if show_label:
+        if label is None:
+            local_label = f"{type}"
+        else:
+            local_label = f"{type} ({label})"
     else:
-        local_label = f"{type} ({label})"
+        local_label = ""
 
     s_plot: PlotSeries = PlotSeries(
         data={

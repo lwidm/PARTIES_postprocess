@@ -1,9 +1,10 @@
 # -- src/plotting/templates.py
 from pathlib import Path
-from typing import List, Optional, Sequence, Tuple, Literal
+from typing import List, Optional, Sequence, Tuple, Literal, Callable, Any
 
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib.axes import Axes
 
 from src.plotting.tools import (
     PlotSeries,
@@ -205,6 +206,7 @@ def _pdf(
     xmax: float | None,
     ymin: float | None,
     ymax: float | None,
+    additional_objects: Optional[Sequence[Callable[[Axes], Any]]] = None,
 ) -> None:
     out_path = output_dir / f"{name}"
     generic_plot(
@@ -219,6 +221,7 @@ def _pdf(
         legend_loc="best",
         # legend_bbox=(1.0, 0.80),
         dpi=150,
+        additional_objects=additional_objects,
     )
 
 
@@ -463,4 +466,24 @@ def family_tree_breakup_formation_pdf(
         xmax=1,
         ymin=0,
         ymax=None,
+    )
+
+def floc_timescale(
+    output_dir: Path,
+    series_list: list[PlotSeries],
+    label: str,
+    additional_objects: Optional[Sequence[Callable[[Axes], Any]]] = None
+) -> None:
+    name = f"floc_timescale_{label}"
+    _pdf(
+        output_dir=output_dir,
+        series_list=series_list,
+        name=name,
+        xlabel=r"$y / L $",
+        ylabel=r"PDF",
+        xmin=None,
+        xmax=1,
+        ymin=0,
+        ymax=None,
+        additional_objects=additional_objects,
     )

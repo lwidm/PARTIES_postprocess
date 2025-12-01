@@ -112,6 +112,7 @@ if __name__ == "__main__":
 
     # scripts.run_get_start_steady.main()
     # scripts.run_fam_tree.main()
+    # scripts.run_floc_timescales.main()
     scripts.run_all_plots.main()
     # scripts.run_plot_biggest_floc.main()
     # scripts.run_plot_floc_slice.main()

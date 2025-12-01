@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Optional, Sequence, Tuple, Union, Literal
+from typing import Any, Dict, Optional, Sequence, Tuple, Union, Literal, Callable
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -259,12 +259,17 @@ def generic_plot(
     legend_loc: Optional[str] = None,
     legend_bbox: Optional[Tuple[float, float]] = None,
     dpi: int = 300,
+    additional_objects: Optional[Sequence[Callable[[Axes], Any]]] = None
 ) -> None:
     update_plot_params()
     fig, ax = plt.subplots(figsize=figsize)
 
     for s in series_list:
         _plot_one(ax, s)
+
+    if additional_objects:
+        for obj_func in additional_objects:
+            obj_func(ax)
 
     if xlabel:
         ax.set_xlabel(xlabel, fontsize=14)
