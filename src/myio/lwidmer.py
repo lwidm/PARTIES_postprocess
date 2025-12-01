@@ -123,3 +123,50 @@ def save_floc_breakup_formation_pdf(
         output.save_to_csv(csv_file, result, header_lines)
 
     return result
+
+def save_floc_lifetime_stats(
+    output_dir: Path,
+    stats: dict,
+) -> dict[str, np.ndarray]:
+
+    y_mean: np.ndarray = stats["y_mean"]  # type: ignore
+    y_edges: np.ndarray = stats["y_edges"]  # type: ignore
+    mean: np.ndarray = stats["mean"]  # type: ignore
+    median: np.ndarray = stats["median"]  # type: ignore
+    std: np.ndarray = stats["std"]  # type: ignore
+    max: np.ndarray = stats["max"]  # type: ignore
+
+    header_lines = [
+        "==================================================================",
+        f"The floc lifetime statistics as a funcion of wall nomral coord",
+        "==================================================================",
+        "",
+        "Column descriptions:",
+        f"- y/L: The mean value withing the histogram bin of the floc location. (formation location + breakup location ) / 2",
+        f"       (wall normal coordinate normalised by charachteristic length)",
+        f"- y/L edges: The pdf histogram edges of each bin of the floc location. (formation location + breakup location ) / 2",
+        f"             (wall normal coordinate normalised by charachteristic length)",
+        f"- max(t_floc): maximum floc lifetime in each bin",
+        f"- std(t_floc): standard deviation of the floc lifetime in each bin",
+        f"- mean(t_floc): mean floc lifetime in each bin",
+        f"- median(t_floc): median floc lifetime in each bin",
+        # "- err: The standard deviation of the PDF value in each bin over all the files devided by the total number of files",
+        "",
+    ]
+
+    result: dict[str, np.ndarray] = {
+        f"y/L": y_mean,
+        f"y/L edges": y_edges,
+        f"max(t_floc)": max,
+        f"std(t_floc)": std,
+        f"mean(t_floc)": mean,
+        f"median(t_floc)": median,
+    }
+
+    if output_dir is not None:
+        name = f"floc_lifetime.csv"
+        output_dir.mkdir(exist_ok=True)
+        csv_file: Path = output_dir / name
+        output.save_to_csv(csv_file, result, header_lines)
+
+    return result

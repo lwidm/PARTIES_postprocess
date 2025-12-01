@@ -796,7 +796,7 @@ def floc_timescale(
 
         _, s_formation_estimate = plt_series.family_tree_breakup_formation_pdf(
             csv_dir=csv_dir / "floc_timescale",
-            label=f"$formation: t_{{floc,min}} = $ poiseulle estimate",
+            label=f"$formation: t_{{floc,min}} = $ poisseulle estimate",
             colour="k",
             marker="None",
             linestyle="-",
@@ -807,7 +807,7 @@ def floc_timescale(
         )
         _, s_breakup_estimate = plt_series.family_tree_breakup_formation_pdf(
             csv_dir=csv_dir / "floc_timescale",
-            label=f"$breakup: t_{{floc,min}} = $ poiseulle estimate",
+            label=f"$breakup: t_{{floc,min}} = $ poisseulle estimate",
             colour="k",
             marker="None",
             linestyle="--",
@@ -869,6 +869,18 @@ def create_colorbar_functions(
 
     return [add_formation_colorbar, add_breakup_colorbar]
 
+def noncohesive_floc_lifetime(plot_dir: Path):
+    data_name: str = "phi5p0_noCo"
+    label: str = r"$\phi_{5\%}$ no cohesion"
+    data_dir: Path = parent_dir / "data/"
+    csv_dir: Path = data_dir / data_name
+
+    s_list: List[PlotSeries] = list(plt_series.noncohesive_floc_lifetime(csv_dir))
+    plt_templ.noncohesive_floc_lifetime(
+        output_dir=plot_dir,
+        series_list=s_list,
+        label=label,
+    )
 
 def main() -> None:
 
@@ -952,6 +964,7 @@ def main() -> None:
         cmap_breakup=red_cmap,
         cmap_formation=blue_cmap,
     )
+    noncohesive_floc_lifetime(plot_dir)
 
     if not globals.on_anvil:
         plt.show()

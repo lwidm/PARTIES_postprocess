@@ -61,7 +61,7 @@ class NoFilterPredicate(FilterPredicate):
         return None
 
 
-def _get_hist_bins(
+def get_hist_bins(
     data: list[np.ndarray], bin_width: float
 ) -> tuple[np.ndarray, np.ndarray]:
     global_min: float = min(np.min(d) for d in data)
@@ -145,7 +145,7 @@ def calc_PDF(
 
     edges: np.ndarray
     centers: np.ndarray
-    edges, centers = _get_hist_bins(data, bin_width)
+    edges, centers = get_hist_bins(data, bin_width)
 
     # compute histogram (counts) for each row (each file / array)
     if mass_weighted:

@@ -3,6 +3,8 @@ from typing import TypedDict, Literal
 import numpy as np
 import h5py
 from tqdm import tqdm
+import pickle
+from scipy.stats import binned_statistic
 
 from src.myio import lwidmer, metadata
 
@@ -13,6 +15,7 @@ from src.statistics import (
     FilterPredicate,
     NoFilterPredicate,
     calc_PDF,
+    get_hist_bins,
 )
 
 
@@ -72,7 +75,7 @@ class AccessFlocBreakupLocation(AccessorWithMass):
             ):
                 if (
                     len(floc_record["children"]) > 1
-                    and floc_record["end_time"] >= self.t_steady_
+                    and floc_record["start_time"] >= self.t_steady_
                     and floc_record["end_time"] - floc_record["start_time"] >= self.dt_
                 ):
                     y_breakup.append(floc_record["y_end"])
@@ -148,7 +151,7 @@ def calc_famtree_pdf_steadystate(
     poisseulle_du_dy = lambda y: -3 * U_mean * (y - L) / L**2
     max_poisseulle_du_dy = 3 * U_mean / L
 
-    min_floc_lifetime = 2*d_p / (d_p * max_poisseulle_du_dy)
+    min_floc_lifetime = 2 * d_p / (d_p * max_poisseulle_du_dy)
     min_floc_lifetime *= 4
     if filter_t_min is not None:
         min_floc_lifetime = filter_t_min
@@ -173,4 +176,69 @@ def calc_famtree_pdf_steadystate(
             mass_weighted=False,
             file_type="pkl",
         )
+    return results
+
+
+def average_floc_lifetime(
+    pickle_dir: Path,
+    metadata_file: Path,
+    bin_width: float,
+    U_mean: float,
+    L: float,
+    d_p: float,
+) -> dict[str, np.ndarray]:
+
+    metadata_dict: dict[str, dict[str, float | int | str]] = metadata.read_metadata(
+        metadata_file
+    )
+    t_steady: int = int(metadata_dict["Time"]["t_steady"])
+
+    poisseulle_u = lambda y: 3 / 2 * U_mean * (1 - ((y - L) / L) ** 2)
+    poisseulle_du_dy = lambda y: -3 * U_mean * (y - L) / L**2
+    max_poisseulle_du_dy = 3 * U_mean / L
+
+    min_floc_lifetime = 2 * d_p / (d_p * max_poisseulle_du_dy)
+    min_floc_lifetime *= 4
+
+    locations: list = []
+    lifetimes: list = []
+
+
+    with open(pickle_dir / "family_tree.pkl", "rb") as file:
+        f = pickle.load(file)
+        family_tree_dict: FamilyTreeType = f
+        for floc_id, floc_record in tqdm(
+            family_tree_dict.items(),
+            desc=f"Collecting floc breakup data",
+            total=len(family_tree_dict),
+            unit="Flocs",
+        ):
+            if (
+                (len(floc_record["children"]) > 1 or len(floc_record["parents"]) > 1)
+                and floc_record["start_time"] >= t_steady
+            ):
+                locations.append((floc_record["y_start"] + floc_record["y_end"])/2)
+                lifetimes.append(floc_record["end_time"] - floc_record["start_time"])
+
+    locations_arr = np.squeeze(np.asarray(locations))
+    lifetimes_arr = np.squeeze(np.asarray(lifetimes))
+
+
+    edges, centers = get_hist_bins([locations_arr], bin_width)
+
+    means, _, _ = binned_statistic(locations_arr, lifetimes_arr, statistic="mean", bins=edges)
+    means_y, _, _ = binned_statistic(locations_arr, locations_arr, statistic="mean", bins=edges)
+    medians, _, _ = binned_statistic(locations_arr, lifetimes_arr, statistic="median", bins=edges)
+    stds, _, _ = binned_statistic(locations_arr, lifetimes_arr, statistic="std", bins=edges)
+    maxs, _, _ = binned_statistic(locations_arr, lifetimes_arr, statistic="max", bins=edges)
+
+    results: dict[str, np.ndarray] = {
+        "y_mean": means_y,
+        "y_edges": edges,
+        "mean": means,
+        "median": medians,
+        "std": stds,
+        "max": maxs,
+    }
+
     return results

@@ -487,3 +487,23 @@ def floc_timescale(
         ymax=None,
         additional_objects=additional_objects,
     )
+
+def noncohesive_floc_lifetime(
+    output_dir: Path,
+    series_list: list[PlotSeries],
+    label: str,
+    additional_objects: Optional[Sequence[Callable[[Axes], Any]]] = None
+) -> None:
+    name = f"noncohesive_floc_lifetime_{label}"
+    _pdf(
+        output_dir=output_dir,
+        series_list=series_list,
+        name=name,
+        xlabel=r"$y / L $",
+        ylabel=r"$t_{floc} \cdot L / U$",
+        xmin=0.0,
+        xmax=1.0,
+        ymin=None,
+        ymax=None,
+        additional_objects=additional_objects,
+    )

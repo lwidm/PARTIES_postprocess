@@ -11,6 +11,7 @@ from . import (
     run_plot_floc_slice,
     run_fam_tree,
     run_floc_timescales,
+run_floc_noncohesive_time,
 )
 
 __all__ = [
@@ -20,4 +21,5 @@ __all__ = [
     "run_plot_floc_slice",
     "run_fam_tree",
     "run_floc_timescales",
+    "run_floc_noncohesive_time",
 ]

@@ -3,6 +3,7 @@
 from pathlib import Path
 from typing import List, Optional, Tuple, Literal
 import h5py
+from scipy import stats
 
 import numpy as np
 
@@ -1253,3 +1254,118 @@ def family_tree_breakup_formation_pdf(
         },
     )
     return s_bar, s_plot
+
+
+def noncohesive_floc_lifetime(
+    csv_dir: Path,
+) -> Tuple[PlotSeries, PlotSeries, PlotSeries, PlotSeries, PlotSeries, PlotSeries]:
+
+    y, edges, max_vals, std_vals, mean_vals, median_vals = lwidmer.read_csv_columns(
+        csv_dir / "floc_lifetime.csv", (0, 1, 2, 3, 4, 5), remove_nan=1
+    )
+
+    markeredgewidth: float = 0.5
+
+    s_max: PlotSeries = PlotSeries(
+        data={
+            "x": y,
+            "y": max_vals,
+        },
+        x_key="x",
+        y_key="y",
+        plot_method="plot",
+        kwargs={
+            "label": "max lifetime",
+            "linestyle": "None",
+            "marker": "x",
+            "markersize": 5,
+            "markerfacecolor": "k",
+            "markeredgecolor": "k",
+            "markeredgewidth": markeredgewidth,
+            "color": "k",
+            "fillstyle": "none",
+        },
+    )
+    s_std: PlotSeries = PlotSeries(
+        data={
+            "x": y,
+            "y": mean_vals,
+            "y_err": std_vals,
+        },
+        x_key="x",
+        y_key="y",
+        plot_method="err_plot",
+        kwargs={
+            "label": "standard devation",
+            "linestyle": "None",
+            "color": "k",
+        },
+    )
+
+    s_mean: PlotSeries = PlotSeries(
+        data={
+            "x": y,
+            "y": mean_vals,
+        },
+        x_key="x",
+        y_key="y",
+        plot_method="plot",
+        kwargs={
+            "label": "mean lifetime",
+            "linestyle": "-",
+            "color": "k",
+        },
+    )
+    s_median: PlotSeries = PlotSeries(
+        data={
+            "x": y,
+            "y": median_vals,
+        },
+        x_key="x",
+        y_key="y",
+        plot_method="plot",
+        kwargs={
+            "label": "median lifetime",
+            "linestyle": ":",
+            "color": "k",
+        },
+    )
+    linregressresult = stats.linregress(y[y <= 1], max_vals[y <= 1])
+    max_vals_fit = linregressresult.slope * y[y <= 1] + linregressresult.intercept
+    s_max_fit: PlotSeries = PlotSeries(
+        data={
+            "x": y[y <= 1],
+            "y": max_vals_fit,
+        },
+        x_key="x",
+        y_key="y",
+        plot_method="plot",
+        kwargs={
+            "label": f"fit: $y_{{max}} \\Longrightarrow t_{{floc}} = {linregressresult.slope:.3f}y + {linregressresult.intercept:.3f} (R^2={linregressresult.rvalue**2:.3f})$",
+            "linestyle": "--",
+            "color": "red",
+        },
+    )
+
+    num_stds = 2
+
+    linregressresult = stats.linregress(
+        y[y <= 1], mean_vals[y <= 1] + std_vals[y <= 1] * num_stds
+    )
+    std_vals_fit = linregressresult.slope * y[y <= 1] + linregressresult.intercept
+    s_model_fit: PlotSeries = PlotSeries(
+        data={
+            "x": y[y <= 1],
+            "y": std_vals_fit,
+        },
+        x_key="x",
+        y_key="y",
+        plot_method="plot",
+        kwargs={
+            "label": f"fit: $y_{{mean}} + {num_stds} \\cdot \\sigma_t \\Longrightarrow t_{{floc}} = {linregressresult.slope:.3f} y + {linregressresult.intercept:.3f}$",
+            "linestyle": ":",
+            "color": "red",
+        },
+    )
+
+    return s_max, s_std, s_mean, s_median, s_max_fit, s_model_fit
