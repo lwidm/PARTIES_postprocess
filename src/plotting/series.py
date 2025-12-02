@@ -1347,7 +1347,7 @@ def noncohesive_floc_lifetime(
         },
     )
 
-    num_stds = 2
+    num_stds = 3
 
     linregressresult = stats.linregress(
         y[y <= 1], mean_vals[y <= 1] + std_vals[y <= 1] * num_stds

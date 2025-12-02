@@ -49,6 +49,24 @@ def _compute_single_pdf(
     myio.lwidmer.save_floc_breakup_formation_pdf(out_dir, "breakup", pdf_stats, False, None)
     myio.lwidmer.save_floc_breakup_formation_pdf(out_dir, "formation", pdf_stats, False, None)
 
+    pdf_stats: dict[str, dict[str, np.ndarray | dict[str, np.ndarray]]] = (
+        family_tree.calc_famtree_pdf_steadystate(
+            pickle_dir=pickle_dir,
+            metadata_file=metadata_file,
+            fields=["breakup", "formation"],
+            bin_widths={"breakup": 0.04, "formation": 0.04},
+            U_mean=U_mean,
+            L=L,
+            d_p=d_p,
+            filter_t_min=-1
+        )
+    )
+
+    pdf_stats_out = myio.output.prepare_dict_for_h5save(pdf_stats)  # type: ignore
+    myio.output.save_to_h5(out_dir / "floc_breakup_formation_advanced_filtered_pdf.h5", pdf_stats_out)
+    myio.lwidmer.save_floc_breakup_formation_pdf(out_dir, "breakup", pdf_stats, False, f"floc_breakup_advanced_filtered_pdf.csv")
+    myio.lwidmer.save_floc_breakup_formation_pdf(out_dir, "formation", pdf_stats, False, f"floc_formation_advanced_filtered_pdf.csv")
+
 
 def main():
     data_names: list[str] = [

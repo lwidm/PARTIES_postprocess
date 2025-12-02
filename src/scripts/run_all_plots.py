@@ -796,7 +796,7 @@ def floc_timescale(
 
         _, s_formation_estimate = plt_series.family_tree_breakup_formation_pdf(
             csv_dir=csv_dir / "floc_timescale",
-            label=f"$formation: t_{{floc,min}} = $ poisseulle estimate",
+            label=f"$t_{{floc,min}} = $ poisseulle estimate",
             colour="k",
             marker="None",
             linestyle="-",
@@ -807,7 +807,7 @@ def floc_timescale(
         )
         _, s_breakup_estimate = plt_series.family_tree_breakup_formation_pdf(
             csv_dir=csv_dir / "floc_timescale",
-            label=f"$breakup: t_{{floc,min}} = $ poisseulle estimate",
+            label=f"$t_{{floc,min}} = $ poisseulle estimate",
             colour="k",
             marker="None",
             linestyle="--",
@@ -819,6 +819,32 @@ def floc_timescale(
 
         s_list[i].append(s_breakup_estimate)
         s_list[i].append(s_formation_estimate)
+
+        _, s_formation_advanced_estimate = plt_series.family_tree_breakup_formation_pdf(
+            csv_dir=csv_dir,
+            label=f"advanced filter",
+            colour="k",
+            marker="None",
+            linestyle=":",
+            type="formation",
+            filtered_t_min=True,
+            name=f"floc_formation_advanced_filtered_pdf.csv",
+            show_label=True,
+        )
+        _, s_breakup_advanced_estimate = plt_series.family_tree_breakup_formation_pdf(
+            csv_dir=csv_dir,
+            label=f"advanced filter",
+            colour="k",
+            marker="None",
+            linestyle="-.",
+            type="breakup",
+            filtered_t_min=True,
+            name=f"floc_breakup_advanced_filtered_pdf.csv",
+            show_label=True,
+        )
+
+        s_list[i].append(s_breakup_advanced_estimate)
+        s_list[i].append(s_formation_advanced_estimate)
 
     for i, csv_dir in enumerate(csv_dirs):
         plt_templ.floc_timescale(
@@ -840,7 +866,7 @@ def create_colorbar_functions(
         fig = ax.get_figure()
         width = 0.3 * fraction  # 0.3 is base width at top
         left = 0.85 - width  # Center in right half
-        cax = fig.add_axes([left, 0.75, width, 0.03])  # type: ignore
+        cax = fig.add_axes([left, 0.7, width, 0.03])  # type: ignore
         effective_max = max_t / (1 - min_val)
         norm = Normalize(vmin=-min_val*effective_max, vmax=effective_max)
         sm = ScalarMappable(norm=norm, cmap=cmap_formation)
@@ -854,7 +880,7 @@ def create_colorbar_functions(
         fig = ax.get_figure()
         width = 0.3 * fraction
         left = 0.85 - width
-        cax = fig.add_axes([left, 0.65, width, 0.03])  # Below formation # type: ignore
+        cax = fig.add_axes([left, 0.62, width, 0.03])  # Below formation # type: ignore
         effective_max = max_t / (1 - min_val)
         norm = Normalize(vmin=-min_val*effective_max, vmax=effective_max)
         sm = ScalarMappable(norm=norm, cmap=cmap_breakup)

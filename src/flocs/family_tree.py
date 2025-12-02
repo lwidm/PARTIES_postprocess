@@ -129,6 +129,108 @@ class AccessFlocFormationLocation(AccessorWithMass):
             )
 
 
+class AccessFlocBreakupLocationAdvanced(AccessorWithMass):
+    name_: str = "AccessFlocBreakupLocationAdvanced"
+    t_steady_: float
+    slope_: float
+    intersect_: float
+
+    def __init__(self, t_steady: float, slope: float, intersect: float) -> None:
+        self.t_steady_ = t_steady
+        self.slope_ = slope
+        self.intersect_ = intersect
+
+    def __call__(
+        self, f: h5py.File | dict, mask: np.ndarray | None
+    ) -> tuple[np.ndarray, np.ndarray]:
+        if isinstance(f, dict):
+            y_breakup: list = []
+            mass: list = []
+            family_tree_dict: FamilyTreeType = f
+            for floc_id, floc_record in tqdm(
+                family_tree_dict.items(),
+                desc=f"Collecting floc breakup data",
+                total=len(family_tree_dict),
+                unit="Flocs",
+            ):
+                if (
+                    len(floc_record["children"]) > 1
+                    and floc_record["start_time"] >= self.t_steady_
+                ):
+                    floc_lifetime: float = (
+                        floc_record["end_time"] - floc_record["start_time"]
+                    )
+                    mean_floc_location: float = (
+                        floc_record["y_start"] + floc_record["y_end"]
+                    ) / 2
+                    mean_floc_location = 1 - abs(1 - mean_floc_location)
+                    if (
+                        mean_floc_location * self.slope_ + self.intersect_
+                        < floc_lifetime
+                    ):
+                        y_breakup.append(floc_record["y_end"])
+                        mass.append(floc_record["size"])
+
+            y_breakup_arr: np.ndarray = np.squeeze(np.asarray(y_breakup))
+            mass_arr: np.ndarray = np.squeeze(np.asarray(mass))
+            return y_breakup_arr, mass_arr
+        else:
+            raise ValueError(
+                f"must pass a family tree dict into {self.name_}, not a h5fp.File object"
+            )
+
+
+class AccessFlocFormationLocationAdvanced(AccessorWithMass):
+    name_: str = "AccessFlocFormationLocationAdvanced"
+    t_steady_: float
+    slope_: float
+    intersect_: float
+
+    def __init__(self, t_steady: float, slope: float, intersect: float) -> None:
+        self.t_steady_ = t_steady
+        self.slope_ = slope
+        self.intersect_ = intersect
+
+    def __call__(
+        self, f: h5py.File | dict, mask: np.ndarray | None
+    ) -> tuple[np.ndarray, np.ndarray]:
+        if isinstance(f, dict):
+            y_formation: list = []
+            mass: list = []
+            family_tree_dict: FamilyTreeType = f
+            for floc_id, floc_record in tqdm(
+                family_tree_dict.items(),
+                desc=f"Collecting floc breakup data",
+                total=len(family_tree_dict),
+                unit="Flocs",
+            ):
+                if (
+                    len(floc_record["parents"]) > 1
+                    and floc_record["start_time"] >= self.t_steady_
+                ):
+                    floc_lifetime: float = (
+                        floc_record["end_time"] - floc_record["start_time"]
+                    )
+                    mean_floc_location: float = (
+                        floc_record["y_start"] + floc_record["y_end"]
+                    ) / 2
+                    mean_floc_location = 1 - abs(1 - mean_floc_location)
+                    if (
+                        mean_floc_location * self.slope_ + self.intersect_
+                        < floc_lifetime
+                    ):
+                        y_formation.append(floc_record["y_start"])
+                        mass.append(floc_record["size"])
+
+            y_formation_arr: np.ndarray = np.squeeze(np.asarray(y_formation))
+            mass_arr: np.ndarray = np.squeeze(np.asarray(mass))
+            return y_formation_arr, mass_arr
+        else:
+            raise ValueError(
+                f"must pass a family tree dict into {self.name_}, not a h5fp.File object"
+            )
+
+
 def calc_famtree_pdf_steadystate(
     pickle_dir: Path,
     metadata_file: Path,
@@ -157,10 +259,22 @@ def calc_famtree_pdf_steadystate(
         min_floc_lifetime = filter_t_min
     print(f"Used minimum floc lifetime t_min= {min_floc_lifetime}")
 
-    field_accessors = {
-        "breakup": AccessFlocBreakupLocation(t_steady, min_floc_lifetime),
-        "formation": AccessFlocFormationLocation(t_steady, min_floc_lifetime),
-    }
+    field_accessors: dict
+
+    # slope = 22.752  # max
+    # intersect = 1.013
+    slope = 7.913  # 3 sigma
+    intersect = 0.025
+    if min_floc_lifetime < 0:
+        field_accessors = {
+            "breakup": AccessFlocBreakupLocationAdvanced(t_steady, slope, intersect),
+            "formation": AccessFlocFormationLocationAdvanced(t_steady, slope, intersect),
+        }
+    else:
+        field_accessors = {
+            "breakup": AccessFlocBreakupLocation(t_steady, min_floc_lifetime),
+            "formation": AccessFlocFormationLocation(t_steady, min_floc_lifetime),
+        }
 
     filter_predicate = NoFilterPredicate()
 
@@ -203,7 +317,6 @@ def average_floc_lifetime(
     locations: list = []
     lifetimes: list = []
 
-
     with open(pickle_dir / "family_tree.pkl", "rb") as file:
         f = pickle.load(file)
         family_tree_dict: FamilyTreeType = f
@@ -214,23 +327,31 @@ def average_floc_lifetime(
             unit="Flocs",
         ):
             if (
-                (len(floc_record["children"]) > 1 or len(floc_record["parents"]) > 1)
-                and floc_record["start_time"] >= t_steady
-            ):
-                locations.append((floc_record["y_start"] + floc_record["y_end"])/2)
+                len(floc_record["children"]) > 1 or len(floc_record["parents"]) > 1
+            ) and floc_record["start_time"] >= t_steady:
+                locations.append((floc_record["y_start"] + floc_record["y_end"]) / 2)
                 lifetimes.append(floc_record["end_time"] - floc_record["start_time"])
 
     locations_arr = np.squeeze(np.asarray(locations))
     lifetimes_arr = np.squeeze(np.asarray(lifetimes))
 
-
     edges, centers = get_hist_bins([locations_arr], bin_width)
 
-    means, _, _ = binned_statistic(locations_arr, lifetimes_arr, statistic="mean", bins=edges)
-    means_y, _, _ = binned_statistic(locations_arr, locations_arr, statistic="mean", bins=edges)
-    medians, _, _ = binned_statistic(locations_arr, lifetimes_arr, statistic="median", bins=edges)
-    stds, _, _ = binned_statistic(locations_arr, lifetimes_arr, statistic="std", bins=edges)
-    maxs, _, _ = binned_statistic(locations_arr, lifetimes_arr, statistic="max", bins=edges)
+    means, _, _ = binned_statistic(
+        locations_arr, lifetimes_arr, statistic="mean", bins=edges
+    )
+    means_y, _, _ = binned_statistic(
+        locations_arr, locations_arr, statistic="mean", bins=edges
+    )
+    medians, _, _ = binned_statistic(
+        locations_arr, lifetimes_arr, statistic="median", bins=edges
+    )
+    stds, _, _ = binned_statistic(
+        locations_arr, lifetimes_arr, statistic="std", bins=edges
+    )
+    maxs, _, _ = binned_statistic(
+        locations_arr, lifetimes_arr, statistic="max", bins=edges
+    )
 
     results: dict[str, np.ndarray] = {
         "y_mean": means_y,
