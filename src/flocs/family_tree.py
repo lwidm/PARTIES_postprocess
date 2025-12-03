@@ -7,6 +7,7 @@ import pickle
 from scipy.stats import binned_statistic
 
 from src.myio import lwidmer, metadata
+from src import myio
 
 from src.statistics import (
     Accessor,
@@ -268,7 +269,9 @@ def calc_famtree_pdf_steadystate(
     if min_floc_lifetime < 0:
         field_accessors = {
             "breakup": AccessFlocBreakupLocationAdvanced(t_steady, slope, intersect),
-            "formation": AccessFlocFormationLocationAdvanced(t_steady, slope, intersect),
+            "formation": AccessFlocFormationLocationAdvanced(
+                t_steady, slope, intersect
+            ),
         }
     else:
         field_accessors = {
@@ -363,3 +366,255 @@ def average_floc_lifetime(
     }
 
     return results
+
+
+def _get_bin_size(
+    size: float, size_list_centers: np.ndarray, size_list_edges: np.ndarray
+) -> tuple[int, float]:
+    idx: int = int(np.searchsorted(size_list_edges, size) - 1)
+    idx = int(np.clip(idx, 0, len(size_list_centers) - 1))
+    size_binned: float = float(size_list_centers[idx])
+    return idx, size_binned
+
+
+def _get_bin_size_floc_record(
+    floc_record,
+    size_type: Literal["n_p", "D_f", "D_g"],
+    size_list_centers: np.ndarray,
+    size_list_edges: np.ndarray,
+) -> tuple[int, float]:
+    size: float
+    match size_type:
+        case "n_p":
+            size = float(floc_record["size"])
+        case "D_f":
+            raise NotImplementedError(
+                "Number Density evolution parameters only works for n_p"
+            )
+        case "D_g":
+            raise NotImplementedError(
+                "Number Density evolution parameters only works for n_p"
+            )
+    return _get_bin_size(size, size_list_centers, size_list_edges)
+
+
+def _get_bin_size_floc_file(
+    f: h5py.File | h5py.Group,
+    size_type: Literal["n_p", "D_f", "D_g"],
+    size_list_centers: np.ndarray,
+    size_list_edges: np.ndarray,
+) -> tuple[list[int], list[float]]:
+    size_arr: np.ndarray
+    match size_type:
+        case "n_p":
+            size_arr = f["n_p"][:]  # type: ignore
+        case "D_f":
+            size_arr = f["D_f"][:]  # type: ignore
+        case "D_g":
+            size_arr = f["D_g"][:]  # type: ignore
+    bin_idx_list: list[int] = []
+    binned_size_list: list[float] = []
+    for i in range(len(size_arr)):
+        idx, binned_size = _get_bin_size(
+            size_arr[i], size_list_centers, size_list_edges
+        )
+        bin_idx_list.append(idx)
+        binned_size_list.append(binned_size)
+
+    return bin_idx_list, binned_size_list
+
+
+def compute_number_density_evolutions_params(
+    pickle_dir: Path,
+    metadata_file: Path,
+    data_dir: Path,
+    trn: bool,
+    size_type: Literal["n_p", "D_f", "D_g"],
+    bin_width: float,
+    U_mean: float,
+    L: float,
+    d_p: float,
+) -> dict[str, dict]:
+
+    metadata_dict: dict[str, dict[str, int | float | str]] = metadata.read_metadata(
+        metadata_file
+    )
+    xmin: float = float(metadata_dict["Domain"]["xmin"])
+    xmax: float = float(metadata_dict["Domain"]["xmax"])
+    ymin: float = float(metadata_dict["Domain"]["ymin"])
+    ymax: float = float(metadata_dict["Domain"]["ymax"])
+    zmin: float = float(metadata_dict["Domain"]["zmin"])
+    zmax: float = float(metadata_dict["Domain"]["zmax"])
+    t_steady: float = float(metadata_dict["Time"]["t_steady"])
+    t_end: float = float(metadata_dict["Time"]["t_end"])
+    delta_t: float = t_end - t_steady
+
+    V: float = (xmax - xmin) * (ymax - ymin) * (zmax - zmin)
+
+    poisseulle_u = lambda y: 3 / 2 * U_mean * (1 - ((y - L) / L) ** 2)
+    poisseulle_du_dy = lambda y: -3 * U_mean * (y - L) / L**2
+    max_poisseulle_du_dy = 3 * U_mean / L
+
+    min_floc_lifetime = 2 * d_p / (d_p * max_poisseulle_du_dy)
+    min_floc_lifetime *= 4
+    min_floc_lifetime *= 0
+
+    C_count: dict[tuple[float, float], int]
+    F_count: dict[float, int]
+    nu_count: dict[float, int]
+    num_fragmentations: dict[float, int]
+    p_count: dict[tuple[float, float], int]
+
+    size_list_centers: np.ndarray
+    size_list_edges: np.ndarray
+
+    with open(pickle_dir / "family_tree.pkl", "rb") as file:
+        fam_tree: FamilyTreeType = pickle.load(file)
+
+        size_max: float = 0.0
+        size_min: float = np.inf
+        for floc_record in fam_tree.values():
+            match size_type:
+                case "n_p":
+                    if size_max < floc_record["size"]:
+                        size_max = floc_record["size"]
+                    if size_min > floc_record["size"]:
+                        size_min = floc_record["size"]
+                case "D_f":
+                    raise NotImplementedError(
+                        "Number Density evolution parameters only works for n_p"
+                    )
+                case "D_g":
+                    raise NotImplementedError(
+                        "Number Density evolution parameters only works for n_p"
+                    )
+
+        num_bins: int = int((size_max - size_min) / bin_width)
+        bin_width_eff: float = (size_max - size_min) / num_bins
+        size_list_centers = np.linspace(size_min, size_max, num_bins + 1)
+        size_list_edges = np.linspace(
+            size_min - bin_width_eff / 2, size_max + bin_width_eff / 2, num_bins + 2
+        )
+
+        C_count = {(i, j): 0 for i in size_list_centers for j in size_list_centers}
+        F_count = {i: 0 for i in size_list_centers}
+        nu_count = {i: 0 for i in size_list_centers}
+        num_fragmentations = {i: 0 for i in size_list_centers}
+        p_count = {(i, j): 0 for i in size_list_centers for j in size_list_centers}
+
+        for floc_record in tqdm(
+            fam_tree.values(),
+            desc=f"Collecting floc data for K",
+            total=len(fam_tree),
+            unit=" floc_record",
+        ):
+            if (
+                len(floc_record["parents"]) == 2
+                and floc_record["start_time"] >= t_steady
+                and floc_record["end_time"] - floc_record["start_time"]
+                >= min_floc_lifetime
+            ):
+                _, parent_bin_size_1 = _get_bin_size(
+                    floc_record["parents_sizes"][0], size_list_centers, size_list_edges
+                )
+                _, parent_bin_size_2 = _get_bin_size(
+                    floc_record["parents_sizes"][1], size_list_centers, size_list_edges
+                )
+
+                C_count[(parent_bin_size_1, parent_bin_size_2)] += 1
+                C_count[(parent_bin_size_2, parent_bin_size_1)] += 1
+
+        for floc_record in tqdm(
+            fam_tree.values(),
+            desc=f"Collecting floc data for F, nu and p",
+            total=len(fam_tree),
+            unit=" floc_record",
+        ):
+            if (
+                len(floc_record["children"]) == 2
+                and floc_record["start_time"] >= t_steady
+                and floc_record["end_time"] - floc_record["start_time"]
+                >= min_floc_lifetime
+            ):
+                size: float = floc_record["size"]
+                size_bin_index: np.integer = np.searchsorted(size_list_edges, size) - 1
+                size_bin: float = size_list_centers[size_bin_index]
+                F_count[size_bin] += 1
+
+                _, child_bin_size_1 = _get_bin_size(
+                    floc_record["children_sizes"][0], size_list_centers, size_list_edges
+                )
+                _, child_bin_size_2 = _get_bin_size(
+                    floc_record["children_sizes"][1], size_list_centers, size_list_edges
+                )
+
+                p_count[(child_bin_size_1, size_bin)] += 1
+                p_count[(child_bin_size_2, size_bin)] += 1
+
+                num_fragmentations[size_bin] += 1
+                nu_count[size_bin] += 2
+
+    floc_files: list[Path] = myio.utils.get_steadystate_floc_files(
+        data_dir / "flocs", metadata_file, trn
+    )
+
+    concentration_count_files: list[dict[float, float]] = []
+
+    for i, floc_file in tqdm(
+        enumerate(floc_files),
+        desc=f"Computing floc size concentrations",
+        total=len(floc_files),
+        unit=" floc files",
+    ):
+        with h5py.File(str(floc_file), "r") as f:
+            concentration_count_files.append({c: np.nan for c in size_list_centers})
+            _, binned_size_arr = _get_bin_size_floc_file(
+                f, size_type, size_list_centers, size_list_edges
+            )
+            num_particles: int = len(binned_size_arr)
+            for binned_size in binned_size_arr:
+                if np.isnan(concentration_count_files[i][binned_size]):
+                    concentration_count_files[i][binned_size] = 1 / num_particles
+                concentration_count_files[i][binned_size] += 1 / num_particles
+
+    c: dict[float, float] = {c: np.nan for c in size_list_centers}
+    for center in size_list_centers:
+        c[center] = float(
+            np.nanmean(
+                np.asarray(
+                    [
+                        concentration_count_files[i][center]
+                        for i in range(len(floc_files))
+                    ]
+                )
+            )
+            / V
+        )
+
+    K: dict[tuple[float, float], float] = {
+        (i, j): float(C_count[(i, j)]) / (c[i] * c[j] * V * delta_t)
+        for i in size_list_centers
+        for j in size_list_centers
+    }
+    F: dict[float, float] = {i: float(F_count[i]) / delta_t for i in size_list_centers}
+    nu: dict[float, float] = {
+        i: (
+            float(nu_count[i]) / float(num_fragmentations[i])
+            if num_fragmentations[i] != 0
+            else np.nan
+        )
+        for i in size_list_centers
+    }
+    p: dict[tuple[float, float], float] = {}
+    p_sums: dict[float, float] = {j: 0.0 for j in size_list_centers}
+    for i in size_list_centers:
+        for j in size_list_centers:
+            p_sums[j] += float(p_count[i, j])
+    for i in size_list_centers:
+        for j in size_list_centers:
+            if p_sums[j] == 0:
+                p[(i, j)] = np.nan
+            else:
+                p[(i, j)] = float(p_count[(i, j)]) / p_sums[j] / bin_width_eff
+
+    return {"K": K, "F": F, "nu": nu, "p": p}

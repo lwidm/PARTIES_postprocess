@@ -6,7 +6,9 @@ import h5py
 from scipy import stats
 
 import numpy as np
+import pickle
 
+from matplotlib.colors import Colormap
 from src.theory import law_of_the_wall as low
 from src.myio import output, utils, lwidmer
 from src.plotting.tools import (
@@ -1369,3 +1371,95 @@ def noncohesive_floc_lifetime(
     )
 
     return s_max, s_std, s_mean, s_median, s_max_fit, s_model_fit
+
+def coagulation_kernel(
+    pickle_dir: Path,
+    label: Optional[str],
+    cmap: Colormap,
+) -> PlotSeries:
+
+    with open(pickle_dir / "number_density_evolution_params.pkl", "rb") as file:
+        results: dict[str, dict] = pickle.load(file)
+
+    K: dict[tuple[float, float], float] = results["K"]
+    x: set[float] = set()
+    for key in K:
+        if not key[0] in x:
+            x.add(key[0])
+        if not key[1] in x:
+            x.add(key[1])
+    x_arr: np.ndarray = np.asarray(sorted(list(x)))
+    X, Y = np.meshgrid(x_arr, x_arr)
+    C: np.ndarray = np.zeros_like(X)
+
+
+    for i, x1 in enumerate(sorted(x)):
+        for j, x2 in enumerate(sorted(x)):
+            C[i, j] = K[(x1, x2)]
+
+
+    s: PlotSeries = PlotSeries(
+        data={
+            "X": X,
+            "Y": Y,
+            "C": C,
+        },
+        x_key="x",
+        y_key="y",
+        plot_method="pcolormesh",
+        kwargs={
+            "label": label,
+            "cmap": cmap,
+            # "vmin": -abs_max,
+            # "vmax": abs_max,
+            "edgecolors": None,
+        },
+    )
+
+    return s
+
+def fragment_size_distribution(
+    pickle_dir: Path,
+    label: Optional[str],
+    cmap: Colormap,
+) -> PlotSeries:
+
+    with open(pickle_dir / "number_density_evolution_params.pkl", "rb") as file:
+        results: dict[str, dict] = pickle.load(file)
+
+    p: dict[tuple[float, float], float] = results["p"]
+    x: set[float] = set()
+    for key in p:
+        if not key[0] in x:
+            x.add(key[0])
+        if not key[1] in x:
+            x.add(key[1])
+    x_arr: np.ndarray = np.asarray(sorted(list(x)))
+    X, Y = np.meshgrid(x_arr, x_arr)
+    C: np.ndarray = np.zeros_like(X)
+
+
+    for i, x1 in enumerate(sorted(x)):
+        for j, x2 in enumerate(sorted(x)):
+            C[i, j] = p[(x1, x2)]
+
+
+    s: PlotSeries = PlotSeries(
+        data={
+            "X": X,
+            "Y": Y,
+            "C": C,
+        },
+        x_key="x",
+        y_key="y",
+        plot_method="pcolormesh",
+        kwargs={
+            "label": label,
+            "cmap": cmap,
+            # "vmin": -abs_max,
+            # "vmax": abs_max,
+            "edgecolors": None,
+        },
+    )
+
+    return s

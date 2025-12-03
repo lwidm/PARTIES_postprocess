@@ -12,6 +12,7 @@ from src.plotting.tools import (
     _plot_one,
     update_plot_params,
     format_plot_axes,
+    my_save_fig,
 )
 
 
@@ -146,8 +147,7 @@ def normal_stress_wall(
     name: str = "wall_normal_stress"
     if use_marker:
         name: str = "wall_normal_stress_marker"
-    generic_plot(
-        output_dir / name,
+    ax, fig, _= generic_plot(
         list(series_list),
         legend=True,
         xlabel=r"$y^+$",
@@ -158,6 +158,8 @@ def normal_stress_wall(
         xlim=xlim,
         ylim=ylim,
     )
+    my_save_fig(output_dir/name, fig)
+
     return
 
 
@@ -168,8 +170,7 @@ def floc_count_evolution(
     ylabel: str = r"\#Flocs"
     if normalised:
         ylabel = r"(\#Flocs) / (\#Particles)"
-    generic_plot(
-        out_path,
+    ax, fig, _ = generic_plot(
         list(series_list),
         legend=True,
         xlabel=r"Dimensionless time, $\tau = L/U$ [-]",
@@ -177,14 +178,13 @@ def floc_count_evolution(
         figsize=(6.5, 5.5),
         legend_loc="lower right",
         legend_bbox=(1.0, 0.80),
-        dpi=150,
     )
+    my_save_fig(out_path, fig, dpi=150)
 
 
 def fluid_Ekin_evolution(output_dir: Path, series_list) -> None:
     out_path = output_dir / "E_kin_evolution"
-    generic_plot(
-        out_path,
+    ax, fig, _ = generic_plot(
         list(series_list),
         legend=True,
         xlabel=r"Dimensionless time, $\tau = L/U$ [-]",
@@ -192,8 +192,8 @@ def fluid_Ekin_evolution(output_dir: Path, series_list) -> None:
         figsize=(6.5, 5.5),
         legend_loc="lower right",
         legend_bbox=(1.0, 0.80),
-        dpi=150,
     )
+    my_save_fig(out_path, fig, dpi=150)
 
 
 def _pdf(
@@ -209,8 +209,7 @@ def _pdf(
     additional_objects: Optional[Sequence[Callable[[Axes], Any]]] = None,
 ) -> None:
     out_path = output_dir / f"{name}"
-    generic_plot(
-        out_path,
+    ax, fig, _ = generic_plot(
         list(series_list),
         legend=True,
         xlabel=xlabel,
@@ -220,9 +219,9 @@ def _pdf(
         figsize=(6.5, 5.5),
         legend_loc="best",
         # legend_bbox=(1.0, 0.80),
-        dpi=150,
         additional_objects=additional_objects,
     )
+    my_save_fig(out_path, fig, dpi=150)
 
 
 def n_p_pdf(output_dir: Path, series_list: list[PlotSeries]) -> None:
@@ -316,8 +315,7 @@ def _avg_floc_dir(
     if inner_units:
         xlabel: str = r"$y^+$"
     out_path = output_dir / f"{name}"
-    generic_plot(
-        out_path,
+    ax, fig, _ = generic_plot(
         list(series_list),
         legend=True,
         xlabel=xlabel,
@@ -325,8 +323,8 @@ def _avg_floc_dir(
         figsize=(6.5, 5.5),
         legend_loc="best",
         # legend_bbox=(1.0, 0.80),
-        dpi=150,
     )
+    my_save_fig(out_path, fig, dpi=150)
 
 
 def avg_D_f(output_dir: Path, series_list: List[PlotSeries], inner_units: bool):
@@ -381,16 +379,15 @@ def phi_eulerian(
     if normalised:
         ylabel: str = r"$\langle \phi / \phi_0 \rangle$ [-]"
 
-    generic_plot(
-        out_path,
+    ax, fig, _ = generic_plot(
         list(series_list),
         legend=True,
         xlabel=xlabel,
         ylabel=ylabel,
         figsize=(6.5, 5.5),
         legend_loc="lower center",
-        dpi=150,
     )
+    my_save_fig(out_path, fig, dpi=150)
 
 
 # -------------------- Lagrangian data pdf --------------------
@@ -450,9 +447,9 @@ def family_tree_breakup_formation_pdf(
     ],  # 1 just filtered, 2 superimpose filterd unfiltered, 3 just unfiltred
 ) -> None:
     name = f"family_tree_breakup_formation_pdf"
-    if filtered_unfiltered==2:
+    if filtered_unfiltered == 2:
         name += "_superimposed"
-    if filtered_unfiltered==3:
+    if filtered_unfiltered == 3:
         name += "_unfiltered"
     if label is not None:
         name += f"_{label}"
@@ -468,11 +465,12 @@ def family_tree_breakup_formation_pdf(
         ymax=None,
     )
 
+
 def floc_timescale(
     output_dir: Path,
     series_list: list[PlotSeries],
     label: str,
-    additional_objects: Optional[Sequence[Callable[[Axes], Any]]] = None
+    additional_objects: Optional[Sequence[Callable[[Axes], Any]]] = None,
 ) -> None:
     name = f"floc_timescale_{label}"
     _pdf(
@@ -488,11 +486,12 @@ def floc_timescale(
         additional_objects=additional_objects,
     )
 
+
 def noncohesive_floc_lifetime(
     output_dir: Path,
     series_list: list[PlotSeries],
     label: str,
-    additional_objects: Optional[Sequence[Callable[[Axes], Any]]] = None
+    additional_objects: Optional[Sequence[Callable[[Axes], Any]]] = None,
 ) -> None:
     name = f"noncohesive_floc_lifetime_{label}"
     _pdf(
@@ -507,3 +506,46 @@ def noncohesive_floc_lifetime(
         ymax=None,
         additional_objects=additional_objects,
     )
+
+
+def coagulation_kernel(
+    output_dir: Path,
+    series: PlotSeries,
+) -> None:
+    out_path: Path = output_dir / "coagulation_kernel"
+    ax, fig, mesh = generic_plot(
+        [series],
+        legend=True,
+        xlabel="$x \\quad (n_p)$",
+        ylabel="$y \\quad (n_p)$",
+        xlim=(1, 200),
+        ylim=(1, 200),
+        figsize=(6.5, 5.5),
+        legend_loc="best",
+        # legend_bbox=(1.0, 0.80),
+    )
+
+    cbar = plt.colorbar(mesh[0], ax=ax, orientation="horizontal")
+    ax.set_aspect('equal', adjustable='box')
+    my_save_fig(out_path, fig, dpi=150)
+
+def fragment_size_distribution(
+    output_dir: Path,
+    series: PlotSeries,
+) -> None:
+    out_path: Path = output_dir / "fragment_size_distribution"
+    ax, fig, mesh = generic_plot(
+        [series],
+        legend=True,
+        xlabel="$x \\quad (n_p)$",
+        ylabel="$y \\quad (n_p)$",
+        xlim=(1, 200),
+        ylim=(1, 200),
+        figsize=(6.5, 5.5),
+        legend_loc="best",
+        # legend_bbox=(1.0, 0.80),
+    )
+
+    cbar = plt.colorbar(mesh[0], ax=ax, orientation="horizontal")
+    ax.set_aspect('equal', adjustable='box')
+    my_save_fig(out_path, fig, dpi=150)

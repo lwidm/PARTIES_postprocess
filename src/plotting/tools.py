@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional, Sequence, Tuple, Union, Literal, Callabl
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 from matplotlib import colors as mcolors
 import colorsys
 
@@ -118,8 +119,9 @@ def _adjust_color(hexcolor, lighter=0.0, sat_mul=1.0):
     return (r2, g2, b2)
 
 
-def _plot_one(ax: Axes, series: PlotSeries) -> None:
+def _plot_one(ax: Axes, series: PlotSeries)  -> Any:
     method: PlotMethod = series.plot_method or "plot"
+
     if method in (
         "plot",
         "semilogx",
@@ -131,6 +133,8 @@ def _plot_one(ax: Axes, series: PlotSeries) -> None:
         "err_semilogy",
         "err_loglog",
     ):
+        other: Any = None
+
         x, y = _extract_xy(series)
         ax_values_tuple: Tuple
         if x is None:
@@ -146,28 +150,30 @@ def _plot_one(ax: Axes, series: PlotSeries) -> None:
         _add_default_kwargs(["kLineWidth", "kMarkerSize"], plot_kwargs)
 
         if method == "plot":
-            ax.plot(*(ax_values_tuple), **plot_kwargs)
+            other = ax.plot(*(ax_values_tuple), **plot_kwargs)
         elif method == "semilogx":
-            ax.semilogx(*(ax_values_tuple), **plot_kwargs)
+            other = ax.semilogx(*(ax_values_tuple), **plot_kwargs)
         elif method == "semilogy":
-            ax.semilogy(*(ax_values_tuple), **plot_kwargs)
+            other = ax.semilogy(*(ax_values_tuple), **plot_kwargs)
         elif method == "loglog":
-            ax.loglog(x, y, **plot_kwargs)
+            other = ax.loglog(x, y, **plot_kwargs)
         elif method in ["err_semilogx", "err_semilogy", "err_plot", "err_loglog"]:
-            _add_default_kwargs(["kELineWidth", "kECapSize", "kECapThick", "kBarsAbove"], plot_kwargs)
+            _add_default_kwargs(
+                ["kELineWidth", "kECapSize", "kECapThick", "kBarsAbove"], plot_kwargs
+            )
             if "x_err" in series.data and "y_err" in series.data:
-                ax.errorbar(
+                other = ax.errorbar(
                     *(ax_values_tuple),
                     xerr=series.data["x_err"],
                     yerr=series.data["y_err"],
                     **plot_kwargs
                 )
             elif "x_err" in series.data:
-                ax.errorbar(
+                other = ax.errorbar(
                     *(ax_values_tuple), xerr=series.data["x_err"], **plot_kwargs
                 )
             elif "y_err" in series.data:
-                ax.errorbar(
+                other = ax.errorbar(
                     *(ax_values_tuple), yerr=series.data["y_err"], **plot_kwargs
                 )
             else:
@@ -187,7 +193,7 @@ def _plot_one(ax: Axes, series: PlotSeries) -> None:
                 raise ValueError(
                     "Failed to extract either x or y when trying to create scatter plot"
                 )
-            ax.scatter(x, y, **plot_kwargs)
+            other = ax.scatter(x, y, **plot_kwargs)
 
     elif method == "bar":
         plot_kwargs: dict = series.kwargs
@@ -219,35 +225,43 @@ def _plot_one(ax: Axes, series: PlotSeries) -> None:
                 "zorder": 2,
             }
         )
-        ax.bar(edges[:-1], counts, width=widths, **plot_kwargs)
+        other = ax.bar(edges[:-1], counts, width=widths, **plot_kwargs)
     elif method == "pcolormesh":
         plot_kwargs = series.kwargs
         data = series.data
         X = data.get("X")
         Y = data.get("Y")
-        C = np.asarray(data.get("C") or data.get("u"))
+        if "C" in data:
+            C = data.get("C")
+        elif "u" in data:
+            C = data.get("u")
+        else:
+            raise ValueError(
+                    "Failed to extract either C or u when trying to create pcolormesh plot"
+                )
         # fallback: try to construct mesh from x and y
         if X is None or Y is None:
             x, y = _extract_xy(series)
             if x is None or y is None:
                 raise ValueError(
-                    "Failed to extract either X, Y, x or y when trying to create scatter plot"
+                    "Failed to extract either X, Y, x or y when trying to create pcolormesh plot"
                 )
             X, Y = np.meshgrid(x, y)
-        ax.pcolormesh(
+        other = ax.pcolormesh(
             X, Y, C, shading=plot_kwargs.pop("shading", "auto"), **plot_kwargs
         )
     elif method == "imshow":
         data = series.data
         C = np.asarray(data.get("C") or data.get("u"))
         plot_kwargs = series.kwargs
-        ax.imshow(C, **plot_kwargs)
+        other = ax.imshow(C, **plot_kwargs)
     else:
         raise ValueError("Plot method specified not implemented yet")
 
+    return other
+
 
 def generic_plot(
-    output_path: Path,
     series_list: Sequence[PlotSeries],
     legend: bool,
     figsize: Tuple[float, float] = (6.5, 5.5),
@@ -258,14 +272,14 @@ def generic_plot(
     title: Optional[str] = None,
     legend_loc: Optional[str] = None,
     legend_bbox: Optional[Tuple[float, float]] = None,
-    dpi: int = 300,
-    additional_objects: Optional[Sequence[Callable[[Axes], Any]]] = None
-) -> None:
+    additional_objects: Optional[Sequence[Callable[[Axes], Any]]] = None,
+) -> Tuple[Axes, Figure, list[Any]]:
+    other: Any = [None for _ in range(len(series_list))]
     update_plot_params()
     fig, ax = plt.subplots(figsize=figsize)
 
-    for s in series_list:
-        _plot_one(ax, s)
+    for i, s in enumerate(series_list):
+        other[i] = _plot_one(ax, s)
 
     if additional_objects:
         for obj_func in additional_objects:
@@ -292,6 +306,10 @@ def generic_plot(
 
     ax = format_plot_axes(ax)
 
+    return ax, fig, other
+
+
+def my_save_fig(output_path: Path, fig: Figure, dpi: float = 300):
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(str(output_path) + ".png", dpi=dpi)
-    fig.savefig(str(output_path)+ ".eps", dpi=dpi)
+    fig.savefig(str(output_path) + ".eps", dpi=dpi)

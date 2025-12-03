@@ -868,7 +868,7 @@ def create_colorbar_functions(
         left = 0.85 - width  # Center in right half
         cax = fig.add_axes([left, 0.7, width, 0.03])  # type: ignore
         effective_max = max_t / (1 - min_val)
-        norm = Normalize(vmin=-min_val*effective_max, vmax=effective_max)
+        norm = Normalize(vmin=-min_val * effective_max, vmax=effective_max)
         sm = ScalarMappable(norm=norm, cmap=cmap_formation)
         sm.set_array([])
         sm.set_clim(0, max_t)
@@ -882,7 +882,7 @@ def create_colorbar_functions(
         left = 0.85 - width
         cax = fig.add_axes([left, 0.62, width, 0.03])  # Below formation # type: ignore
         effective_max = max_t / (1 - min_val)
-        norm = Normalize(vmin=-min_val*effective_max, vmax=effective_max)
+        norm = Normalize(vmin=-min_val * effective_max, vmax=effective_max)
         sm = ScalarMappable(norm=norm, cmap=cmap_breakup)
         sm.set_array([])
         sm.set_clim(0, max_t)
@@ -894,6 +894,7 @@ def create_colorbar_functions(
         cbar.set_ticklabels(tick_labels, fontsize=8)
 
     return [add_formation_colorbar, add_breakup_colorbar]
+
 
 def noncohesive_floc_lifetime(plot_dir: Path):
     data_name: str = "phi5p0_noCo"
@@ -907,6 +908,41 @@ def noncohesive_floc_lifetime(plot_dir: Path):
         series_list=s_list,
         label=label,
     )
+
+
+def coagulation_kernel(
+    plot_dir: Path,
+    data_dir: Path,
+    data_names: List[str],
+    labels: List[str],
+):
+
+    cmap: Colormap = plt.get_cmap("Blues")
+    s_list: list[PlotSeries] = []
+    for i, data_name in enumerate(data_names):
+        s_list.append(
+            plt_series.coagulation_kernel(data_dir / data_name, labels[i], cmap)
+        )
+    for i in range(len(data_names)):
+        plt_templ.coagulation_kernel(plot_dir, s_list[i])
+
+
+def fragment_size_distribution(
+    plot_dir: Path,
+    data_dir: Path,
+    data_names: List[str],
+    labels: List[str],
+):
+
+    cmap: Colormap = plt.get_cmap("Blues")
+    s_list: list[PlotSeries] = []
+    for i, data_name in enumerate(data_names):
+        s_list.append(
+            plt_series.fragment_size_distribution(data_dir / data_name, labels[i], cmap)
+        )
+    for i in range(len(data_names)):
+        plt_templ.fragment_size_distribution(plot_dir, s_list[i])
+
 
 def main() -> None:
 
@@ -982,15 +1018,27 @@ def main() -> None:
     #     separate_plots=True,
     #     unfiltered=3,
     # )
-    floc_timescale(
-        plot_dir=plot_dir,
-        data_dir=data_dir,
-        data_names=data_names,
-        labels=labels,
-        cmap_breakup=red_cmap,
-        cmap_formation=blue_cmap,
+    # floc_timescale(
+    #     plot_dir=plot_dir,
+    #     data_dir=data_dir,
+    #     data_names=data_names,
+    #     labels=labels,
+    #     cmap_breakup=red_cmap,
+    #     cmap_formation=blue_cmap,
+    # )
+    # noncohesive_floc_lifetime(plot_dir)
+    coagulation_kernel(
+        plot_dir,
+        data_dir,
+        data_names,
+        labels,
     )
-    noncohesive_floc_lifetime(plot_dir)
+    fragment_size_distribution(
+        plot_dir,
+        data_dir,
+        data_names,
+        labels,
+    )
 
     if not globals.on_anvil:
         plt.show()

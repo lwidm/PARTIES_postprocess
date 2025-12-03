@@ -22,14 +22,20 @@ def _compute_single_pdf(
             U_mean=U_mean,
             L=L,
             d_p=d_p,
-            filter_t_min=None
+            filter_t_min=None,
         )
     )
 
     pdf_stats_out = myio.output.prepare_dict_for_h5save(pdf_stats)  # type: ignore
-    myio.output.save_to_h5(out_dir / "floc_breakup_formation_filtered_pdf.h5", pdf_stats_out)
-    myio.lwidmer.save_floc_breakup_formation_pdf(out_dir, "breakup", pdf_stats, True, None)
-    myio.lwidmer.save_floc_breakup_formation_pdf(out_dir, "formation", pdf_stats, True, None)
+    myio.output.save_to_h5(
+        out_dir / "floc_breakup_formation_filtered_pdf.h5", pdf_stats_out
+    )
+    myio.lwidmer.save_floc_breakup_formation_pdf(
+        out_dir, "breakup", pdf_stats, True, None
+    )
+    myio.lwidmer.save_floc_breakup_formation_pdf(
+        out_dir, "formation", pdf_stats, True, None
+    )
 
     pdf_stats: dict[str, dict[str, np.ndarray | dict[str, np.ndarray]]] = (
         family_tree.calc_famtree_pdf_steadystate(
@@ -40,14 +46,20 @@ def _compute_single_pdf(
             U_mean=U_mean,
             L=L,
             d_p=d_p,
-            filter_t_min=0.0
+            filter_t_min=0.0,
         )
     )
 
     pdf_stats_out = myio.output.prepare_dict_for_h5save(pdf_stats)  # type: ignore
-    myio.output.save_to_h5(out_dir / "floc_breakup_formation_unfiltered_pdf.h5", pdf_stats_out)
-    myio.lwidmer.save_floc_breakup_formation_pdf(out_dir, "breakup", pdf_stats, False, None)
-    myio.lwidmer.save_floc_breakup_formation_pdf(out_dir, "formation", pdf_stats, False, None)
+    myio.output.save_to_h5(
+        out_dir / "floc_breakup_formation_unfiltered_pdf.h5", pdf_stats_out
+    )
+    myio.lwidmer.save_floc_breakup_formation_pdf(
+        out_dir, "breakup", pdf_stats, False, None
+    )
+    myio.lwidmer.save_floc_breakup_formation_pdf(
+        out_dir, "formation", pdf_stats, False, None
+    )
 
     pdf_stats: dict[str, dict[str, np.ndarray | dict[str, np.ndarray]]] = (
         family_tree.calc_famtree_pdf_steadystate(
@@ -58,14 +70,24 @@ def _compute_single_pdf(
             U_mean=U_mean,
             L=L,
             d_p=d_p,
-            filter_t_min=-1
+            filter_t_min=-1,
         )
     )
 
     pdf_stats_out = myio.output.prepare_dict_for_h5save(pdf_stats)  # type: ignore
-    myio.output.save_to_h5(out_dir / "floc_breakup_formation_advanced_filtered_pdf.h5", pdf_stats_out)
-    myio.lwidmer.save_floc_breakup_formation_pdf(out_dir, "breakup", pdf_stats, False, f"floc_breakup_advanced_filtered_pdf.csv")
-    myio.lwidmer.save_floc_breakup_formation_pdf(out_dir, "formation", pdf_stats, False, f"floc_formation_advanced_filtered_pdf.csv")
+    myio.output.save_to_h5(
+        out_dir / "floc_breakup_formation_advanced_filtered_pdf.h5", pdf_stats_out
+    )
+    myio.lwidmer.save_floc_breakup_formation_pdf(
+        out_dir, "breakup", pdf_stats, False, f"floc_breakup_advanced_filtered_pdf.csv"
+    )
+    myio.lwidmer.save_floc_breakup_formation_pdf(
+        out_dir,
+        "formation",
+        pdf_stats,
+        False,
+        f"floc_formation_advanced_filtered_pdf.csv",
+    )
 
 
 def main():
@@ -75,13 +97,32 @@ def main():
         "phi3p0",
         "phi5p0",
     ]
+    trn: list[bool] = [
+        False,
+        False,
+        True,
+        True,
+    ]
     U_mean: list[float] = [1.0 for _ in data_names]
     L: list[float] = [1.0 for _ in data_names]
     d_p: list[float] = [0.03225806 for _ in data_names]
     for i, data_name in enumerate(data_names):
-        _compute_single_pdf(
-            data_name, Path("./data") / data_name, U_mean[i], L[i], d_p[i]
+        data_dir: Path = Path("./data") / data_name
+        out_dir: Path = Path("./data") / data_name
+        _compute_single_pdf(data_name, data_dir, U_mean[i], L[i], d_p[i])
+
+        result: dict[str, dict] = family_tree.compute_number_density_evolutions_params(
+            data_dir,
+            data_dir / "metadata.ini",
+            data_dir,
+            trn[i],
+            "n_p",
+            bin_width=1,
+            U_mean=U_mean[i],
+            L=L[i],
+            d_p=d_p[i],
         )
+        myio.output.save_to_pickle(out_dir / "number_density_evolution_params.pkl", result)
 
 
 if __name__ == "__name__":
