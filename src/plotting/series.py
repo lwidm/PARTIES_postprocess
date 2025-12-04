@@ -1477,8 +1477,8 @@ def breakage_rate(
 
 
     F_arr: np.ndarray = np.zeros(len(F))
-    for i, x_val in enumerate(x_arr):
-        F_arr[i] = F[x_val]
+    for i, x_idx in enumerate(x_idx_list):
+        F_arr[i] = F[x_idx]
 
     s: PlotSeries = PlotSeries(
         data={"x": x_arr, "y": F_arr},

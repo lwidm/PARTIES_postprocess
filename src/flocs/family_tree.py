@@ -539,7 +539,7 @@ def compute_number_density_evolutions_params(
                 size: float = floc_record["size"]
                 parent_bin_idx: int
                 child_bin_idx_1: int
-                child_bin_idx_1: int
+                child_bin_idx_2: int
                 parent_bin_idx, _ = _get_bin_size(
                     size, size_list_centers, size_list_edges
                 )
@@ -575,19 +575,16 @@ def compute_number_density_evolutions_params(
             binned_idx_arr, _ = _get_bin_size_floc_file(
                 f, size_type, size_list_centers, size_list_edges
             )
-            num_particles: int = len(binned_idx_arr)
             for bin_idx in binned_idx_arr:
-                # if np.isnan(concentration_count_files[i][binned_size]):
-                #     concentration_count_files[i][binned_size] = 1 / num_particles
-                concentration_count_files[i][bin_idx] += 1 / num_particles
+                concentration_count_files[i][bin_idx] += 1
 
-    c: dict[int, float] = {c: 0.0 for c in size_list_centers_idx}
+    c: dict[int, float] = {i: 0.0 for i in size_list_centers_idx}
     for bin_idx in size_list_centers_idx:
         for file_idx in range(num_files):
             c[bin_idx] += concentration_count_files[file_idx][bin_idx]
         c[bin_idx] /= num_files * V
 
-    K: dict[tuple[float, float], float] = {}
+    K: dict[tuple[int, int], float] = {}
     for i in size_list_centers_idx:
         for j in size_list_centers_idx:
             if c[i] == 0 or c[j] == 0:
@@ -595,19 +592,19 @@ def compute_number_density_evolutions_params(
                 continue
             K[(i, j)] = float(C_count[(i, j)]) / (c[i] * c[j] * V * delta_t)
 
-    F: dict[float, float] = {}
+    F: dict[int, float] = {}
     for i in size_list_centers_idx:
         if c[i] == 0:
             F[i] = np.nan
             continue
         F[i] = float(F_count[i]) / (c[i] * V * delta_t)
 
-    nu: dict[float, float] = {
+    nu: dict[int, float] = {
         i: (float(nu_count[i]) / float(F_count[i]) if F_count[i] != 0 else np.nan)
         for i in size_list_centers_idx
     }
 
-    p: dict[tuple[float, float], float] = {}
+    p: dict[tuple[int, int], float] = {}
     for i in size_list_centers_idx:
         for j in size_list_centers_idx:
             if F_count[j] == 0:
@@ -618,9 +615,9 @@ def compute_number_density_evolutions_params(
             )
 
     bin_info: dict[str, list[int] | list[float]] = {
-        "center_sizes": size_list_centers_idx,
+        "center_sizes": size_list_centers,
         "center_idxs": size_list_centers_idx,
-        "edge_sizes": size_list_edges_idx,
+        "edge_sizes": size_list_edges,
         "edge_idxs": size_list_edges_idx,
     }
 
