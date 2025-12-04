@@ -147,7 +147,7 @@ def normal_stress_wall(
     name: str = "wall_normal_stress"
     if use_marker:
         name: str = "wall_normal_stress_marker"
-    ax, fig, _= generic_plot(
+    ax, fig, _ = generic_plot(
         list(series_list),
         legend=True,
         xlabel=r"$y^+$",
@@ -158,7 +158,7 @@ def normal_stress_wall(
         xlim=xlim,
         ylim=ylim,
     )
-    my_save_fig(output_dir/name, fig)
+    my_save_fig(output_dir / name, fig)
 
     return
 
@@ -511,8 +511,16 @@ def noncohesive_floc_lifetime(
 def coagulation_kernel(
     output_dir: Path,
     series: PlotSeries,
+    name: str,
+    n_p_max: float,
 ) -> None:
-    out_path: Path = output_dir / "coagulation_kernel"
+    out_path: Path = output_dir / f"coagulation_kernel_{name}"
+
+    K: np.ndarray = series.data["C"]
+    X: np.ndarray = series.data["X"]
+
+    cmax: float = np.nanmax(K[X[:, 0] < n_p_max, X[:, 0] < n_p_max])
+
     ax, fig, mesh = generic_plot(
         [series],
         legend=True,
@@ -525,15 +533,15 @@ def coagulation_kernel(
         # legend_bbox=(1.0, 0.80),
     )
 
+    mesh[0].set_clim(0, cmax)
     cbar = plt.colorbar(mesh[0], ax=ax, orientation="horizontal")
-    ax.set_aspect('equal', adjustable='box')
+    ax.set_aspect("equal", adjustable="box")
+
     my_save_fig(out_path, fig, dpi=150)
 
-def fragment_size_distribution(
-    output_dir: Path,
-    series: PlotSeries,
-) -> None:
-    out_path: Path = output_dir / "fragment_size_distribution"
+
+def fragment_size_distribution(output_dir: Path, series: PlotSeries, name: str) -> None:
+    out_path: Path = output_dir / f"fragment_size_distribution_{name}"
     ax, fig, mesh = generic_plot(
         [series],
         legend=True,
@@ -547,5 +555,37 @@ def fragment_size_distribution(
     )
 
     cbar = plt.colorbar(mesh[0], ax=ax, orientation="horizontal")
-    ax.set_aspect('equal', adjustable='box')
+    ax.set_aspect("equal", adjustable="box")
+    my_save_fig(out_path, fig, dpi=150)
+
+
+def breakage_rate(
+    output_dir: Path, series_list: Sequence[PlotSeries], n_p_max: float
+) -> None:
+    out_path = output_dir / "breakage_rate"
+
+    F_list: list[np.ndarray] = []
+    x_list: list[np.ndarray] = []
+    for s in series_list:
+        F_list.append(s.data["y"])
+        x_list.append(s.data["x"])
+
+    ymax: float = max([np.nanmax(F[x < n_p_max]) for x, F in zip(x_list, F_list)])
+
+    ax, fig, _ = generic_plot(
+        list(series_list),
+        legend=True,
+        xlabel=r"floc size: $x \quad (n_p)$",
+        ylabel="breakage rate: $F(x)$",
+        xlim=(2, n_p_max),
+        ylim=(0, ymax),
+        figsize=(6.5, 5.5),
+        legend_loc="lower right",
+        legend_bbox=(1.0, 0.80),
+    )
+    current_ticks = list(ax.get_xticks())
+    if 1 not in current_ticks:
+        current_ticks.append(2)
+        current_ticks.sort()
+        ax.set_xticks(current_ticks)
     my_save_fig(out_path, fig, dpi=150)

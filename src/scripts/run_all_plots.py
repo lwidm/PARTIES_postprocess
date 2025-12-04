@@ -924,7 +924,7 @@ def coagulation_kernel(
             plt_series.coagulation_kernel(data_dir / data_name, labels[i], cmap)
         )
     for i in range(len(data_names)):
-        plt_templ.coagulation_kernel(plot_dir, s_list[i])
+        plt_templ.coagulation_kernel(plot_dir, s_list[i], data_names[i], n_p_max=300)
 
 
 def fragment_size_distribution(
@@ -941,7 +941,27 @@ def fragment_size_distribution(
             plt_series.fragment_size_distribution(data_dir / data_name, labels[i], cmap)
         )
     for i in range(len(data_names)):
-        plt_templ.fragment_size_distribution(plot_dir, s_list[i])
+        plt_templ.fragment_size_distribution(plot_dir, s_list[i], data_names[i])
+
+
+def breakage_rate(
+    plot_dir: Path,
+    data_dir: Path,
+    data_names: List[str],
+    labels: List[str],
+    colours: List[str | Tuple[float, float, float, float]],
+) -> None:
+    s_list: list[PlotSeries] = []
+    for i, data_name in enumerate(data_names):
+        s_list.append(
+            plt_series.breakage_rate(
+                pickle_dir=data_dir / data_name,
+                colour=colours[i],
+                linestyle="-",
+                label=labels[i],
+            )
+        )
+    plt_templ.breakage_rate(plot_dir, s_list, n_p_max=20)
 
 
 def main() -> None:
@@ -1038,6 +1058,13 @@ def main() -> None:
         data_dir,
         data_names,
         labels,
+    )
+    breakage_rate(
+        plot_dir,
+        data_dir,
+        data_names,
+        labels,
+        colours,
     )
 
     if not globals.on_anvil:

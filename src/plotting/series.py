@@ -1378,24 +1378,61 @@ def coagulation_kernel(
     cmap: Colormap,
 ) -> PlotSeries:
 
+
     with open(pickle_dir / "number_density_evolution_params.pkl", "rb") as file:
         results: dict[str, dict] = pickle.load(file)
 
-    K: dict[tuple[float, float], float] = results["K"]
-    x: set[float] = set()
-    for key in K:
-        if not key[0] in x:
-            x.add(key[0])
-        if not key[1] in x:
-            x.add(key[1])
-    x_arr: np.ndarray = np.asarray(sorted(list(x)))
+    K: dict[tuple[int, int], float] = results["K"]
+    x_list: list[float] = results["bin_info"]["center_sizes"]
+    x_idx_list: list[int] = results["bin_info"]["center_idxs"]
+
+    x_arr: np.ndarray = np.asarray(x_list, dtype=float)
     X, Y = np.meshgrid(x_arr, x_arr)
-    C: np.ndarray = np.zeros_like(X)
+    C: np.ndarray = np.zeros_like(X, dtype=float)
+
+    for i, x1_idx in enumerate(x_idx_list):
+        for j, x2_idx in enumerate(x_idx_list):
+            C[i, j] = K[(x1_idx, x2_idx)]
 
 
-    for i, x1 in enumerate(sorted(x)):
-        for j, x2 in enumerate(sorted(x)):
-            C[i, j] = K[(x1, x2)]
+    s: PlotSeries = PlotSeries(
+        data={
+            "X": X,
+            "Y": Y,
+            "C": C,
+        },
+        x_key="x",
+        y_key="y",
+        plot_method="pcolormesh",
+        kwargs={
+            "label": label,
+            "cmap": cmap,
+            "edgecolors": None,
+        },
+    )
+
+    return s
+
+def fragment_size_distribution(
+    pickle_dir: Path,
+    label: Optional[str],
+    cmap: Colormap,
+) -> PlotSeries:
+
+    with open(pickle_dir / "number_density_evolution_params.pkl", "rb") as file:
+        results: dict[str, dict] = pickle.load(file)
+
+    p: dict[tuple[int, int], float] = results["p"]
+    x_list: list[float] = results["bin_info"]["center_sizes"]
+    x_idx_list: list[int] = results["bin_info"]["center_idxs"]
+
+    x_arr: np.ndarray = np.asarray(x_list, dtype=float)
+    X, Y = np.meshgrid(x_arr, x_arr)
+    C: np.ndarray = np.zeros_like(X, dtype=float)
+
+    for i, x1_idx in enumerate(x_idx_list):
+        for j, x2_idx in enumerate(x_idx_list):
+            C[i, j] = p[(x1_idx, x2_idx)]
 
 
     s: PlotSeries = PlotSeries(
@@ -1418,47 +1455,40 @@ def coagulation_kernel(
 
     return s
 
-def fragment_size_distribution(
+def breakage_rate(
     pickle_dir: Path,
+    colour: str | Tuple[float, float, float, float],
+    linestyle: str,
     label: Optional[str],
-    cmap: Colormap,
 ) -> PlotSeries:
 
     with open(pickle_dir / "number_density_evolution_params.pkl", "rb") as file:
         results: dict[str, dict] = pickle.load(file)
 
-    p: dict[tuple[float, float], float] = results["p"]
-    x: set[float] = set()
-    for key in p:
-        if not key[0] in x:
-            x.add(key[0])
-        if not key[1] in x:
-            x.add(key[1])
-    x_arr: np.ndarray = np.asarray(sorted(list(x)))
-    X, Y = np.meshgrid(x_arr, x_arr)
-    C: np.ndarray = np.zeros_like(X)
+    F: dict[int, float] = results["F"]
+    x: list[float] = results["bin_info"]["center_sizes"]
+    x_idx_list: list[int] = results["bin_info"]["center_idxs"]
+
+    x_arr: np.ndarray = np.asarray(x, dtype=float)
+    F_arr: np.ndarray = np.zeros_like(x_arr, dtype=float)
+
+    for i, x_idx in enumerate(x_idx_list):
+        F_arr[i] = F[x_idx]
 
 
-    for i, x1 in enumerate(sorted(x)):
-        for j, x2 in enumerate(sorted(x)):
-            C[i, j] = p[(x1, x2)]
-
+    F_arr: np.ndarray = np.zeros(len(F))
+    for i, x_val in enumerate(x_arr):
+        F_arr[i] = F[x_val]
 
     s: PlotSeries = PlotSeries(
-        data={
-            "X": X,
-            "Y": Y,
-            "C": C,
-        },
+        data={"x": x_arr, "y": F_arr},
         x_key="x",
         y_key="y",
-        plot_method="pcolormesh",
+        plot_method="plot",
         kwargs={
             "label": label,
-            "cmap": cmap,
-            # "vmin": -abs_max,
-            # "vmax": abs_max,
-            "edgecolors": None,
+            "color": colour,
+            "linestyle": linestyle,
         },
     )
 
