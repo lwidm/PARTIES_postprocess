@@ -522,11 +522,20 @@ def coagulation_kernel(
     xlim: Tuple[float, float] = series_pcolormesh.data["xlim"]
     ylim: Tuple[float, float] = series_pcolormesh.data["ylim"]
 
-    mask = (X[0, :] >= xlim[0]) & (X[0, :] <= xlim[1]) & (Y[:, 0] >= ylim[0]) & (Y[:, 0] <= ylim[1])
+    mask = (
+        (X[0, :] >= xlim[0])
+        & (X[0, :] <= xlim[1])
+        & (Y[:, 0] >= ylim[0])
+        & (Y[:, 0] <= ylim[1])
+    )
 
     cmax: float = np.nanmax(K[mask])
 
-    s_list = [series_pcolormesh, series_contour] if series_contour is not None else [series_pcolormesh]
+    s_list = (
+        [series_pcolormesh, series_contour]
+        if series_contour is not None
+        else [series_pcolormesh]
+    )
 
     ax, fig, mesh = generic_plot(
         s_list,
@@ -603,9 +612,13 @@ def breakage_rate(
         ax.set_xticks(current_ticks)
     my_save_fig(out_path, fig, dpi=150)
 
+
 def number_density_evo_sink_source(
-    output_dir: Path, series_list: Sequence[PlotSeries], name: str | None,
+    output_dir: Path,
+    series_list: Sequence[PlotSeries],
+    name: str | None,
     xmax: float | None,
+    mass_weighted: bool,
 ) -> None:
     if name is not None:
         name = "number_density_evo_{name}"
@@ -613,17 +626,21 @@ def number_density_evo_sink_source(
         name = "number_density_evo"
     out_path = output_dir / name
 
-
+    xlabel: str = r"floc size: $n_p$"
+    ylabel: str
+    if mass_weighted:
+        ylabel = r"$\frac{\partial n(n_p)}{\partial t} \cdot n_p$"
+    else:
+        ylabel = r"$\frac{\partial n(n_p)}{\partial t}$"
     ax, fig, _ = generic_plot(
         list(series_list),
         legend=True,
-        xlabel=r"floc size: $x \quad (n_p)$",
-        ylabel=r"$\frac{\partial n(n_p)}{\partial t}$",
+        xlabel=xlabel,
+        ylabel=ylabel,
         xlim=(1, xmax),
         ylim=(None, None),
         figsize=(6.5, 5.5),
-        legend_loc="lower right",
-        legend_bbox=(1.0, 0.80),
+        legend_loc="best",
     )
     current_ticks = list(ax.get_xticks())
     if 1 not in current_ticks:

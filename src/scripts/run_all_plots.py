@@ -1003,16 +1003,18 @@ def number_density_evo_sink_source(
     s_list_gain_frag: list[PlotSeries]
     s_list_loss_frag: list[PlotSeries]
     s_list_dn_dt: list[PlotSeries]
-    s_quantities: list[PlotSeries]
     s_cases: list[PlotSeries]
+    s_quantities: list[PlotSeries]
+    s_hline_zero: PlotSeries
     (
         s_list_gain_coag,
         s_list_loss_coag,
         s_list_gain_frag,
         s_list_loss_frag,
         s_list_dn_dt,
-        s_quantities,
         s_cases,
+        s_quantities,
+        s_hline_zero,
     ) = plt_series.number_density_evo_sink_source(
         data_dir=data_dir,
         data_names=data_names,
@@ -1026,6 +1028,7 @@ def number_density_evo_sink_source(
     if separate_plots:
         for i in range(len(data_names)):
             series_list: list[PlotSeries] = [
+                s_hline_zero,
                 s_list_gain_coag[i],
                 s_list_loss_coag[i],
                 s_list_gain_frag[i],
@@ -1033,12 +1036,13 @@ def number_density_evo_sink_source(
                 s_list_dn_dt[i],
             ]
             plt_templ.number_density_evo_sink_source(
-                output_dir=plot_dir, series_list=series_list, name=data_names[i], xmax=50
+                output_dir=plot_dir, series_list=series_list, name=data_names[i], xmax=20, mass_weighted=mass_weighted
             )
     else:
         series_list: list[PlotSeries] = (
-            s_cases
-            + s_quantities
+            s_quantities
+            +s_cases
+            + [s_hline_zero]
             + s_list_gain_coag
             + s_list_loss_coag
             + s_list_gain_frag
@@ -1046,7 +1050,7 @@ def number_density_evo_sink_source(
             + s_list_dn_dt
         )
         plt_templ.number_density_evo_sink_source(
-            output_dir=plot_dir, series_list=series_list, name=None, xmax=50
+            output_dir=plot_dir, series_list=series_list, name=None, xmax=20, mass_weighted=mass_weighted
         )
 
 

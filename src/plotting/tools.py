@@ -22,6 +22,8 @@ PlotMethod = Literal[
     "bar",
     "contour",
     "contourf",
+    "hline",
+    "vline",
     "err_plot",
     "err_semilogx",
     "err_semilogy",
@@ -340,6 +342,18 @@ def _plot_one(ax: Axes, series: PlotSeries)  -> Any:
             other = ax.contour(X, Y, C, levels=levels, **plot_kwargs)
         else:
             other = ax.contourf(X, Y, C, levels=levels, **plot_kwargs)
+    elif method == "hline":
+        plot_kwargs = series.kwargs
+        y_value = series.data.get("y")
+        if y_value is None:
+            raise ValueError("hline requires 'y' value in data dict")
+        other = ax.axhline(y=y_value, **plot_kwargs)
+    elif method == "vline":
+        plot_kwargs = series.kwargs
+        x_value = series.data.get("x")
+        if x_value is None:
+            raise ValueError("vline requires 'x' value in data dict")
+        other = ax.axvline(x=x_value, **plot_kwargs)
     else:
         raise ValueError("Plot method specified not implemented yet")
 

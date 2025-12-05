@@ -1681,6 +1681,7 @@ def number_density_evo_sink_source(
     list[PlotSeries],
     list[PlotSeries],
     list[PlotSeries],
+    PlotSeries,
 ]:
 
     s_list_gain_coag: list[PlotSeries] = []
@@ -1761,7 +1762,7 @@ def number_density_evo_sink_source(
             return K[x_idx, y_idx_arr] * n[y_idx_arr]
 
         def integrand_gain_frag(x_idx: int, y_idx_arr: np.ndarray) -> np.ndarray:
-            return F[y_idx_arr] * p[x_idx, y_idx_arr] * n[y_idx_arr]
+            return F[y_idx_arr] * nu[y_idx_arr] * p[x_idx, y_idx_arr] * n[y_idx_arr]
 
         def gain_coag() -> np.ndarray:
             result: np.ndarray = np.zeros_like(x_idx_arr, dtype=float)
@@ -1780,7 +1781,7 @@ def number_density_evo_sink_source(
         def loss_coag() -> np.ndarray:
             result: np.ndarray = np.zeros_like(x_idx_arr, dtype=float)
             for i, x_idx in enumerate(x_idx_arr):
-                result[i] = -1/2*n[x_idx] * size_integral(
+                result[i] = -n[x_idx] * size_integral(
                     x_idx_arr[0],
                     x_idx_arr[-1],
                     lambda y_idx_arr: integrand_loss_coag(x_idx, y_idx_arr),
@@ -1827,7 +1828,7 @@ def number_density_evo_sink_source(
         def create_series(idx: int, y_data: np.ndarray) -> PlotSeries:
             labels_local: list[str] = ["" for _ in range(len(quantities))]
             colours_local: List[str | Tuple[float, float, float, float]] = [
-                colours[idx] for _ in range(len(labels))
+                colours[data_idx] for _ in range(len(quantities))
             ]
             if separate_plots:
                 labels_local = [f"{quantity} ({labels[data_idx]})" for quantity in quantities]
@@ -1854,9 +1855,7 @@ def number_density_evo_sink_source(
     s_quantities: list[PlotSeries] = []
     s_cases: list[PlotSeries] = []
     if not separate_plots:
-        for i in range(len(quantities)):
-            s_quantities.append(
-                create_proxy_series(
+        for i in range(len(quantities)): s_quantities.append( create_proxy_series(
                     "k",
                     "white",
                     "none",
@@ -1873,12 +1872,26 @@ def number_density_evo_sink_source(
                 )
             )
 
+    s_hline_zero = PlotSeries(
+        data={"y": 0},
+        x_key=None,
+        y_key=None,
+        plot_method="hline",
+        kwargs={
+            "color": "black",
+            "linestyle": "--",
+            "linewidth": 0.8,
+            "alpha": 0.7,
+        },
+    )
+
     return (
         s_list_gain_coag,
         s_list_loss_coag,
         s_list_gain_frag,
         s_list_loss_frag,
         s_list_dn_dt,
-        s_quantities,
         s_cases,
+        s_quantities,
+        s_hline_zero,
     )
