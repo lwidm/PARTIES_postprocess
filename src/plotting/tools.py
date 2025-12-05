@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Optional, Sequence, Tuple, Union, Literal, Callable
+from typing import Any, Sequence, Literal, Callable
 
 import numpy as np
 from numpy.fft import fft2, ifft2
@@ -10,7 +10,7 @@ from matplotlib.figure import Figure
 from matplotlib import colors as mcolors
 import colorsys
 
-NumericArray = Union[np.ndarray, float, int]
+NumericArray = np.ndarray | float | int
 PlotMethod = Literal[
     "plot",
     "semilogx",
@@ -33,14 +33,14 @@ PlotMethod = Literal[
 
 @dataclass
 class PlotSeries:
-    data: Dict[str, Any]
-    x_key: Optional[str] = "x"
-    y_key: Optional[str] = "y"
-    plot_method: Optional[PlotMethod] = "plot"
-    kwargs: Dict[str, Any] = field(default_factory=dict)
+    data: dict[str, Any]
+    x_key: str | None = "x"
+    y_key: str | None = "y"
+    plot_method: PlotMethod | None = "plot"
+    kwargs: dict[str, Any] = field(default_factory=dict)
 
 
-SeriesLike = Union[PlotSeries, Sequence[PlotSeries]]
+SeriesLike = PlotSeries | Sequence[PlotSeries]
 
 default_kwargs: dict[str, dict] = {
     "kLineWidth": {"linewidth": 0.9},  # default linewidth for generic plots
@@ -90,10 +90,10 @@ def format_plot_axes(axes: Axes) -> Axes:
 
 def _extract_xy(
     series: PlotSeries,
-) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
+) -> tuple[np.ndarray | None, np.ndarray | None]:
     """Return numeric (x, y) arrays or (None, None) if not available."""
-    x: Optional[np.ndarray] = None
-    y: Optional[np.ndarray] = None
+    x: np.ndarray | None = None
+    y: np.ndarray | None = None
     try:
         if series.x_key is not None:
             x = np.asarray(series.data[series.x_key])
@@ -240,18 +240,18 @@ def _plot_one(ax: Axes, series: PlotSeries)  -> Any:
         widths = edges[1:] - edges[:-1]
         edge_lighter = -0.18
         edge_sat = 1.3
-        base_colour: Optional[str] = series.kwargs["color"]
+        base_colour: str | None = series.kwargs["color"]
         if base_colour is None:
             base_colour = "red"
         face_alpha: float = 0.38
-        face_rgb: Tuple[float, float, float] = _hex_to_rgb01(base_colour)
-        face_rgba: Tuple[float, float, float, float] = (
+        face_rgb: tuple[float, float, float] = _hex_to_rgb01(base_colour)
+        face_rgba: tuple[float, float, float, float] = (
             face_rgb[0],
             face_rgb[1],
             face_rgb[2],
             face_alpha,
         )
-        edge_rgb: Tuple[float, float, float] = _adjust_color(
+        edge_rgb: tuple[float, float, float] = _adjust_color(
             base_colour, lighter=edge_lighter, sat_mul=edge_sat
         )
         plot_kwargs.update(
@@ -363,16 +363,16 @@ def _plot_one(ax: Axes, series: PlotSeries)  -> Any:
 def generic_plot(
     series_list: Sequence[PlotSeries],
     legend: bool,
-    figsize: Tuple[float, float] = (6.5, 5.5),
-    xlabel: Optional[str] = None,
-    ylabel: Optional[str] = None,
-    xlim: Optional[Tuple[Optional[float], Optional[float]]] = None,
-    ylim: Optional[Tuple[Optional[float], Optional[float]]] = None,
-    title: Optional[str] = None,
-    legend_loc: Optional[str] = None,
-    legend_bbox: Optional[Tuple[float, float]] = None,
-    additional_objects: Optional[Sequence[Callable[[Axes], Any]]] = None,
-) -> Tuple[Axes, Figure, list[Any]]:
+    figsize: tuple[float, float] = (6.5, 5.5),
+    xlabel: str | None = None,
+    ylabel: str | None = None,
+    xlim: tuple[float | None, float | None] | None = None,
+    ylim: tuple[float | None, float | None] | None = None,
+    title: str | None = None,
+    legend_loc: str | None = None,
+    legend_bbox: tuple[float, float] | None = None,
+    additional_objects: Sequence[Callable[[Axes], Any]] | None = None,
+) -> tuple[Axes, Figure, list[Any]]:
     other: Any = [None for _ in range(len(series_list))]
     update_plot_params()
     fig, ax = plt.subplots(figsize=figsize)
@@ -396,7 +396,7 @@ def generic_plot(
         ax.set_ylim(*ylim)
 
     if legend:
-        legend_kwargs: Dict[str, Any] = {"frameon": False, "fontsize": 12}
+        legend_kwargs: dict[str, Any] = {"frameon": False, "fontsize": 12}
         if legend_loc is not None:
             legend_kwargs["loc"] = legend_loc
         if legend_bbox is not None:

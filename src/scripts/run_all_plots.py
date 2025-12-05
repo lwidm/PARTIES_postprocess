@@ -1,5 +1,5 @@
 from os import sep
-from typing import Optional, Tuple, List, Literal, Callable
+from typing import Literal, Callable
 from pathlib import Path
 import seaborn as sns
 import re
@@ -23,12 +23,12 @@ def fuild_velocity_profile(
     utexas_dir: Path,
     plot_dir: Path,
     data_dir: Path,
-    data_names: List[str],
-    labels: List[str],
-    colours: List[str | Tuple[float, float, float, float]],
+    data_names: list[str],
+    labels: list[str],
+    colours: list[str | tuple[float, float, float, float]],
     use_markers: bool,
 ):
-    data_dirs: List[Path] = [data_dir / data_name for data_name in data_names]
+    data_dirs: list[Path] = [data_dir / data_name for data_name in data_names]
     Num_data: int = len(data_names)
     linestyles: tuple[str, str, str] = ("-", ":", ":")
 
@@ -48,7 +48,7 @@ def fuild_velocity_profile(
         use_label_log_fit = True
         use_label_visc_fit = False
 
-    utexas_wall_series: List[PlotSeries] = plt_series.u_plus_mean_utexas(
+    utexas_wall_series: list[PlotSeries] = plt_series.u_plus_mean_utexas(
         utexas_dir,
         "utexas",
         "k",
@@ -59,7 +59,7 @@ def fuild_velocity_profile(
         use_label_visc_fit_texas,
         linestyles,
     )
-    parties_wall_series: List[List[PlotSeries]] = []
+    parties_wall_series: list[list[PlotSeries]] = []
     for i in range(Num_data):
         parties_wall_series.append(
             plt_series.u_plus_mean_parties(
@@ -75,12 +75,12 @@ def fuild_velocity_profile(
             )
         )
 
-    all_wall_series: List[PlotSeries] = utexas_wall_series
+    all_wall_series: list[PlotSeries] = utexas_wall_series
     for series in parties_wall_series:
         all_wall_series += series
 
     if not separate_labels:
-        colours_proxy: list[str | Tuple[float, float, float, float]] = colours
+        colours_proxy: list[str | tuple[float, float, float, float]] = colours
         colours_proxy[Num_data] = "k"
         proxy_series = plt_series.u_plus_proxies(
             linestyles=list(linestyles),
@@ -96,13 +96,13 @@ def fluid_wall_normal(
     utexas_dir: Path,
     plot_dir: Path,
     data_dir: Path,
-    data_names: List[str],
-    labels: List[str],
-    colours: List[str | Tuple[float, float, float, float]],
+    data_names: list[str],
+    labels: list[str],
+    colours: list[str | tuple[float, float, float, float]],
     use_markers: bool,
 ):
 
-    data_dirs: List[Path] = [data_dir / data_name for data_name in data_names]
+    data_dirs: list[Path] = [data_dir / data_name for data_name in data_names]
     Num_data: int = len(data_names)
 
     linestyles_utexas: list[str] = ["-", "-.", "--", ":"]
@@ -115,16 +115,16 @@ def fluid_wall_normal(
         markers: list[str] = ["o", "d", "^", "s"]
     else:
         markers: list[str] = ["None" for _ in range(len(linestyles_utexas))]
-    # colours: List[str] = ["k", "k", "k", "k", "k"]
+    # colours: list[str] = ["k", "k", "k", "k", "k"]
 
     # ==============================
     # Automation
     # ==============================
 
-    utexas_stress_series: List[PlotSeries] = plt_series.normal_stress_wall_utexas(
+    utexas_stress_series: list[PlotSeries] = plt_series.normal_stress_wall_utexas(
         utexas_dir, linestyles_utexas, utexas_colour
     )
-    parties_stress_series: List[List[PlotSeries]] = []
+    parties_stress_series: list[list[PlotSeries]] = []
     for i in range(Num_data):
         parties_stress_series.append(
             plt_series.normal_stress_wall_parties(
@@ -135,7 +135,7 @@ def fluid_wall_normal(
                 colour=colours[i],
             )
         )
-    colours_proxy: list[str | Tuple[float, float, float, float]] = colours
+    colours_proxy: list[str | tuple[float, float, float, float]] = colours
     colours_proxy[Num_data] = "k"
     marker_cases: list[str]
     linestyle_cases: list[str]
@@ -153,7 +153,7 @@ def fluid_wall_normal(
         marker_cases=marker_cases,
         linestyle_cases=linestyle_cases,
     )
-    all_stress_series: List[PlotSeries] = utexas_stress_series
+    all_stress_series: list[PlotSeries] = utexas_stress_series
     for series in parties_stress_series:
         all_stress_series += series
     all_stress_series += proxy_series
@@ -163,19 +163,19 @@ def fluid_wall_normal(
 def floc(
     plot_dir: Path,
     data_dir: Path,
-    data_names: List[str],
-    labels: List[str],
-    colours: List[str | Tuple[float, float, float, float]],
-    markers: List[str],
-    linestyles: List[str],
+    data_names: list[str],
+    labels: list[str],
+    colours: list[str | tuple[float, float, float, float]],
+    markers: list[str],
+    linestyles: list[str],
     plot_evo_fit: bool,
 ) -> None:
 
-    data_dirs: List[Path] = [data_dir / data_name for data_name in data_names]
+    data_dirs: list[Path] = [data_dir / data_name for data_name in data_names]
 
     def get_series_floc_evolution(
         csv_dir: Path,
-        colour: str | Tuple[float, float, float, float],
+        colour: str | tuple[float, float, float, float],
         label: str,
     ) -> PlotSeries:
         s: PlotSeries = plt_series.floc_count_evolution(
@@ -189,7 +189,7 @@ def floc(
 
     def get_series_floc_evolution_fit(
         csv_dir: Path,
-        colour: str | Tuple[float, float, float, float],
+        colour: str | tuple[float, float, float, float],
         label: str,
     ) -> PlotSeries:
         s: PlotSeries = plt_series.floc_count_evolution_fit(
@@ -203,10 +203,10 @@ def floc(
 
     def get_series_pdf(
         data_dir: Path,
-        colour: str | Tuple[float, float, float, float],
+        colour: str | tuple[float, float, float, float],
         label: str,
         marker: str,
-    ) -> Tuple[
+    ) -> tuple[
         PlotSeries,
         PlotSeries,
         PlotSeries,
@@ -258,9 +258,9 @@ def floc(
     def get_series_avg(
         data_dir: Path,
         label: str,
-        colour: str | Tuple[float, float, float, float],
+        colour: str | tuple[float, float, float, float],
         marker: str,
-    ) -> Tuple[
+    ) -> tuple[
         PlotSeries,
         PlotSeries,
         PlotSeries,
@@ -297,28 +297,28 @@ def floc(
         )
 
     plot_dir.mkdir(parents=True, exist_ok=True)
-    s_evo_list: List[PlotSeries] = []
-    s_evo_fit_list: List[PlotSeries] = []
-    s_pdf_np_list: List[PlotSeries] = []
-    s_pdf_Df_list: List[PlotSeries] = []
-    s_pdf_Dg_list: List[PlotSeries] = []
-    s_pdf_np_err_list: List[PlotSeries] = []
-    s_pdf_Df_err_list: List[PlotSeries] = []
-    s_pdf_Dg_err_list: List[PlotSeries] = []
-    s_pdf_np_mass_list: List[PlotSeries] = []
-    s_pdf_Df_mass_list: List[PlotSeries] = []
-    s_pdf_Dg_mass_list: List[PlotSeries] = []
-    s_pdf_np_mass_err_list: List[PlotSeries] = []
-    s_pdf_Df_mass_err_list: List[PlotSeries] = []
-    s_pdf_Dg_mass_err_list: List[PlotSeries] = []
-    s_avg_Df_list: List[PlotSeries] = []
-    s_avg_Dg_list: List[PlotSeries] = []
-    s_mass_avg_Df_list: List[PlotSeries] = []
-    s_mass_avg_Dg_list: List[PlotSeries] = []
-    s_avg_Df_err_list: List[PlotSeries] = []
-    s_avg_Dg_err_list: List[PlotSeries] = []
-    s_mass_avg_Df_err_list: List[PlotSeries] = []
-    s_mass_avg_Dg_err_list: List[PlotSeries] = []
+    s_evo_list: list[PlotSeries] = []
+    s_evo_fit_list: list[PlotSeries] = []
+    s_pdf_np_list: list[PlotSeries] = []
+    s_pdf_Df_list: list[PlotSeries] = []
+    s_pdf_Dg_list: list[PlotSeries] = []
+    s_pdf_np_err_list: list[PlotSeries] = []
+    s_pdf_Df_err_list: list[PlotSeries] = []
+    s_pdf_Dg_err_list: list[PlotSeries] = []
+    s_pdf_np_mass_list: list[PlotSeries] = []
+    s_pdf_Df_mass_list: list[PlotSeries] = []
+    s_pdf_Dg_mass_list: list[PlotSeries] = []
+    s_pdf_np_mass_err_list: list[PlotSeries] = []
+    s_pdf_Df_mass_err_list: list[PlotSeries] = []
+    s_pdf_Dg_mass_err_list: list[PlotSeries] = []
+    s_avg_Df_list: list[PlotSeries] = []
+    s_avg_Dg_list: list[PlotSeries] = []
+    s_mass_avg_Df_list: list[PlotSeries] = []
+    s_mass_avg_Dg_list: list[PlotSeries] = []
+    s_avg_Df_err_list: list[PlotSeries] = []
+    s_avg_Dg_err_list: list[PlotSeries] = []
+    s_mass_avg_Df_err_list: list[PlotSeries] = []
+    s_mass_avg_Dg_err_list: list[PlotSeries] = []
     for i in range(len(data_dirs)):
         s_evo = get_series_floc_evolution(
             data_dirs[i],
@@ -425,15 +425,15 @@ def floc(
 def phi_eulerian(
     plot_dir: Path,
     data_dir: Path,
-    data_names: List[str],
-    labels: List[str],
-    colours: List[str | Tuple[float, float, float, float]],
+    data_names: list[str],
+    labels: list[str],
+    colours: list[str | tuple[float, float, float, float]],
     show_errs: bool,
 ) -> None:
-    csv_dirs: List[Path] = [data_dir / data_name for data_name in data_names]
+    csv_dirs: list[Path] = [data_dir / data_name for data_name in data_names]
 
-    s_list: List[PlotSeries] = []
-    s_err_list: List[Optional[PlotSeries]] = []
+    s_list: list[PlotSeries] = []
+    s_err_list: list[PlotSeries | None] = []
     i = 0
     for fluid_dir in csv_dirs:
         s_vfu, s_err_vfu = plt_series.phi_eulerian_vfu(
@@ -461,7 +461,7 @@ def phi_eulerian(
         # i += 2
         i += 1
 
-    s_plot: List[PlotSeries] = []
+    s_plot: list[PlotSeries] = []
     if show_errs:
         if any(x is None for x in s_err_list):
             raise ValueError("s_err_lsit contains None entries")
@@ -474,14 +474,14 @@ def phi_eulerian(
 def lagrangian_data(
     plot_dir: Path,
     data_dir: Path,
-    data_names: List[str],
-    labels: List[str],
-    colours: List[str | Tuple[float, float, float, float]],
-    markers: List[str],
+    data_names: list[str],
+    labels: list[str],
+    colours: list[str | tuple[float, float, float, float]],
+    markers: list[str],
     show_errs: bool,
     separate_plots: bool,
 ) -> None:
-    csv_dirs: List[Path] = [data_dir / data_name for data_name in data_names]
+    csv_dirs: list[Path] = [data_dir / data_name for data_name in data_names]
 
     s_a_list: list[list[PlotSeries]] = []
     s_a_fit_list: list[PlotSeries] = []
@@ -497,8 +497,8 @@ def lagrangian_data(
 
     for i, csv_dir in enumerate(csv_dirs):
 
-        colours_local: List[str | Tuple[float, float, float, float]]
-        labels_local: List[str | None]
+        colours_local: list[str | tuple[float, float, float, float]]
+        labels_local: list[str | None]
         if not separate_plots:
             colours_local = [colours[i] for _ in range(max(3, len(csv_dirs)))]
             labels_local = [labels[i] for _ in range(max(3, len(csv_dirs)))]
@@ -575,8 +575,8 @@ def lagrangian_data(
             )
             plt_templ.lagrangian_up_pdf(plot_dir, s_up_list[i], labels[i])
     else:
-        s_a_plot: List[PlotSeries] = [s_a_fit_list[0]]
-        s_up_plot: List[PlotSeries] = []
+        s_a_plot: list[PlotSeries] = [s_a_fit_list[0]]
+        s_up_plot: list[PlotSeries] = []
         for i, csv_dir in enumerate(csv_dirs):
             s_a_plot += s_a_list[i]
             s_up_plot += s_up_list[i]
@@ -588,17 +588,17 @@ def lagrangian_data(
 def fam_tree(
     plot_dir: Path,
     data_dir: Path,
-    data_names: List[str],
-    labels: List[str],
-    colours: List[str | Tuple[float, float, float, float]],
-    markers: List[str],
-    linestyles: List[str],
+    data_names: list[str],
+    labels: list[str],
+    colours: list[str | tuple[float, float, float, float]],
+    markers: list[str],
+    linestyles: list[str],
     separate_plots: bool,
     unfiltered: Literal[
         1, 2, 3
     ],  # 1 dont show them, 2 superimpose them, 3 separately plot them
 ) -> None:
-    csv_dirs: List[Path] = [data_dir / data_name for data_name in data_names]
+    csv_dirs: list[Path] = [data_dir / data_name for data_name in data_names]
 
     s_list_filtered: list[list[PlotSeries]] = []
     s_list_unfiltered: list[list[PlotSeries]] = []
@@ -611,7 +611,7 @@ def fam_tree(
 
     for i, csv_dir in enumerate(csv_dirs):
 
-        labels_local: List[str | None]
+        labels_local: list[str | None]
         if not separate_plots:
             labels_local = [labels[i] for _ in range(2)]
             markers_local = markers
@@ -695,8 +695,8 @@ def fam_tree(
                     plot_dir, s_list_unfiltered[i], labels[i], 3
                 )
     else:
-        s_list_all: List[PlotSeries] = []
-        s_list_all_unfiltered: List[PlotSeries] = []
+        s_list_all: list[PlotSeries] = []
+        s_list_all_unfiltered: list[PlotSeries] = []
         for i, csv_dir in enumerate(csv_dirs):
             if unfiltered == 1:
                 s_list_all += [s_list_filtered[i][0]]
@@ -727,12 +727,12 @@ def fam_tree(
 def floc_timescale(
     plot_dir: Path,
     data_dir: Path,
-    data_names: List[str],
-    labels: List[str],
+    data_names: list[str],
+    labels: list[str],
     cmap_breakup: Colormap,
     cmap_formation: Colormap,
 ) -> None:
-    csv_dirs: List[Path] = [data_dir / data_name for data_name in data_names]
+    csv_dirs: list[Path] = [data_dir / data_name for data_name in data_names]
 
     s_list: list[list[PlotSeries]] = [[] for _ in range(len(csv_dirs))]
     colorbar_funcs_list: list[list[Callable[[Axes], None]]] = []
@@ -751,11 +751,11 @@ def floc_timescale(
 
         max_t = max(timescales)
 
-        colours_formation: list[str | Tuple[float, float, float, float]] = [
+        colours_formation: list[str | tuple[float, float, float, float]] = [
             cmap_formation(t_min / max_t * (1 - min_color_val) + min_color_val)
             for t_min in timescales
         ]
-        colours_breakup: list[str | Tuple[float, float, float, float]] = [
+        colours_breakup: list[str | tuple[float, float, float, float]] = [
             cmap_breakup(t_min / max_t * (1 - min_color_val) + min_color_val)
             for t_min in timescales
         ]
@@ -765,7 +765,7 @@ def floc_timescale(
         )
         colorbar_funcs_list.append(colorbar_funcs)
 
-        labels_local: List[str | None]
+        labels_local: list[str | None]
 
         for j, t_min in enumerate(timescales):
             _, s_formation = plt_series.family_tree_breakup_formation_pdf(
@@ -853,12 +853,12 @@ def floc_timescale(
 
 
 def create_colorbar_functions(
-    timescales: List[float],
+    timescales: list[float],
     max_t: float,
     cmap_formation: Colormap,
     cmap_breakup: Colormap,
     min_val: float,
-) -> List[Callable[[Axes], None]]:
+) -> list[Callable[[Axes], None]]:
 
     fraction: float = 1.2
 
@@ -902,7 +902,7 @@ def noncohesive_floc_lifetime(plot_dir: Path):
     data_dir: Path = parent_dir / "data/"
     csv_dir: Path = data_dir / data_name
 
-    s_list: List[PlotSeries] = list(plt_series.noncohesive_floc_lifetime(csv_dir))
+    s_list: list[PlotSeries] = list(plt_series.noncohesive_floc_lifetime(csv_dir))
     plt_templ.noncohesive_floc_lifetime(
         output_dir=plot_dir,
         series_list=s_list,
@@ -913,9 +913,9 @@ def noncohesive_floc_lifetime(plot_dir: Path):
 def coagulation_kernel(
     plot_dir: Path,
     data_dir: Path,
-    data_names: List[str],
-    labels: List[str],
-    contour_sigmas: List[float],
+    data_names: list[str],
+    labels: list[str],
+    contour_sigmas: list[float],
 ):
 
     cmap: Colormap = plt.get_cmap("Blues")
@@ -947,8 +947,8 @@ def coagulation_kernel(
 def fragment_size_distribution(
     plot_dir: Path,
     data_dir: Path,
-    data_names: List[str],
-    labels: List[str],
+    data_names: list[str],
+    labels: list[str],
 ):
 
     cmap: Colormap = plt.get_cmap("Blues")
@@ -969,9 +969,9 @@ def fragment_size_distribution(
 def breakage_rate(
     plot_dir: Path,
     data_dir: Path,
-    data_names: List[str],
-    labels: List[str],
-    colours: List[str | Tuple[float, float, float, float]],
+    data_names: list[str],
+    labels: list[str],
+    colours: list[str | tuple[float, float, float, float]],
 ) -> None:
     s_list: list[PlotSeries] = []
     for i, data_name in enumerate(data_names):
@@ -989,11 +989,11 @@ def breakage_rate(
 def number_density_evo_sink_source(
     plot_dir: Path,
     data_dir: Path,
-    data_names: List[str],
-    labels: List[str],
-    linestyles: List[str],
-    markers: List[str],
-    colours: List[str | Tuple[float, float, float, float]],
+    data_names: list[str],
+    labels: list[str],
+    linestyles: list[str],
+    markers: list[str],
+    colours: list[str | tuple[float, float, float, float]],
     mass_weighted: bool,
     separate_plots: bool,
 ):
@@ -1057,21 +1057,21 @@ def number_density_evo_sink_source(
 def main() -> None:
 
     plot_dir: Path = Path("./output/plots")
-    data_names: List[str] = [
+    data_names: list[str] = [
         "phi5p0_noCo",
         "phi1p5",
         "phi3p0",
         "phi5p0",
         # "test"
     ]
-    labels: List[str] = [
+    labels: list[str] = [
         r"$\phi_{5\%}$ no cohesion",
         r"$\phi_{1.5\%}$",
         r"$\phi_{3\%}$",
         r"$\phi_{5\%}$",
         # "test"
     ]
-    coagulation_kernel_sigmas: List[float] = [
+    coagulation_kernel_sigmas: list[float] = [
         2,
         5,
         5,
@@ -1083,16 +1083,16 @@ def main() -> None:
     blue_cmap = plt.get_cmap("Blues")
     red_cmap = plt.get_cmap("Reds")
 
-    # colours: list[str | Tuple[float, float, float, float]] = [
+    # colours: list[str | tuple[float, float, float, float]] = [
     #     cmap(x) for x in np.linspace(0.3, 0.9, 5)
     # ]
-    colours: list[str | Tuple[float, float, float, float]] = list(cb_palette)
-    colours_fam_tree: list[str | Tuple[float, float, float, float]] = [
+    colours: list[str | tuple[float, float, float, float]] = list(cb_palette)
+    colours_fam_tree: list[str | tuple[float, float, float, float]] = [
         blue_cmap(0.55),
         red_cmap(0.55),
     ]
-    markers: List[str] = ["o", "s", "^", "v", "P"]
-    linestyles: List[str] = ["-", "--", "-.", ":", ":"]
+    markers: list[str] = ["o", "s", "^", "v", "P"]
+    linestyles: list[str] = ["-", "--", "-.", ":", ":"]
     # floc(
     #     plot_dir,
     #     data_dir,

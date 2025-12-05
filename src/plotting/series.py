@@ -1,7 +1,7 @@
 # -- src/plotting/series.py
 
 from pathlib import Path
-from typing import List, Optional, Tuple, Literal, Callable
+from typing import Literal, Callable
 import h5py
 from scipy import stats
 from scipy.interpolate import RectBivariateSpline
@@ -19,8 +19,8 @@ from src.plotting.tools import (
 
 
 def create_proxy_series(
-    colour: str | Tuple[float, float, float, float],
-    colour_face: str | Tuple[float, float, float, float],
+    colour: str | tuple[float, float, float, float],
+    colour_face: str | tuple[float, float, float, float],
     fillstyle: str,
     linestyle: str,
     marker: str,
@@ -61,8 +61,8 @@ def create_proxy_series(
 
 def floc_count_evolution(
     csv_dir: Path,
-    colour: str | Tuple[float, float, float, float],
-    label: Optional[str],
+    colour: str | tuple[float, float, float, float],
+    label: str | None,
     normalised: bool,
     reset_time: bool,
 ) -> PlotSeries:
@@ -96,8 +96,8 @@ def floc_count_evolution(
 
 def floc_count_evolution_fit(
     csv_dir: Path,
-    colour: str | Tuple[float, float, float, float],
-    label: Optional[str],
+    colour: str | tuple[float, float, float, float],
+    label: str | None,
     normalised: bool,
     reset_time: bool,
 ) -> PlotSeries:
@@ -171,10 +171,10 @@ def floc_count_evolution_fit(
 
 def floc_pdf(
     floc_dir: Path,
-    labels: List[Optional[str]],
-    colours: List[str | Tuple[float, float, float, float]],
-    markers: List[str],
-) -> Tuple[
+    labels: list[str | None],
+    colours: list[str | tuple[float, float, float, float]],
+    markers: list[str],
+) -> tuple[
     PlotSeries,
     PlotSeries,
     PlotSeries,
@@ -189,11 +189,11 @@ def floc_pdf(
     PlotSeries,
 ]:
 
-    means_list: List[np.ndarray] = []
-    std_probab_list: List[np.ndarray] = []
-    bin_widths_list: List[np.ndarray] = []
-    probabs_list: List[np.ndarray] = []
-    postfixes: List[str] = ["n_p", "D_f", "D_g"]
+    means_list: list[np.ndarray] = []
+    std_probab_list: list[np.ndarray] = []
+    bin_widths_list: list[np.ndarray] = []
+    probabs_list: list[np.ndarray] = []
+    postfixes: list[str] = ["n_p", "D_f", "D_g"]
 
     with h5py.File(str(floc_dir / "pdf_stats.h5"), "r") as f:
         for key in ["n_p", "D_f", "D_g"]:
@@ -210,7 +210,7 @@ def floc_pdf(
 
     markeredgewidth: float = 0.7
 
-    def create_series(i: int) -> Tuple[PlotSeries, PlotSeries]:
+    def create_series(i: int) -> tuple[PlotSeries, PlotSeries]:
         s: PlotSeries = PlotSeries(
             data={
                 "x": means_list[i],
@@ -275,10 +275,10 @@ def floc_pdf(
 
 def floc_avg_dir(
     floc_dir: Path,
-    labels: List[Optional[str]],
-    colours: List[str | Tuple[float, float, float, float]],
-    markers: List[str],
-) -> Tuple[
+    labels: list[str | None],
+    colours: list[str | tuple[float, float, float, float]],
+    markers: list[str],
+) -> tuple[
     PlotSeries,
     PlotSeries,
     PlotSeries,
@@ -313,7 +313,7 @@ def floc_avg_dir(
 
     def create_series(
         y_data: np.ndarray, std_data: np.ndarray, idx: int
-    ) -> Tuple[PlotSeries, PlotSeries]:
+    ) -> tuple[PlotSeries, PlotSeries]:
 
         s: PlotSeries = PlotSeries(
             # data={"edges": edges_n_p, "counts": probab_n_p},
@@ -382,14 +382,14 @@ def floc_avg_dir(
 def u_plus_mean_parties(
     csv_dir: Path,
     label: str,
-    colour: str | Tuple[float, float, float, float],
+    colour: str | tuple[float, float, float, float],
     log_fit: bool,
     visc_fit: bool,
     use_label: bool,
     use_label_log_fit: bool,
     use_label_visc_fit: bool,
-    linestyles: Tuple[str, str, str],
-) -> List[PlotSeries]:
+    linestyles: tuple[str, str, str],
+) -> list[PlotSeries]:
     yc_plus, U = lwidmer.read_csv_columns(
         csv_dir / "flow_mean_data_inner.csv", (0, 1), remove_nan=1
     )
@@ -419,8 +419,8 @@ def u_plus_mean_utexas(
     use_label: bool,
     use_label_log_fit: bool,
     use_label_visc_fit: bool,
-    linestyles: Tuple[str, str, str],
-) -> List[PlotSeries]:
+    linestyles: tuple[str, str, str],
+) -> list[PlotSeries]:
     yc_plus, U = lwidmer.read_csv_columns(
         csv_dir / "LM_Channel_0180_mean_prof.dat", (1, 2), remove_nan=1
     )
@@ -442,14 +442,14 @@ def u_plus_mean(
     yc_plus: np.ndarray,
     U: np.ndarray,
     label: str,
-    colour: str | Tuple[float, float, float, float],
+    colour: str | tuple[float, float, float, float],
     log_fit: bool,
     visc_fit: bool,
     use_label: bool,
     use_label_log_fit: bool,
     use_label_visc_fit: bool,
-    linestyles: Tuple[str, str, str],
-) -> List[PlotSeries]:
+    linestyles: tuple[str, str, str],
+) -> list[PlotSeries]:
 
     label_local: str
 
@@ -460,7 +460,7 @@ def u_plus_mean(
         yc_plus, fitted_kappa, fitted_constant
     )
 
-    results: List[PlotSeries] = []
+    results: list[PlotSeries] = []
     if use_label:
         label_local = label
     else:
@@ -477,7 +477,7 @@ def u_plus_mean(
     )
     results.append(s_parties)
 
-    s_parties_visc: Optional[PlotSeries] = None
+    s_parties_visc: PlotSeries | None = None
     if use_label_visc_fit:
         label_local = f"Law of the wall ({label})"
     else:
@@ -500,7 +500,7 @@ def u_plus_mean(
         )
         results.append(s_parties_visc)
 
-    s_parties_log: Optional[PlotSeries] = None
+    s_parties_log: PlotSeries | None = None
     if use_label_log_fit:
         label_local = f"Law of the wall ({label})"
     else:
@@ -529,14 +529,14 @@ def u_plus_mean(
 def u_plus_proxies(
     linestyles: list[str],
     labels: list[str],
-    colours: List[str | Tuple[float, float, float, float]],
+    colours: list[str | tuple[float, float, float, float]],
 ) -> list[PlotSeries]:
     quantities: list[tuple[str, str]] = [
         ("Numerical", linestyles[0]),
         ("Law of the wall", linestyles[1]),
     ]
 
-    cases: list[tuple[str, str | Tuple[float, float, float, float]]] = []
+    cases: list[tuple[str, str | tuple[float, float, float, float]]] = []
     for i in range(len(labels)):
         cases.append((labels[i], colours[i]))
 
@@ -570,9 +570,9 @@ def normal_stress_wall_parties(
     csv_dir: Path,
     linestyles: list[str],
     markers: list[str],
-    colour: str | Tuple[float, float, float, float],
+    colour: str | tuple[float, float, float, float],
     label: str,
-) -> List[PlotSeries]:
+) -> list[PlotSeries]:
     yc, uu, ww, uv, _, yv, vv = lwidmer.read_csv_columns(
         csv_dir / "flow_fluctuation_data_inner.csv", (0, 1, 2, 3, 4, 5, 6), remove_nan=1
     )
@@ -586,7 +586,7 @@ def normal_stress_wall_parties(
         "uv_plus": uv,
     }
 
-    colours: list[str | Tuple[float, float, float, float]] = [colour for _ in range(4)]
+    colours: list[str | tuple[float, float, float, float]] = [colour for _ in range(4)]
     return normal_stress_wall(stats, colours, linestyles, markers, label, False)
 
 
@@ -594,7 +594,7 @@ def normal_stress_wall_utexas(
     csv_dir: Path,
     linestyles: list[str],
     colour: str,
-) -> List[PlotSeries]:
+) -> list[PlotSeries]:
     yp, uu, vv, ww, uv, uw, vw, k = lwidmer.read_csv_columns(
         csv_dir / "LM_Channel_0180_vel_fluc_prof.dat",
         (1, 2, 3, 4, 5, 6, 7, 8),
@@ -610,7 +610,7 @@ def normal_stress_wall_utexas(
         "uv_plus": uv,
     }
 
-    colours: list[str | Tuple[float, float, float, float]] = [colour for _ in range(4)]
+    colours: list[str | tuple[float, float, float, float]] = [colour for _ in range(4)]
     markers: list[str] = ["None" for _ in range(4)]
     return normal_stress_wall(stats, colours, linestyles, markers, "utexas", False)
 
@@ -625,12 +625,12 @@ normal_stress_wall_labels: dict[str, str] = {
 
 def normal_stress_wall(
     stats: dict[str, np.ndarray],
-    colours: list[str | Tuple[float, float, float, float]],
+    colours: list[str | tuple[float, float, float, float]],
     linestyles: list[str],
     markers: list[str],
     label: str,
     plot_labels: bool,
-) -> List[PlotSeries]:
+) -> list[PlotSeries]:
 
     yc_plus: np.ndarray = stats["yc_plus"]
     yv_plus: np.ndarray = stats["yv_plus"]
@@ -733,7 +733,7 @@ def normal_stress_wall_label_proxies(
     linestyles: list[str],
     markers: list[str],
     labels: list[str],
-    colours: list[str | Tuple[float, float, float, float]],
+    colours: list[str | tuple[float, float, float, float]],
     marker_cases: list[str],
     linestyle_cases: list[str],
 ) -> list[PlotSeries]:
@@ -741,7 +741,7 @@ def normal_stress_wall_label_proxies(
     for i, key in enumerate(normal_stress_wall_labels):
         quantities[key] = (normal_stress_wall_labels[key], linestyles[i], markers[i])
 
-    cases: list[tuple[str, str, str, str | Tuple[float, float, float, float]]] = []
+    cases: list[tuple[str, str, str, str | tuple[float, float, float, float]]] = []
     for i, label in enumerate(labels):
         cases.append((label, linestyle_cases[i], marker_cases[i], colours[i]))
 
@@ -776,7 +776,7 @@ def Ekin_evolution(
     colour: str,
     linestyle: str,
     marker: str,
-    label: Optional[str],
+    label: str | None,
 ) -> PlotSeries:
 
     E_kin: np.ndarray
@@ -810,9 +810,9 @@ def phi_eulerian_ana(
     csv_dir: Path,
     colour: str,
     linestyle: str,
-    label: Optional[str],
+    label: str | None,
     phi_tot: float | None,
-) -> Tuple[PlotSeries, Optional[PlotSeries]]:
+) -> tuple[PlotSeries, PlotSeries | None]:
 
     y, Phi = lwidmer.read_csv_columns(
         csv_dir / "particle_eulerian_stats.csv", (0, 1), remove_nan=1
@@ -828,12 +828,12 @@ def phi_eulerian_ana(
 
 def phi_eulerian_vfu(
     csv_dir: Path,
-    colour: str | Tuple[float, float, float, float],
+    colour: str | tuple[float, float, float, float],
     linestyle: str,
-    label: Optional[str],
+    label: str | None,
     normalised: bool,
     show_err: bool,
-) -> Tuple[PlotSeries, Optional[PlotSeries]]:
+) -> tuple[PlotSeries, PlotSeries | None]:
 
     if normalised:
         y, Phi, Phi_err = lwidmer.read_csv_columns(
@@ -856,10 +856,10 @@ def phi_eulerian(
     y: np.ndarray,
     Phi: np.ndarray,
     Phi_err: np.ndarray | None,
-    colour: str | Tuple[float, float, float, float],
+    colour: str | tuple[float, float, float, float],
     linestyle: str,
-    label: Optional[str],
-) -> Tuple[PlotSeries, Optional[PlotSeries]]:
+    label: str | None,
+) -> tuple[PlotSeries, PlotSeries | None]:
 
     s: PlotSeries = PlotSeries(
         data={"x": y, "y": Phi},
@@ -899,11 +899,11 @@ def phi_eulerian(
 
 def lagrangian_acceleration_pdf(
     csv_dir: Path,
-    labels: List[Optional[str]],
-    colours: List[str | Tuple[float, float, float, float]],
-    markers: List[str],
+    labels: list[str | None],
+    colours: list[str | tuple[float, float, float, float]],
+    markers: list[str],
     show_legend: bool,
-) -> Tuple[
+) -> tuple[
     PlotSeries, PlotSeries, PlotSeries, PlotSeries, PlotSeries, PlotSeries, PlotSeries
 ]:
 
@@ -933,7 +933,7 @@ def lagrangian_acceleration_pdf(
     markeredgewidth: float = 0.7
     dir_labels: list[str] = ["x", "y", "z"]
 
-    def create_series(i: int) -> Tuple[PlotSeries, PlotSeries]:
+    def create_series(i: int) -> tuple[PlotSeries, PlotSeries]:
         local_label: str
         if show_legend:
             if labels[i] is None:
@@ -1018,11 +1018,11 @@ def lagrangian_acceleration_pdf(
 def lagrangian_u_p_pdf(
     csv_dir: Path,
     yp: float | None,
-    label: Optional[str],
-    colour: str | Tuple[float, float, float, float],
+    label: str | None,
+    colour: str | tuple[float, float, float, float],
     marker: str,
     show_legend: bool,
-) -> Tuple[PlotSeries, PlotSeries]:
+) -> tuple[PlotSeries, PlotSeries]:
 
     csv_file: Path
     if yp is not None:
@@ -1095,7 +1095,7 @@ def lagrangian_u_p_pdf(
 def lagrangian_acceleration_pdf_proxies(
     markers: list[str],
     labels: list[str],
-    colours: list[str | Tuple[float, float, float, float]],
+    colours: list[str | tuple[float, float, float, float]],
     marker_cases: list[str],
 ) -> list[PlotSeries]:
     quantities: list[tuple[str, str]] = [
@@ -1104,7 +1104,7 @@ def lagrangian_acceleration_pdf_proxies(
         ("$a_{p,z}$", markers[2]),
     ]
 
-    cases: list[tuple[str, str, str | Tuple[float, float, float, float]]] = []
+    cases: list[tuple[str, str, str | tuple[float, float, float, float]]] = []
     for i, label in enumerate(labels):
         cases.append((label, marker_cases[i], colours[i]))
 
@@ -1143,14 +1143,14 @@ def lagrangian_up_pdf_proxies(
     markers: list[str],
     labels: list[str],
     yp_list: list[float],
-    colours: list[str | Tuple[float, float, float, float]],
+    colours: list[str | tuple[float, float, float, float]],
     marker_cases: list[str],
 ) -> list[PlotSeries]:
     quantities: list[tuple[str, str]] = []
     for i, yp in enumerate(yp_list):
         quantities.append((f"$y^+ = {yp}$", markers[i]))
 
-    cases: list[tuple[str, str, str | Tuple[float, float, float, float]]] = []
+    cases: list[tuple[str, str, str | tuple[float, float, float, float]]] = []
     for i, label in enumerate(labels):
         cases.append((label, marker_cases[i], colours[i]))
 
@@ -1190,15 +1190,15 @@ def lagrangian_up_pdf_proxies(
 
 def family_tree_breakup_formation_pdf(
     csv_dir: Path,
-    label: Optional[str],
-    colour: str | Tuple[float, float, float, float],
+    label: str | None,
+    colour: str | tuple[float, float, float, float],
     marker: str,
     linestyle: str,
     type: Literal["breakup", "formation"],
     filtered_t_min: bool,
     name: str | None,
     show_label: bool,
-) -> Tuple[PlotSeries, PlotSeries]:
+) -> tuple[PlotSeries, PlotSeries]:
 
     y: np.ndarray
     PDF: np.ndarray
@@ -1262,7 +1262,7 @@ def family_tree_breakup_formation_pdf(
 
 def noncohesive_floc_lifetime(
     csv_dir: Path,
-) -> Tuple[PlotSeries, PlotSeries, PlotSeries, PlotSeries, PlotSeries, PlotSeries]:
+) -> tuple[PlotSeries, PlotSeries, PlotSeries, PlotSeries, PlotSeries, PlotSeries]:
 
     y, edges, max_vals, std_vals, mean_vals, median_vals = lwidmer.read_csv_columns(
         csv_dir / "floc_lifetime.csv", (0, 1, 2, 3, 4, 5), remove_nan=1
@@ -1377,17 +1377,17 @@ def noncohesive_floc_lifetime(
 
 def coagulation_kernel(
     pickle_dir: Path,
-    label: Optional[str],
+    label: str | None,
     cmap: Colormap,
-    xlim: Optional[Tuple[float, float]],
+    xlim: tuple[float, float] | None,
     pcolormesh_log_scale: bool,
     contour_log_scale: bool,
     contour_interp_factor: int,
     contour_sigma: float,
     contour_levels: int,
-    contour_color: Optional[str] = "black",
+    contour_color: str | None = "black",
     contour_cmap: Optional[Colormap] = None,
-) -> Tuple[PlotSeries, PlotSeries]:
+) -> tuple[PlotSeries, PlotSeries]:
 
     ylim = xlim
 
@@ -1500,17 +1500,17 @@ def coagulation_kernel(
 
 def fragment_size_distribution(
     pickle_dir: Path,
-    label: Optional[str],
+    label: str | None,
     cmap: Colormap,
-    xlim: Optional[Tuple[float, float]],
+    xlim: tuple[float, float] | None,
     contour_sigma: float = 1.5,
     contour_levels: int = 10,
-    contour_color: Optional[str] = "black",
+    contour_color: str | None = "black",
     contour_cmap: Optional[Colormap] = None,
     contour_interp_factor: int = 5,
     pcolormesh_log_scale: bool = False,
     contour_log_scale: bool = False,
-) -> Tuple[PlotSeries, PlotSeries]:
+) -> tuple[PlotSeries, PlotSeries]:
 
     ylim = xlim
 
@@ -1627,9 +1627,9 @@ def fragment_size_distribution(
 
 def breakage_rate(
     pickle_dir: Path,
-    colour: str | Tuple[float, float, float, float],
+    colour: str | tuple[float, float, float, float],
     linestyle: str,
-    label: Optional[str],
+    label: str | None,
 ) -> PlotSeries:
 
     with open(pickle_dir / "number_density_evolution_params.pkl", "rb") as file:
@@ -1666,11 +1666,11 @@ def breakage_rate(
 
 def number_density_evo_sink_source(
     data_dir: Path,
-    data_names: List[str],
-    labels: List[str],
-    colours: List[str | Tuple[float, float, float, float]],
-    linestyles: List[str],
-    markers: List[str],
+    data_names: list[str],
+    labels: list[str],
+    colours: list[str | tuple[float, float, float, float]],
+    linestyles: list[str],
+    markers: list[str],
     mass_weighted: bool,
     separate_plots: bool,
 ) -> tuple[
@@ -1827,7 +1827,7 @@ def number_density_evo_sink_source(
 
         def create_series(idx: int, y_data: np.ndarray) -> PlotSeries:
             labels_local: list[str] = ["" for _ in range(len(quantities))]
-            colours_local: List[str | Tuple[float, float, float, float]] = [
+            colours_local: list[str | tuple[float, float, float, float]] = [
                 colours[data_idx] for _ in range(len(quantities))
             ]
             if separate_plots:

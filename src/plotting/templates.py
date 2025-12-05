@@ -1,6 +1,6 @@
 # -- src/plotting/templates.py
 from pathlib import Path
-from typing import List, Optional, Sequence, Tuple, Literal, Callable, Any
+from typing import Sequence, Literal, Callable, Any
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -19,11 +19,11 @@ from src.plotting.tools import (
 def velocity_profile_wall(
     output_dir: Path,
     series_list: Sequence[PlotSeries],
-    figsize: Tuple[float, float] = (6.5, 5.5),
+    figsize: tuple[float, float] = (6.5, 5.5),
     xlabel: str = r"$y^+$",
     ylabel: str = r"$u^+$",
     legend_loc: str = "lower right",
-    legend_bbox: Tuple[float, float] = (1.0, 0.20),
+    legend_bbox: tuple[float, float] = (1.0, 0.20),
     dpi: int = 300,
 ) -> None:
     if not series_list:
@@ -35,8 +35,8 @@ def velocity_profile_wall(
     for s in series_list:
         _plot_one(ax, s)
 
-    x_candidates: List[float] = []
-    y_candidates: List[float] = []
+    x_candidates: list[float] = []
+    y_candidates: list[float] = []
     for s in series_list:
         try:
             if s.x_key and s.data.get(s.x_key) is not None:
@@ -137,8 +137,8 @@ def normal_stress_wall(
         except:
             pass
 
-    xlim: Optional[Tuple[float, float]] = None
-    ylim: Optional[Tuple[float, float]] = None
+    xlim: Optional[tuple[float, float]] = None
+    ylim: Optional[tuple[float, float]] = None
     if ymax is not None:
         ylim = (ymin, min(1.1 * ymax, 8.0))
     if xmax is not None:
@@ -327,7 +327,7 @@ def _avg_floc_dir(
     my_save_fig(out_path, fig, dpi=150)
 
 
-def avg_D_f(output_dir: Path, series_list: List[PlotSeries], inner_units: bool):
+def avg_D_f(output_dir: Path, series_list: list[PlotSeries], inner_units: bool):
     _avg_floc_dir(
         output_dir,
         series_list,
@@ -337,7 +337,7 @@ def avg_D_f(output_dir: Path, series_list: List[PlotSeries], inner_units: bool):
     )
 
 
-def avg_D_g(output_dir: Path, series_list: List[PlotSeries], inner_units: bool):
+def avg_D_g(output_dir: Path, series_list: list[PlotSeries], inner_units: bool):
     _avg_floc_dir(
         output_dir,
         series_list,
@@ -347,7 +347,7 @@ def avg_D_g(output_dir: Path, series_list: List[PlotSeries], inner_units: bool):
     )
 
 
-def mass_avg_D_f(output_dir: Path, series_list: List[PlotSeries], inner_units: bool):
+def mass_avg_D_f(output_dir: Path, series_list: list[PlotSeries], inner_units: bool):
     _avg_floc_dir(
         output_dir,
         series_list,
@@ -357,7 +357,7 @@ def mass_avg_D_f(output_dir: Path, series_list: List[PlotSeries], inner_units: b
     )
 
 
-def mass_avg_D_g(output_dir: Path, series_list: List[PlotSeries], inner_units: bool):
+def mass_avg_D_g(output_dir: Path, series_list: list[PlotSeries], inner_units: bool):
     _avg_floc_dir(
         output_dir,
         series_list,
@@ -371,7 +371,7 @@ def mass_avg_D_g(output_dir: Path, series_list: List[PlotSeries], inner_units: b
 
 
 def phi_eulerian(
-    output_dir: Path, series_list: List[PlotSeries], normalised: bool
+    output_dir: Path, series_list: list[PlotSeries], normalised: bool
 ) -> None:
     out_path: Path = output_dir / f"phi_eulerian{"_norm" if normalised else ""}"
     xlabel: str = r"$y = \tilde y/L$ [-]"
@@ -519,8 +519,8 @@ def coagulation_kernel(
     K: np.ndarray = series_pcolormesh.data["C"]
     X: np.ndarray = series_pcolormesh.data["X"]
     Y: np.ndarray = series_pcolormesh.data["Y"]
-    xlim: Tuple[float, float] = series_pcolormesh.data["xlim"]
-    ylim: Tuple[float, float] = series_pcolormesh.data["ylim"]
+    xlim: tuple[float, float] = series_pcolormesh.data["xlim"]
+    ylim: tuple[float, float] = series_pcolormesh.data["ylim"]
 
     mask = (
         (X[0, :] >= xlim[0])
@@ -562,8 +562,8 @@ def fragment_size_distribution(
     name: str,
 ) -> None:
     out_path: Path = output_dir / f"fragment_size_distribution_{name}"
-    xlim: Tuple[float, float] = series_pcolormesh.data["xlim"]
-    ylim: Tuple[float, float] = series_pcolormesh.data["ylim"]
+    xlim: tuple[float, float] = series_pcolormesh.data["xlim"]
+    ylim: tuple[float, float] = series_pcolormesh.data["ylim"]
 
     ax, fig, mesh = generic_plot(
         [series_pcolormesh, series_contour],
