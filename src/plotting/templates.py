@@ -93,8 +93,8 @@ def velocity_profile_wall(
     ax.legend(loc=legend_loc, bbox_to_anchor=legend_bbox)
     ax = format_plot_axes(ax)
 
-    Re_val: Optional[float] = None
-    Re_tau_val: Optional[float] = None
+    Re_val: float | None = None
+    Re_tau_val: float | None = None
     for s in series_list:
         if Re_val is None and "Re" in s.data:
             try:
@@ -123,9 +123,9 @@ def normal_stress_wall(
     use_marker: bool,
 ) -> None:
     xmin: float = 0.0
-    xmax: Optional[float] = None
+    xmax: float | None = None
     ymin: float = 0.0
-    ymax: Optional[float] = None
+    ymax: float | None = None
     for series in series_list:
         try:
             if ymax is None:
@@ -137,8 +137,8 @@ def normal_stress_wall(
         except:
             pass
 
-    xlim: Optional[tuple[float, float]] = None
-    ylim: Optional[tuple[float, float]] = None
+    xlim: tuple[float, float] | None = None
+    ylim: tuple[float, float] | None = None
     if ymax is not None:
         ylim = (ymin, min(1.1 * ymax, 8.0))
     if xmax is not None:
@@ -206,7 +206,7 @@ def _pdf(
     xmax: float | None,
     ymin: float | None,
     ymax: float | None,
-    additional_objects: Optional[Sequence[Callable[[Axes], Any]]] = None,
+    additional_objects: Sequence[Callable[[Axes], Any]] | None = None,
 ) -> None:
     out_path = output_dir / f"{name}"
     ax, fig, _ = generic_plot(
@@ -470,7 +470,7 @@ def floc_timescale(
     output_dir: Path,
     series_list: list[PlotSeries],
     label: str,
-    additional_objects: Optional[Sequence[Callable[[Axes], Any]]] = None,
+    additional_objects: Sequence[Callable[[Axes], Any]] | None = None,
 ) -> None:
     name = f"floc_timescale_{label}"
     _pdf(
@@ -491,7 +491,7 @@ def noncohesive_floc_lifetime(
     output_dir: Path,
     series_list: list[PlotSeries],
     label: str,
-    additional_objects: Optional[Sequence[Callable[[Axes], Any]]] = None,
+    additional_objects: Sequence[Callable[[Axes], Any]] | None = None,
 ) -> None:
     name = f"noncohesive_floc_lifetime_{label}"
     _pdf(
