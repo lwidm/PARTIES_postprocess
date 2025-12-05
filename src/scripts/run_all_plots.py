@@ -1,6 +1,6 @@
+from os import sep
 from typing import Optional, Tuple, List, Literal, Callable
 from pathlib import Path
-import numpy as np
 import seaborn as sns
 import re
 
@@ -915,16 +915,33 @@ def coagulation_kernel(
     data_dir: Path,
     data_names: List[str],
     labels: List[str],
+    contour_sigmas: List[float],
 ):
 
     cmap: Colormap = plt.get_cmap("Blues")
-    s_list: list[PlotSeries] = []
+    s_pcolormesh_list: list[PlotSeries] = []
+    s_contour_list: list[PlotSeries] = []
     for i, data_name in enumerate(data_names):
-        s_list.append(
-            plt_series.coagulation_kernel(data_dir / data_name, labels[i], cmap)
+        s_pcolormesh, s_contour = plt_series.coagulation_kernel(
+            data_dir / data_name,
+            labels[i],
+            cmap,
+            xlim=(1, 50),
+            pcolormesh_log_scale=True,
+            contour_log_scale=True,
+            contour_interp_factor=1,
+            contour_sigma=contour_sigmas[i],
+            contour_levels=10,
         )
+        s_pcolormesh_list.append(s_pcolormesh)
+        s_contour_list.append(s_contour)
     for i in range(len(data_names)):
-        plt_templ.coagulation_kernel(plot_dir, s_list[i], data_names[i], n_p_max=300)
+        # plt_templ.coagulation_kernel(
+        #     plot_dir, s_pcolormesh_list[i], s_contour_list[i], data_names[i]
+        # )
+        plt_templ.coagulation_kernel(
+            plot_dir, s_pcolormesh_list[i], None, data_names[i]
+        )
 
 
 def fragment_size_distribution(
@@ -935,13 +952,18 @@ def fragment_size_distribution(
 ):
 
     cmap: Colormap = plt.get_cmap("Blues")
-    s_list: list[PlotSeries] = []
+    s_pcolormesh_list: list[PlotSeries] = []
+    s_contour_list: list[PlotSeries] = []
     for i, data_name in enumerate(data_names):
-        s_list.append(
-            plt_series.fragment_size_distribution(data_dir / data_name, labels[i], cmap)
+        s_pcolormesh, s_contour = plt_series.fragment_size_distribution(
+            data_dir / data_name, labels[i], cmap, xlim=(1, 50)
         )
+        s_pcolormesh_list.append(s_pcolormesh)
+        s_contour_list.append(s_contour)
     for i in range(len(data_names)):
-        plt_templ.fragment_size_distribution(plot_dir, s_list[i], data_names[i])
+        plt_templ.fragment_size_distribution(
+            plot_dir, s_pcolormesh_list[i], s_contour_list[i], data_names[i]
+        )
 
 
 def breakage_rate(
@@ -964,6 +986,70 @@ def breakage_rate(
     plt_templ.breakage_rate(plot_dir, s_list, n_p_max=20)
 
 
+def number_density_evo_sink_source(
+    plot_dir: Path,
+    data_dir: Path,
+    data_names: List[str],
+    labels: List[str],
+    linestyles: List[str],
+    markers: List[str],
+    colours: List[str | Tuple[float, float, float, float]],
+    mass_weighted: bool,
+    separate_plots: bool,
+):
+    markers = ["" for _ in range(len(markers))]
+    s_list_gain_coag: list[PlotSeries]
+    s_list_loss_coag: list[PlotSeries]
+    s_list_gain_frag: list[PlotSeries]
+    s_list_loss_frag: list[PlotSeries]
+    s_list_dn_dt: list[PlotSeries]
+    s_quantities: list[PlotSeries]
+    s_cases: list[PlotSeries]
+    (
+        s_list_gain_coag,
+        s_list_loss_coag,
+        s_list_gain_frag,
+        s_list_loss_frag,
+        s_list_dn_dt,
+        s_quantities,
+        s_cases,
+    ) = plt_series.number_density_evo_sink_source(
+        data_dir=data_dir,
+        data_names=data_names,
+        labels=labels,
+        colours=colours,
+        linestyles=linestyles,
+        markers=markers,
+        mass_weighted=mass_weighted,
+        separate_plots=separate_plots,
+    )
+    if separate_plots:
+        for i in range(len(data_names)):
+            series_list: list[PlotSeries] = [
+                s_list_gain_coag[i],
+                s_list_loss_coag[i],
+                s_list_gain_frag[i],
+                s_list_loss_frag[i],
+                s_list_dn_dt[i],
+            ]
+            plt_templ.number_density_evo_sink_source(
+                output_dir=plot_dir, series_list=series_list, name=data_names[i], xmax=50
+            )
+    else:
+        series_list: list[PlotSeries] = (
+            s_cases
+            + s_quantities
+            + s_list_gain_coag
+            + s_list_loss_coag
+            + s_list_gain_frag
+            + s_list_loss_frag
+            + s_list_dn_dt
+        )
+        plt_templ.number_density_evo_sink_source(
+            output_dir=plot_dir, series_list=series_list, name=None, xmax=50
+        )
+
+
 def main() -> None:
 
     plot_dir: Path = Path("./output/plots")
@@ -981,6 +1067,12 @@ def main() -> None:
         r"$\phi_{5\%}$",
         # "test"
     ]
+    coagulation_kernel_sigmas: List[float] = [
+        2,
+        5,
+        5,
+        5,
+    ]
     data_dir: Path = parent_dir / "data/"
     cmap = plt.get_cmap("tab10")
     cb_palette = sns.color_palette("colorblind", n_colors=5)
@@ -996,7 +1088,7 @@ def main() -> None:
         red_cmap(0.55),
     ]
     markers: List[str] = ["o", "s", "^", "v", "P"]
-    linestyles: List[str] = ["-", "--", "-.", ":"]
+    linestyles: List[str] = ["-", "--", "-.", ":", ":"]
     # floc(
     #     plot_dir,
     #     data_dir,
@@ -1047,24 +1139,32 @@ def main() -> None:
     #     cmap_formation=blue_cmap,
     # )
     # noncohesive_floc_lifetime(plot_dir)
-    coagulation_kernel(
-        plot_dir,
-        data_dir,
-        data_names,
-        labels,
-    )
-    fragment_size_distribution(
-        plot_dir,
-        data_dir,
-        data_names,
-        labels,
-    )
-    breakage_rate(
-        plot_dir,
-        data_dir,
-        data_names,
-        labels,
-        colours,
+    # coagulation_kernel(
+    #     plot_dir, data_dir, data_names, labels, contour_sigmas=coagulation_kernel_sigmas
+    # )
+    # fragment_size_distribution(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    # )
+    # breakage_rate(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     colours,
+    # )
+    number_density_evo_sink_source(
+        plot_dir=plot_dir,
+        data_dir=data_dir,
+        data_names=data_names,
+        labels=labels,
+        linestyles=linestyles,
+        markers=markers,
+        colours=colours,
+        mass_weighted=True,
+        separate_plots=True,
     )
 
     if not globals.on_anvil:

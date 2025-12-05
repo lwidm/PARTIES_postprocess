@@ -578,26 +578,32 @@ def compute_number_density_evolutions_params(
             for bin_idx in binned_idx_arr:
                 concentration_count_files[i][bin_idx] += 1
 
+    # Compute concentration c[i] (# per volume)
     c: dict[int, float] = {i: 0.0 for i in size_list_centers_idx}
     for bin_idx in size_list_centers_idx:
         for file_idx in range(num_files):
             c[bin_idx] += concentration_count_files[file_idx][bin_idx]
         c[bin_idx] /= num_files * V
 
+    # Compute number density n[i] (# per volume per floc size)
+    n: dict[int, float] = {i: c[i] / bin_width_eff for i in size_list_centers_idx}
+
     K: dict[tuple[int, int], float] = {}
     for i in size_list_centers_idx:
         for j in size_list_centers_idx:
-            if c[i] == 0 or c[j] == 0:
+            if n[i] == 0 or n[j] == 0:
                 K[(i, j)] = np.nan
                 continue
-            K[(i, j)] = float(C_count[(i, j)]) / (c[i] * c[j] * V * delta_t)
+            K[(i, j)] = float(C_count[(i, j)]) / (
+                n[i] * n[j] * V * bin_width_eff**2 * delta_t
+            )
 
     F: dict[int, float] = {}
     for i in size_list_centers_idx:
-        if c[i] == 0:
+        if n[i] == 0:
             F[i] = np.nan
             continue
-        F[i] = float(F_count[i]) / (c[i] * V * delta_t)
+        F[i] = float(F_count[i]) / (n[i] * V * bin_width_eff * delta_t)
 
     nu: dict[int, float] = {
         i: (float(nu_count[i]) / float(F_count[i]) if F_count[i] != 0 else np.nan)
@@ -621,4 +627,4 @@ def compute_number_density_evolutions_params(
         "edge_idxs": size_list_edges_idx,
     }
 
-    return {"K": K, "F": F, "nu": nu, "p": p, "bin_info": bin_info}
+    return {"K": K, "F": F, "nu": nu, "p": p, "c": c, "n": n, "bin_info": bin_info}

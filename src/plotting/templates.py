@@ -510,48 +510,61 @@ def noncohesive_floc_lifetime(
 
 def coagulation_kernel(
     output_dir: Path,
-    series: PlotSeries,
+    series_pcolormesh: PlotSeries,
+    series_contour: PlotSeries | None,
     name: str,
-    n_p_max: float,
 ) -> None:
     out_path: Path = output_dir / f"coagulation_kernel_{name}"
 
-    K: np.ndarray = series.data["C"]
-    X: np.ndarray = series.data["X"]
+    K: np.ndarray = series_pcolormesh.data["C"]
+    X: np.ndarray = series_pcolormesh.data["X"]
+    Y: np.ndarray = series_pcolormesh.data["Y"]
+    xlim: Tuple[float, float] = series_pcolormesh.data["xlim"]
+    ylim: Tuple[float, float] = series_pcolormesh.data["ylim"]
 
-    cmax: float = np.nanmax(K[X[:, 0] < n_p_max, X[:, 0] < n_p_max])
+    mask = (X[0, :] >= xlim[0]) & (X[0, :] <= xlim[1]) & (Y[:, 0] >= ylim[0]) & (Y[:, 0] <= ylim[1])
+
+    cmax: float = np.nanmax(K[mask])
+
+    s_list = [series_pcolormesh, series_contour] if series_contour is not None else [series_pcolormesh]
 
     ax, fig, mesh = generic_plot(
-        [series],
+        s_list,
         legend=True,
         xlabel="$x \\quad (n_p)$",
         ylabel="$y \\quad (n_p)$",
-        xlim=(1, 200),
-        ylim=(1, 200),
+        xlim=xlim,
+        ylim=ylim,
         figsize=(6.5, 5.5),
         legend_loc="best",
-        # legend_bbox=(1.0, 0.80),
     )
 
-    mesh[0].set_clim(0, cmax)
+    # mesh[0].set_clim(0, cmax)
     cbar = plt.colorbar(mesh[0], ax=ax, orientation="horizontal")
     ax.set_aspect("equal", adjustable="box")
 
     my_save_fig(out_path, fig, dpi=150)
 
 
-def fragment_size_distribution(output_dir: Path, series: PlotSeries, name: str) -> None:
+def fragment_size_distribution(
+    output_dir: Path,
+    series_pcolormesh: PlotSeries,
+    series_contour: PlotSeries,
+    name: str,
+) -> None:
     out_path: Path = output_dir / f"fragment_size_distribution_{name}"
+    xlim: Tuple[float, float] = series_pcolormesh.data["xlim"]
+    ylim: Tuple[float, float] = series_pcolormesh.data["ylim"]
+
     ax, fig, mesh = generic_plot(
-        [series],
+        [series_pcolormesh, series_contour],
         legend=True,
         xlabel="$x \\quad (n_p)$",
         ylabel="$y \\quad (n_p)$",
-        xlim=(1, 200),
-        ylim=(1, 200),
+        xlim=xlim,
+        ylim=ylim,
         figsize=(6.5, 5.5),
         legend_loc="best",
-        # legend_bbox=(1.0, 0.80),
     )
 
     cbar = plt.colorbar(mesh[0], ax=ax, orientation="horizontal")
@@ -586,6 +599,35 @@ def breakage_rate(
     current_ticks = list(ax.get_xticks())
     if 1 not in current_ticks:
         current_ticks.append(2)
+        current_ticks.sort()
+        ax.set_xticks(current_ticks)
+    my_save_fig(out_path, fig, dpi=150)
+
+def number_density_evo_sink_source(
+    output_dir: Path, series_list: Sequence[PlotSeries], name: str | None,
+    xmax: float | None,
+) -> None:
+    if name is not None:
+        name = "number_density_evo_{name}"
+    else:
+        name = "number_density_evo"
+    out_path = output_dir / name
+
+
+    ax, fig, _ = generic_plot(
+        list(series_list),
+        legend=True,
+        xlabel=r"floc size: $x \quad (n_p)$",
+        ylabel=r"$\frac{\partial n(n_p)}{\partial t}$",
+        xlim=(1, xmax),
+        ylim=(None, None),
+        figsize=(6.5, 5.5),
+        legend_loc="lower right",
+        legend_bbox=(1.0, 0.80),
+    )
+    current_ticks = list(ax.get_xticks())
+    if 1 not in current_ticks:
+        current_ticks.append(1)
         current_ticks.sort()
         ax.set_xticks(current_ticks)
     my_save_fig(out_path, fig, dpi=150)

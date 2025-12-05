@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Sequence, Tuple, Union, Literal, Callable
 
 import numpy as np
+from numpy.fft import fft2, ifft2
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
@@ -19,6 +20,8 @@ PlotMethod = Literal[
     "imshow",
     "scatter",
     "bar",
+    "contour",
+    "contourf",
     "err_plot",
     "err_semilogx",
     "err_semilogy",
@@ -117,6 +120,38 @@ def _adjust_color(hexcolor, lighter=0.0, sat_mul=1.0):
     s = min(max(0.0, s * sat_mul), 1.0)
     r2, g2, b2 = colorsys.hls_to_rgb(h, l, s)
     return (r2, g2, b2)
+
+
+def _gaussian_filter_2d(data: np.ndarray, sigma: float) -> np.ndarray:
+    valid_mask = ~np.isnan(data)
+    if not np.any(valid_mask):
+        return np.full_like(data, np.nan)
+
+    data_zeroed = np.nan_to_num(data, nan=0.0)
+
+    kernel_size = int(4 * sigma + 1)
+    if kernel_size % 2 == 0:
+        kernel_size += 1
+    ax = np.arange(-kernel_size // 2 + 1., kernel_size // 2 + 1.)
+    xx, yy = np.meshgrid(ax, ax)
+    kernel = np.exp(-(xx**2 + yy**2) / (2. * sigma**2))
+    kernel = kernel / np.sum(kernel)
+
+    data_fft = fft2(data_zeroed)
+
+    kernel_padded = np.zeros_like(data)
+    kernel_padded[:kernel_size, :kernel_size] = kernel
+    kernel_padded = np.roll(kernel_padded, -kernel_size // 2, axis=(0, 1))
+    kernel_fft = fft2(kernel_padded)
+
+    conv = np.real(ifft2(data_fft * kernel_fft))
+
+    mask_fft = fft2(valid_mask.astype(float))
+    norm = np.real(ifft2(mask_fft * kernel_fft))
+
+    result = conv / np.where(norm == 0, 1, norm)
+
+    return result
 
 
 def _plot_one(ax: Axes, series: PlotSeries)  -> Any:
@@ -255,6 +290,56 @@ def _plot_one(ax: Axes, series: PlotSeries)  -> Any:
         C = np.asarray(data.get("C") or data.get("u"))
         plot_kwargs = series.kwargs
         other = ax.imshow(C, **plot_kwargs)
+    elif method in ("contour", "contourf"):
+        from scipy.interpolate import RectBivariateSpline
+
+        plot_kwargs = series.kwargs
+        data = series.data
+        X = data.get("X")
+        Y = data.get("Y")
+        if "C" in data:
+            C = data.get("C")
+        elif "u" in data:
+            C = data.get("u")
+        else:
+            raise ValueError(
+                "Failed to extract either C or u when trying to create contour plot"
+            )
+        if X is None or Y is None:
+            x, y = _extract_xy(series)
+            if x is None or y is None:
+                raise ValueError(
+                    "Failed to extract either X, Y, x or y when trying to create contour plot"
+                )
+            X, Y = np.meshgrid(x, y)
+
+        # Check if interpolation is requested
+        interp_factor = plot_kwargs.pop("interp_factor", 5)
+
+        if interp_factor is not None and interp_factor > 1:
+            # Extract 1D arrays from meshgrid
+            x_1d = X[0, :]
+            y_1d = Y[:, 0]
+
+            # Create interpolation function
+            spline = RectBivariateSpline(y_1d, x_1d, C, kx=3, ky=3)
+
+            # Create finer grid
+            x_fine = np.linspace(x_1d.min(), x_1d.max(), len(x_1d) * interp_factor)
+            y_fine = np.linspace(y_1d.min(), y_1d.max(), len(y_1d) * interp_factor)
+            X_fine, Y_fine = np.meshgrid(x_fine, y_fine)
+
+            # Interpolate
+            C_fine = spline(y_fine, x_fine)
+
+            # Use interpolated data
+            X, Y, C = X_fine, Y_fine, C_fine
+
+        levels = plot_kwargs.pop("levels", 10)
+        if method == "contour":
+            other = ax.contour(X, Y, C, levels=levels, **plot_kwargs)
+        else:
+            other = ax.contourf(X, Y, C, levels=levels, **plot_kwargs)
     else:
         raise ValueError("Plot method specified not implemented yet")
 

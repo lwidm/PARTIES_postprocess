@@ -1,18 +1,20 @@
 # -- src/plotting/series.py
 
 from pathlib import Path
-from typing import List, Optional, Tuple, Literal
+from typing import List, Optional, Tuple, Literal, Callable
 import h5py
 from scipy import stats
+from scipy.interpolate import RectBivariateSpline
 
 import numpy as np
 import pickle
 
-from matplotlib.colors import Colormap
+from matplotlib.colors import Colormap, LogNorm
 from src.theory import law_of_the_wall as low
 from src.myio import output, utils, lwidmer
 from src.plotting.tools import (
     PlotSeries,
+    _gaussian_filter_2d,
 )
 
 
@@ -1372,12 +1374,22 @@ def noncohesive_floc_lifetime(
 
     return s_max, s_std, s_mean, s_median, s_max_fit, s_model_fit
 
+
 def coagulation_kernel(
     pickle_dir: Path,
     label: Optional[str],
     cmap: Colormap,
-) -> PlotSeries:
+    xlim: Optional[Tuple[float, float]],
+    pcolormesh_log_scale: bool,
+    contour_log_scale: bool,
+    contour_interp_factor: int,
+    contour_sigma: float,
+    contour_levels: int,
+    contour_color: Optional[str] = "black",
+    contour_cmap: Optional[Colormap] = None,
+) -> Tuple[PlotSeries, PlotSeries]:
 
+    ylim = xlim
 
     with open(pickle_dir / "number_density_evolution_params.pkl", "rb") as file:
         results: dict[str, dict] = pickle.load(file)
@@ -1394,30 +1406,113 @@ def coagulation_kernel(
         for j, x2_idx in enumerate(x_idx_list):
             C[i, j] = K[(x1_idx, x2_idx)]
 
+    x_data_max = np.nanmax(x_arr)
+    y_data_max = np.nanmax(x_arr)
 
-    s: PlotSeries = PlotSeries(
+    if xlim is not None:
+        x_min_plot, x_max_plot = xlim
+    else:
+        x_min_plot, x_max_plot = 1, x_data_max
+
+    if ylim is not None:
+        y_min_plot, y_max_plot = ylim
+    else:
+        y_min_plot, y_max_plot = 1, y_data_max
+
+    x_max_plot = min(x_max_plot, x_data_max)
+    y_max_plot = min(y_max_plot, y_data_max)
+
+    mask: np.ndarray = (
+        (X >= x_min_plot) & (X <= x_max_plot) & (Y >= y_min_plot) & (Y <= y_max_plot)
+    )
+    n_rows = np.sum(mask[:, 0])
+    n_cols = np.sum(mask[0, :])
+    C_filtered = C[mask].reshape(n_rows, n_cols)
+
+    C_smoothed = _gaussian_filter_2d(C, contour_sigma)
+    mask: np.ndarray = (
+        (X >= x_min_plot) & (X <= x_max_plot) & (Y >= y_min_plot) & (Y <= y_max_plot)
+    )
+    n_rows = np.sum(mask[:, 0])
+    n_cols = np.sum(mask[0, :])
+    X_filtered_smoothed = X[mask].reshape(n_rows, n_cols)
+    Y_filtered_smoothed = Y[mask].reshape(n_rows, n_cols)
+    C_filtered_smoothed = C_smoothed[mask].reshape(n_rows, n_cols)
+
+    pcolormesh_kwargs = {
+        "label": label,
+        "cmap": cmap,
+        "edgecolors": None,
+    }
+    if pcolormesh_log_scale:
+        vmin = (
+            np.nanmin(C_filtered[C_filtered > 0]) if np.any(C_filtered > 0) else 1e-10
+        )
+        vmax = np.nanmax(C_filtered)
+        pcolormesh_kwargs["norm"] = LogNorm(vmin=vmin, vmax=vmax)
+
+    s_pcolormesh: PlotSeries = PlotSeries(
         data={
             "X": X,
             "Y": Y,
             "C": C,
+            "xlim": (x_min_plot, x_max_plot),
+            "ylim": (y_min_plot, y_max_plot),
         },
         x_key="x",
         y_key="y",
         plot_method="pcolormesh",
-        kwargs={
-            "label": label,
-            "cmap": cmap,
-            "edgecolors": None,
-        },
+        kwargs=pcolormesh_kwargs,
     )
 
-    return s
+    contour_kwargs = {
+        "levels": contour_levels,
+        "linewidths": 0.8,
+        "interp_factor": contour_interp_factor,
+    }
+    if contour_log_scale:
+        vmin = (
+            np.nanmin(C_filtered_smoothed[C_filtered_smoothed > 0])
+            if np.any(C_filtered_smoothed > 0)
+            else 1e-10
+        )
+        vmax = np.nanmax(C_filtered_smoothed)
+        contour_kwargs["norm"] = LogNorm(vmin=vmin, vmax=vmax)
+    if contour_cmap is not None:
+        contour_kwargs["cmap"] = contour_cmap
+    elif contour_color is not None:
+        contour_kwargs["colors"] = contour_color
+
+    s_contour: PlotSeries = PlotSeries(
+        data={
+            "X": X_filtered_smoothed,
+            "Y": Y_filtered_smoothed,
+            "C": C_filtered_smoothed,
+        },
+        x_key="x",
+        y_key="y",
+        plot_method="contour",
+        kwargs=contour_kwargs,
+    )
+
+    return s_pcolormesh, s_contour
+
 
 def fragment_size_distribution(
     pickle_dir: Path,
     label: Optional[str],
     cmap: Colormap,
-) -> PlotSeries:
+    xlim: Optional[Tuple[float, float]],
+    contour_sigma: float = 1.5,
+    contour_levels: int = 10,
+    contour_color: Optional[str] = "black",
+    contour_cmap: Optional[Colormap] = None,
+    contour_interp_factor: int = 5,
+    pcolormesh_log_scale: bool = False,
+    contour_log_scale: bool = False,
+) -> Tuple[PlotSeries, PlotSeries]:
+
+    ylim = xlim
 
     with open(pickle_dir / "number_density_evolution_params.pkl", "rb") as file:
         results: dict[str, dict] = pickle.load(file)
@@ -1434,26 +1529,101 @@ def fragment_size_distribution(
         for j, x2_idx in enumerate(x_idx_list):
             C[i, j] = p[(x1_idx, x2_idx)]
 
+    x_min_default, x_max_default = 1.0, 200.0
+    y_min_default, y_max_default = 1.0, 200.0
 
-    s: PlotSeries = PlotSeries(
+    x_data_max = np.nanmax(x_arr)
+    y_data_max = np.nanmax(x_arr)
+
+    if xlim is not None:
+        x_min_plot, x_max_plot = xlim
+    else:
+        x_min_plot, x_max_plot = 1, None
+
+    if ylim is not None:
+        y_min_plot, y_max_plot = ylim
+    else:
+        y_min_plot, y_max_plot = 1, None
+
+    if x_max_plot is None or x_data_max < x_max_plot:
+        x_max_plot = x_data_max
+    if y_max_plot is None or y_data_max < y_max_plot:
+        y_max_plot = y_data_max
+
+    mask: np.ndarray = (
+        (X >= x_min_plot) & (X <= x_max_plot) & (Y >= y_min_plot) & (Y <= y_max_plot)
+    )
+
+    n_rows = np.sum(mask[:, 0])
+    n_cols = np.sum(mask[0, :])
+
+    X_filtered: np.ndarray = X[mask].reshape(n_rows, n_cols)
+    Y_filtered: np.ndarray = Y[mask].reshape(n_rows, n_cols)
+    C_filtered = C[mask].reshape(n_rows, n_cols)
+
+    if contour_sigma > 0:
+        C_smoothed = _gaussian_filter_2d(C_filtered, contour_sigma)
+    else:
+        C_smoothed = C_filtered
+
+    pcolormesh_kwargs = {
+        "label": label,
+        "cmap": cmap,
+        "edgecolors": None,
+    }
+    if pcolormesh_log_scale:
+        # vmin = np.nanmin(C[C > 0]) if np.any(C > 0) else 1e-10
+        vmin = np.nanmin(C[2 < X[:, 0] < 4][C > 0]) if np.any(C > 0) else 1e-10
+        vmax = np.nanmax(C)
+        pcolormesh_kwargs["norm"] = LogNorm(vmin=vmin, vmax=vmax)
+
+    s_pcolormesh: PlotSeries = PlotSeries(
         data={
             "X": X,
             "Y": Y,
             "C": C,
+            "xlim": (x_min_plot, x_max_plot),
+            "ylim": (y_min_plot, y_max_plot),
         },
         x_key="x",
         y_key="y",
         plot_method="pcolormesh",
-        kwargs={
-            "label": label,
-            "cmap": cmap,
-            # "vmin": -abs_max,
-            # "vmax": abs_max,
-            "edgecolors": None,
-        },
+        kwargs=pcolormesh_kwargs,
     )
 
-    return s
+    contour_kwargs = {
+        "levels": contour_levels,
+        "linewidths": 0.8,
+        "interp_factor": contour_interp_factor,
+    }
+    if contour_log_scale:
+        # vmin = np.nanmin(C_smoothed[C_smoothed > 0]) if np.any(C_smoothed > 0) else 1e-10
+        vmin = (
+            np.nanmin(C_smoothed[2 < X[:, 0] < 4][C_smoothed > 0])
+            if np.any(C_smoothed > 0)
+            else 1e-10
+        )
+        vmax = np.nanmax(C_smoothed)
+        contour_kwargs["norm"] = LogNorm(vmin=vmin, vmax=vmax)
+    if contour_cmap is not None:
+        contour_kwargs["cmap"] = contour_cmap
+    elif contour_color is not None:
+        contour_kwargs["colors"] = contour_color
+
+    s_contour: PlotSeries = PlotSeries(
+        data={
+            "X": X_filtered,
+            "Y": Y_filtered,
+            "C": C_smoothed,
+        },
+        x_key="x",
+        y_key="y",
+        plot_method="contour",
+        kwargs=contour_kwargs,
+    )
+
+    return s_pcolormesh, s_contour
+
 
 def breakage_rate(
     pickle_dir: Path,
@@ -1475,7 +1645,6 @@ def breakage_rate(
     for i, x_idx in enumerate(x_idx_list):
         F_arr[i] = F[x_idx]
 
-
     F_arr: np.ndarray = np.zeros(len(F))
     for i, x_idx in enumerate(x_idx_list):
         F_arr[i] = F[x_idx]
@@ -1493,3 +1662,223 @@ def breakage_rate(
     )
 
     return s
+
+
+def number_density_evo_sink_source(
+    data_dir: Path,
+    data_names: List[str],
+    labels: List[str],
+    colours: List[str | Tuple[float, float, float, float]],
+    linestyles: List[str],
+    markers: List[str],
+    mass_weighted: bool,
+    separate_plots: bool,
+) -> tuple[
+    list[PlotSeries],
+    list[PlotSeries],
+    list[PlotSeries],
+    list[PlotSeries],
+    list[PlotSeries],
+    list[PlotSeries],
+    list[PlotSeries],
+]:
+
+    s_list_gain_coag: list[PlotSeries] = []
+    s_list_loss_coag: list[PlotSeries] = []
+    s_list_gain_frag: list[PlotSeries] = []
+    s_list_loss_frag: list[PlotSeries] = []
+    s_list_dn_dt: list[PlotSeries] = []
+
+    quantities: list[str] = [
+        "gain by coagulation",
+        "loss by coagulation",
+        "gain by fragmentation",
+        "loss by fragmentation",
+        r"$\frac{\partial n(n_p)}{\partial t}$",
+    ]
+
+    for data_idx, data_name in enumerate(data_names):
+        with open(
+            data_dir / data_name / "number_density_evolution_params.pkl", "rb"
+        ) as file:
+            results: dict[str, dict] = pickle.load(file)
+
+        K_dict: dict[tuple[int, int], float] = results["K"]
+        p_dict: dict[tuple[int, int], float] = results["p"]
+        F_dict: dict[int, float] = results["F"]
+        nu_dict: dict[int, float] = results["nu"]
+        n_dict: dict[int, float] = results["n"]
+
+        x_list: list[float] = results["bin_info"]["center_sizes"]
+        x_edges_list: list[float] = results["bin_info"]["edge_sizes"]
+        x_idx_list: list[int] = results["bin_info"]["center_idxs"]
+        x_arr: np.ndarray = np.asarray(x_list, dtype=float)
+        x_edges_arr: np.ndarray = np.asarray(x_edges_list, dtype=float)
+        bin_widths: np.ndarray = x_edges_arr[1:] - x_edges_arr[:-1]
+        x_idx_arr: np.ndarray = np.asarray(x_idx_list, dtype=int)
+        X, _ = np.meshgrid(x_arr, x_arr)
+        # X_idx, Y_idx = np.meshgrid(x_idx_list, x_arr)
+
+        K: np.ndarray = np.zeros_like(X, dtype=float)
+        for i, x1_idx in enumerate(x_idx_list):
+            for j, x2_idx in enumerate(x_idx_list):
+                K[i, j] = K_dict[(x1_idx, x2_idx)]
+        K = np.nan_to_num(K, nan=0.0)
+
+        p: np.ndarray = np.zeros_like(X, dtype=float)
+        for i, x1_idx in enumerate(x_idx_list):
+            for j, x2_idx in enumerate(x_idx_list):
+                p[i, j] = p_dict[(x1_idx, x2_idx)]
+        p = np.nan_to_num(p, nan=0.0)
+
+        F: np.ndarray = np.zeros_like(x_arr, dtype=float)
+        for i, x_idx in enumerate(x_idx_list):
+            F[i] = F_dict[x_idx]
+        F = np.nan_to_num(F, nan=0.0)
+
+        nu: np.ndarray = np.zeros_like(x_arr, dtype=float)
+        for i, x_idx in enumerate(x_idx_list):
+            nu[i] = nu_dict[x_idx]
+        nu = np.nan_to_num(nu, nan=2.0)
+
+        n: np.ndarray = np.zeros_like(x_arr, dtype=float)
+        for i, x_idx in enumerate(x_idx_list):
+            n[i] = n_dict[x_idx]
+        n = np.nan_to_num(n, nan=0.0)
+
+        def size_integral(
+            lower: int, upper: int, integrand: Callable[[np.ndarray], np.ndarray]
+        ) -> np.floating:
+            mask: np.ndarray = (x_idx_arr >= lower) & (x_idx_arr <= upper)
+            return np.dot(integrand(x_idx_arr[mask]), bin_widths[mask])
+
+        def integrand_gain_coag(x_idx: int, y_idx_arr: np.ndarray) -> np.ndarray:
+            z_val_arr: np.ndarray = x_arr[x_idx] - x_arr[y_idx_arr]
+            z_idx_arr: np.ndarray = np.digitize(z_val_arr, x_edges_list) - 1
+            return K[z_idx_arr, y_idx_arr] * n[z_idx_arr] * n[y_idx_arr]
+
+        def integrand_loss_coag(x_idx: int, y_idx_arr: np.ndarray) -> np.ndarray:
+            return K[x_idx, y_idx_arr] * n[y_idx_arr]
+
+        def integrand_gain_frag(x_idx: int, y_idx_arr: np.ndarray) -> np.ndarray:
+            return F[y_idx_arr] * p[x_idx, y_idx_arr] * n[y_idx_arr]
+
+        def gain_coag() -> np.ndarray:
+            result: np.ndarray = np.zeros_like(x_idx_arr, dtype=float)
+            for i, x_idx in enumerate(x_idx_arr):
+                result[i] = (
+                    1
+                    / 2
+                    * size_integral(
+                        x_idx_arr[0],
+                        x_idx,
+                        lambda y_idx_arr: integrand_gain_coag(x_idx, y_idx_arr),
+                    )
+                )
+            return result
+
+        def loss_coag() -> np.ndarray:
+            result: np.ndarray = np.zeros_like(x_idx_arr, dtype=float)
+            for i, x_idx in enumerate(x_idx_arr):
+                result[i] = -1/2*n[x_idx] * size_integral(
+                    x_idx_arr[0],
+                    x_idx_arr[-1],
+                    lambda y_idx_arr: integrand_loss_coag(x_idx, y_idx_arr),
+                )
+            return result
+
+        def gain_frag() -> np.ndarray:
+            result: np.ndarray = np.zeros_like(x_idx_arr, dtype=float)
+            for i, x_idx in enumerate(x_idx_arr):
+                result[i] = size_integral(
+                    x_idx,
+                    x_idx_arr[-1],
+                    lambda y_idx_arr: integrand_gain_frag(x_idx, y_idx_arr),
+                )
+            return result
+
+        def loss_frag() -> np.ndarray:
+            return - F * n
+
+        def dn_dt(
+            gain_coag: np.ndarray,
+            loss_coag: np.ndarray,
+            gain_frag: np.ndarray,
+            loss_frag: np.ndarray,
+        ) -> np.ndarray:
+            return gain_coag + loss_coag + gain_frag + loss_frag
+
+        def weight_by_mass(data: np.ndarray) -> np.ndarray:
+            return data * x_arr
+
+        y_gain_coag: np.ndarray = gain_coag()
+        y_loss_coag: np.ndarray = loss_coag()
+        y_gain_frag: np.ndarray = gain_frag()
+        y_loss_frag: np.ndarray = loss_frag()
+        y_dn_dt: np.ndarray = dn_dt(y_gain_coag, y_loss_coag, y_gain_frag, y_loss_frag)
+
+        if mass_weighted:
+            y_gain_coag = weight_by_mass(y_gain_coag)
+            y_loss_coag = weight_by_mass(y_loss_coag)
+            y_gain_frag = weight_by_mass(y_gain_frag)
+            y_loss_frag = weight_by_mass(y_loss_frag)
+            y_dn_dt = weight_by_mass(y_dn_dt)
+
+        def create_series(idx: int, y_data: np.ndarray) -> PlotSeries:
+            labels_local: list[str] = ["" for _ in range(len(quantities))]
+            colours_local: List[str | Tuple[float, float, float, float]] = [
+                colours[idx] for _ in range(len(labels))
+            ]
+            if separate_plots:
+                labels_local = [f"{quantity} ({labels[data_idx]})" for quantity in quantities]
+                colours_local = colours
+            return PlotSeries(
+                data={"x": x_arr, "y": y_data},
+                x_key="x",
+                y_key="y",
+                plot_method="plot",
+                kwargs={
+                    "label": labels_local[idx],
+                    "color": colours_local[idx],
+                    "linestyle": linestyles[idx],
+                    "marker": markers[idx],
+                },
+            )
+
+        s_list_gain_coag.append(create_series(0, y_gain_coag))
+        s_list_loss_coag.append(create_series(1, y_loss_coag))
+        s_list_gain_frag.append(create_series(2, y_gain_frag))
+        s_list_loss_frag.append(create_series(3, y_loss_frag))
+        s_list_dn_dt.append(create_series(4, y_dn_dt))
+
+    s_quantities: list[PlotSeries] = []
+    s_cases: list[PlotSeries] = []
+    if not separate_plots:
+        for i in range(len(quantities)):
+            s_quantities.append(
+                create_proxy_series(
+                    "k",
+                    "white",
+                    "none",
+                    linestyles[i],
+                    "none",
+                    0.5,
+                    quantities[i],
+                )
+            )
+        for i in range(len(labels)):
+            s_cases.append(
+                create_proxy_series(
+                    colours[i], colours[i], "full", "None", "s", 0, labels[i]
+                )
+            )
+
+    return (
+        s_list_gain_coag,
+        s_list_loss_coag,
+        s_list_gain_frag,
+        s_list_loss_frag,
+        s_list_dn_dt,
+        s_quantities,
+        s_cases,
+    )
