@@ -1386,7 +1386,7 @@ def coagulation_kernel(
     contour_sigma: float,
     contour_levels: int,
     contour_color: str | None = "black",
-    contour_cmap: Optional[Colormap] = None,
+    contour_cmap: Colormap | None = None,
 ) -> tuple[PlotSeries, PlotSeries]:
 
     ylim = xlim
@@ -1506,7 +1506,7 @@ def fragment_size_distribution(
     contour_sigma: float = 1.5,
     contour_levels: int = 10,
     contour_color: str | None = "black",
-    contour_cmap: Optional[Colormap] = None,
+    contour_cmap: Colormap | None = None,
     contour_interp_factor: int = 5,
     pcolormesh_log_scale: bool = False,
     contour_log_scale: bool = False,

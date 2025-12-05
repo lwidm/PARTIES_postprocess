@@ -216,9 +216,9 @@ def compute_cross_component_statistics(
 
 def process_single_component(
     component: Literal["u", "v", "w"],
-    min_file_index: Optional[int] = None,
-    max_file_index: Optional[int] = None,
-    num_workers: Optional[int] = None,
+    min_file_index: int | None = None,
+    max_file_index: int | None = None,
+    num_workers: int | None = None,
     use_threads: bool = False,
     set_blas_threads_to_one: bool = True,
 ) -> Tuple[np.ndarray, np.ndarray]:
@@ -237,8 +237,8 @@ def process_single_component(
         Dictionary containing component_mean and component_squared_mean
     """
     # Initialize accumulation arrays
-    accumulated_mean_velocity: Optional[np.ndarray] = None
-    accumulated_mean_velocity_squared: Optional[np.ndarray] = None
+    accumulated_mean_velocity: np.ndarray | None = None
+    accumulated_mean_velocity_squared: np.ndarray | None = None
     processed_file_count: int = 0
 
     data_files: List[Path] = myio.list_parties_data_files(
@@ -303,9 +303,9 @@ def process_single_component(
 def process_cross_components(
     component1: Literal["u", "v", "w"],
     component2: Literal["u", "v", "w"],
-    min_file_index: Optional[int] = None,
-    max_file_index: Optional[int] = None,
-    num_workers: Optional[int] = None,
+    min_file_index: int | None = None,
+    max_file_index: int | None = None,
+    num_workers: int | None = None,
     use_threads: bool = False,
     set_blas_threads_to_one: bool = True,
 ) -> np.ndarray:
@@ -324,7 +324,7 @@ def process_cross_components(
     Returns:
         Cross-component mean array
     """
-    accumulated_cross_mean_velocity: Optional[np.ndarray] = None
+    accumulated_cross_mean_velocity: np.ndarray | None = None
     processed_file_count: int = 0
 
     data_files: List[Path] = myio.list_parties_data_files(
@@ -383,10 +383,10 @@ def process_cross_components(
 
 
 def compute_all_reynolds_stresses_step_by_step(
-    min_file_index: Optional[int] = None,
-    max_file_index: Optional[int] = None,
-    num_workers_single_component: Optional[int] = None,
-    num_workers_cross_component: Optional[int] = None,
+    min_file_index: int | None = None,
+    max_file_index: int | None = None,
+    num_workers_single_component: int | None = None,
+    num_workers_cross_component: int | None = None,
     use_threads: bool = False,
     save_intermediates: bool = True,
 ) -> Dict[str, Any]:

@@ -2,7 +2,7 @@
 
 from concurrent.futures import ThreadPoolExecutor
 import numpy as np
-from typing import Optional, List, Dict, Union, Any, Tuple, Generator
+from typing import Any, Generator
 from natsort import natsorted
 from pathlib import Path
 import io
@@ -24,12 +24,12 @@ sys.setrecursionlimit(int(1e9))
 
 def save_to_h5(
     output_path: Path,
-    data_dict: Dict[str, Any],
-    metadata: Optional[Dict[str, Any]] = None,
+    data_dict: dict[str, Any],
+    metadata: dict[str, Any] | None = None,
 ) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    def _save_nested_dict(h5_group: h5py.Group, data: Dict[str, Any]) -> None:
+    def _save_nested_dict(h5_group: h5py.Group, data: dict[str, Any]) -> None:
         for key, value in data.items():
             if isinstance(value, dict):
                 subgroup = h5_group.create_group(key)
@@ -84,10 +84,10 @@ def save_to_h5(
 
 def load_from_h5(
     input_path: Path,
-) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
+) -> tuple[dict[str, Any], dict[str, Any] | None]:
 
-    def _load_nested_dict(h5_group: h5py.Group) -> Dict[str, Any]:
-        result: Dict[str, Any] = {}
+    def _load_nested_dict(h5_group: h5py.Group) -> dict[str, Any]:
+        result: dict[str, Any] = {}
         for key, item in h5_group.items():
             if isinstance(item, h5py.Group):
                 result[key] = _load_nested_dict(item)
@@ -105,7 +105,7 @@ def load_from_h5(
                     result[key] = data
         return result
 
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: dict[str, Any] | None = None
     with h5py.File(str(input_path), "r") as h5_file:
         data_dict = _load_nested_dict(h5_file)
         metadata = dict(h5_file.attrs) if h5_file.attrs else None
@@ -115,7 +115,7 @@ def load_from_h5(
 
 def load_columns_from_txt_numpy(
     path: str, split_chars: str = ",;", comment_chars: str = "#%"
-) -> List[np.ndarray]:
+) -> list[np.ndarray]:
     """
     Load numeric columns from a text file and return a list of NumPy 1-D arrays.
 
@@ -127,10 +127,10 @@ def load_columns_from_txt_numpy(
     Returns:
         List of 1-D numpy arrays, one per column.
     """
-    esc_split: Optional[str] = re.escape(split_chars) if split_chars else ""
-    esc_comment: Optional[str] = re.escape(comment_chars) if comment_chars else ""
-    pattern_split: Optional[str] = f"[{esc_split}]+" if esc_split else None
-    pattern_comment: Optional[str] = f"[{esc_comment}].*" if esc_comment else None
+    esc_split: str | None = re.escape(split_chars) if split_chars else ""
+    esc_comment: str | None = re.escape(comment_chars) if comment_chars else ""
+    pattern_split: str | None = f"[{esc_split}]+" if esc_split else None
+    pattern_comment: str | None = f"[{esc_comment}].*" if esc_comment else None
 
     lines: list[str] = []
     with open(path, "r", encoding="utf-8") as file:
@@ -167,9 +167,9 @@ def load_columns_from_txt_numpy(
 def list_data_files(
     path: Path,
     base_name: str,
-    min_file_index: Optional[int],
-    max_file_index: Optional[int],
-) -> List[Path]:
+    min_file_index: int | None,
+    max_file_index: int | None,
+) -> list[Path]:
     """
     Find HDF5 data files matching the pattern and filter by index range.
 
@@ -182,13 +182,13 @@ def list_data_files(
         Sorted list of file paths matching the criteria
     """
     file_pattern: str = str(path / f"{base_name}_*.h5")
-    all_files: List[Path] = [Path(f) for f in glob.glob(file_pattern)]
+    all_files: list[Path] = [Path(f) for f in glob.glob(file_pattern)]
     all_files = natsorted(all_files, key=lambda f: f.stem)
 
     if min_file_index is None and max_file_index is None:
         return all_files
 
-    filtered_files: List[Path] = []
+    filtered_files: list[Path] = []
     file_path: Path
     for file_path in all_files:
         try:
@@ -212,7 +212,7 @@ def _is_ssh_path(file_path: Path) -> bool:
 
 def rsync_download_file(remote_path: Path, local_path: Path) -> bool:
     try:
-        cmd: List[str] = [
+        cmd: list[str] = [
             "rsync",
             "-ahv",
             "--partial",
@@ -228,14 +228,14 @@ def rsync_download_file(remote_path: Path, local_path: Path) -> bool:
         return False
 
 
-def _list_remote_files(ssh_path: str, base_name: str) -> List[Path]:
+def _list_remote_files(ssh_path: str, base_name: str) -> list[Path]:
     host, remote_dir = ssh_path.split(":", 1)
     remote_pattern: str = f"{shlex.quote(remote_dir.rstrip('/'))}/{base_name}_*.h5"
     ssh_cmd = ["ssh", host, "ls -l " + remote_pattern]
     try:
         proc = subprocess.run(ssh_cmd, capture_output=True, text=True, check=True)
         lines = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
-        results: List[Path] = []
+        results: list[Path] = []
         for l in lines:
             remote_file: str
             if l.startswith("/"):
@@ -252,13 +252,13 @@ def streaming_data_files_generator(
     data_dir: Path,
     download_dir: Path,
     base_name: str,
-    min_file_index: Optional[int],
-    max_file_index: Optional[int],
+    min_file_index: int | None,
+    max_file_index: int | None,
     download_workers: int,
 ) -> Generator[Path, None, None]:
     download_dir.mkdir(parents=True, exist_ok=True)
 
-    def parse_index_from_name(name: str) -> Optional[int]:
+    def parse_index_from_name(name: str) -> int | None:
         try:
             tail: str = str(name).split(":", 1)[-1]
             stem: str = Path(tail).stem
@@ -267,8 +267,8 @@ def streaming_data_files_generator(
         except Exception:
             return None
 
-    def discover_once() -> List[Path]:
-        discovered: List[Path] = []
+    def discover_once() -> list[Path]:
+        discovered: list[Path] = []
         if _is_ssh_path(data_dir):
             discovered = _list_remote_files(str(data_dir), base_name)
         else:
@@ -278,7 +278,7 @@ def streaming_data_files_generator(
         discovered_sorted = natsorted(
             discovered, key=lambda p: Path(str(p).split(":")[-1]).stem
         )
-        filtered: List[Path] = []
+        filtered: list[Path] = []
         for p in discovered_sorted:
             idx = parse_index_from_name(str(p))
             if idx is None:
@@ -305,7 +305,7 @@ def streaming_data_files_generator(
                 raise RuntimeError(f"Local file not found: {str(remote_or_local)}")
             return remote_or_local
 
-    files_to_process: List[Path] = discover_once()
+    files_to_process: list[Path] = discover_once()
 
     if not files_to_process:
         return
@@ -325,7 +325,7 @@ def read_coh_range(
 ) -> float:
     """Read the cohesive range from 'parties.inp' if not, return 0.05 * D_p."""
     try:
-        params: Dict[str, Union[np.ndarray, int, float]] = _read_inp(
+        params: dict[str, Union[np.ndarray, int, float]] = _read_inp(
             data_dir / "parties.inp"
         )
         dy: float = float(params["ymax"] - params["ymin"]) / float(params["NYM"])
@@ -340,7 +340,7 @@ def read_coh_range(
 def read_Re(data_dir: Path) -> float:
     """Read the cohesive range from 'parties.inp' if not, return 0.05 * D_p."""
     try:
-        params: Dict[str, Union[np.ndarray, int, float]] = _read_inp(
+        params: dict[str, Union[np.ndarray, int, float]] = _read_inp(
             data_dir / "parties.inp"
         )
         Re: float = params["Re"]  # type: ignore
@@ -351,7 +351,7 @@ def read_Re(data_dir: Path) -> float:
 
 def read_channel_half_height(data_dir: Path) -> float:
     try:
-        params: Dict[str, Union[np.ndarray, int, float]] = _read_inp(
+        params: dict[str, Union[np.ndarray, int, float]] = _read_inp(
             data_dir / "parties.inp"
         )
         ymax: float = params["ymax"]  # type: ignore
@@ -361,7 +361,7 @@ def read_channel_half_height(data_dir: Path) -> float:
         raise KeyError(r"Either parties.inp not found, or Re not found in parties.inp")
 
 
-def read_domain_info(path: Path) -> Dict[str, Union[int, float]]:
+def read_domain_info(path: Path) -> dict[str, Union[int, float]]:
     """Returns a dict containing the domain size and periodicity in each direction."""
     with h5py.File(str(path), "r") as f:
         domain_data: h5py.Group = f["domain"]  # type: ignore
@@ -371,7 +371,7 @@ def read_domain_info(path: Path) -> Dict[str, Union[int, float]]:
         x_periodic: int = domain_data["periodic"][0]  # type: ignore
         y_periodic: int = domain_data["periodic"][1]  # type: ignore
         z_periodic: int = domain_data["periodic"][2]  # type: ignore
-        domain: Dict[str, Union[int, float]] = {
+        domain: dict[str, Union[int, float]] = {
             "Lx": Lx,
             "Ly": Ly,
             "Lz": Lz,
@@ -382,7 +382,7 @@ def read_domain_info(path: Path) -> Dict[str, Union[int, float]]:
     return domain
 
 
-def read_particle_data(path: Path) -> Dict[str, Union[np.ndarray, float]]:
+def read_particle_data(path: Path) -> dict[str, Union[np.ndarray, float]]:
     with h5py.File(str(path), "r") as f:
         mobile_data: h5py.Group = f["mobile"]  # type: ignore
         id: np.ndarray = np.arange(mobile_data["R"].shape[0])  # type: ignore
@@ -395,7 +395,7 @@ def read_particle_data(path: Path) -> Dict[str, Union[np.ndarray, float]]:
         w: np.ndarray = mobile_data["U"][:, 2]  # type: ignore
         time: float = f["time"][()]  # type: ignore
 
-        particle_data: Dict[str, Union[np.ndarray, float]] = {
+        particle_data: dict[str, Union[np.ndarray, float]] = {
             "id": id,
             "x": x,
             "y": y,
@@ -407,9 +407,9 @@ def read_particle_data(path: Path) -> Dict[str, Union[np.ndarray, float]]:
             "time": time,
         }
 
-        particle_data_fields: List[str] = ["F_IBM", "F_rigid", "F_coll"]
+        particle_data_fields: list[str] = ["F_IBM", "F_rigid", "F_coll"]
         # BUG :
-        particle_data_fields: List[str] = []
+        particle_data_fields: list[str] = []
         field: str
         for field in particle_data_fields:
             particle_data = _load_3_component_field(particle_data, mobile_data, field)
@@ -417,7 +417,7 @@ def read_particle_data(path: Path) -> Dict[str, Union[np.ndarray, float]]:
 
 
 def _load_3_component_field(
-    particle_data: Dict[str, Union[np.ndarray, float]],
+    particle_data: dict[str, Union[np.ndarray, float]],
     mobile_data: h5py.Group,
     fieldname: str,
 ):
@@ -429,12 +429,12 @@ def _load_3_component_field(
     return particle_data
 
 
-def combine_dicts(dict_list: List[Dict[str, Any]]) -> Dict[str, np.ndarray]:
+def combine_dicts(dict_list: list[dict[str, Any]]) -> dict[str, np.ndarray]:
     if not dict_list:
         return {}
 
     keys = dict_list[0].keys()
-    out: Dict[str, np.ndarray] = {}
+    out: dict[str, np.ndarray] = {}
 
     for k in keys:
         vals = [d[k] for d in dict_list]
@@ -463,7 +463,7 @@ def combine_dicts(dict_list: List[Dict[str, Any]]) -> Dict[str, np.ndarray]:
     return out
 
 
-def _read_inp(inp_file: Path) -> Dict[str, Union[np.ndarray, int, float]]:
+def _read_inp(inp_file: Path) -> dict[str, Union[np.ndarray, int, float]]:
     """Return a dict of all parameters in a config file."""
     config_parser = configparser.ConfigParser(inline_comment_prefixes="#")
 
@@ -472,15 +472,15 @@ def _read_inp(inp_file: Path) -> Dict[str, Union[np.ndarray, int, float]]:
 
     config_parser.optionxform = _optionxform  # type: ignore
     config_parser.read(inp_file)
-    config_dicts: List[Dict[str, Union[np.ndarray, int, float]]] = [dict(config_parser[s]) for s in config_parser.sections()]  # type: ignore
-    config_raw: Dict[str, str] = _merge_dicts(config_dicts)
+    config_dicts: list[dict[str, Union[np.ndarray, int, float]]] = [dict(config_parser[s]) for s in config_parser.sections()]  # type: ignore
+    config_raw: dict[str, str] = _merge_dicts(config_dicts)
     config_raw = {
         k: v.replace("{", "[").replace("}", "]") for k, v in config_raw.items()
     }
-    config_list: Dict[str, Union[List, int, float]] = {
+    config_list: dict[str, Union[List, int, float]] = {
         k: ast.literal_eval(v) for k, v in config_raw.items()
     }
-    config_np: Dict[str, Union[np.ndarray, int, float]] = {
+    config_np: dict[str, Union[np.ndarray, int, float]] = {
         k: np.array(v) if isinstance(v, list) else v for k, v in config_list.items()
     }
     return config_np
@@ -497,9 +497,9 @@ def _merge_dicts(dict_list: list[dict]) -> dict:
 def get_time_array(
     file_prefix: str,
     data_dir: Path,
-    min_file_index: Optional[int],
-    max_file_index: Optional[int],
-    key: Optional[str] = None,
+    min_file_index: int | None,
+    max_file_index: int | None,
+    key: str | None = None,
 ) -> np.ndarray:
 
     print("Obtaining time array of data hdf5 files")
@@ -508,7 +508,7 @@ def get_time_array(
     )
     if key == None:
         key = "time"
-    data_files: List[Path] = list_data_files(
+    data_files: list[Path] = list_data_files(
         data_dir, file_prefix, min_file_index, max_file_index
     )
 
@@ -525,12 +525,12 @@ def find_idx_from_time(
     file_prefix: str,
     data_dir: Path,
     target_time: float,
-    key: Optional[str] = None,
-) -> Dict[str, Any]:
+    key: str | None = None,
+) -> dict[str, Any]:
     if key is None:
         key = "time"
 
-    data_files: List[Path] = list_data_files(data_dir, file_prefix, None, None)
+    data_files: list[Path] = list_data_files(data_dir, file_prefix, None, None)
 
     if not data_files:
         return {"position": None, "path": None, "file_idx": None}

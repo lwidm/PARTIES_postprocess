@@ -1,6 +1,6 @@
 # -- src/scripts/run_fuild_wall_analysis.py
 
-from typing import Optional, List, Dict, Literal
+from typing import Literal
 from pathlib import Path
 import numpy as np
 import h5py
@@ -18,15 +18,15 @@ def compute_fluid_Ekin_evolution(
     parties_data_dir: Path,
     output_dir: Path,
     Re: float,
-    min_file_index: Optional[int],
-    max_file_index: Optional[int],
-) -> Dict[str, np.ndarray]:
+    min_file_index: int | None,
+    max_file_index: int | None,
+) -> dict[str, np.ndarray]:
 
     print("Starting fluid kinetic energy computation...")
     print(
         f'Looking for datafile in directory: "{parties_data_dir}" with min_file_index: {min_file_index} and max_file_index: {max_file_index}'
     )
-    data_files: List[Path] = myio.list_data_files(
+    data_files: list[Path] = myio.list_data_files(
         parties_data_dir, "Data", min_file_index, max_file_index
     )
 
@@ -38,7 +38,7 @@ def compute_fluid_Ekin_evolution(
     for i, fluid_file in enumerate(tqdm.tqdm(data_files, desc="Processing total fluid kinetic energy")):
         E_kin[i] = fstat.calc_tot_fluid_Ekin(fluid_file, Re)
 
-    results: Dict[str, np.ndarray] = {"E_kin": E_kin, "time": time}
+    results: dict[str, np.ndarray] = {"E_kin": E_kin, "time": time}
 
     myio.save_to_h5(output_dir / "E_kin.h5", results)
 
@@ -49,8 +49,8 @@ def compute_fluid_Ekin_evolution(
 def main(
     parties_data_dir: Path,
     output_dir: Path,
-    min_file_index: Optional[int] = None,
-    max_file_index: Optional[int] = None,
+    min_file_index: int | None = None,
+    max_file_index: int | None = None,
 ):
 
     # =============================================================================
@@ -62,8 +62,8 @@ def main(
     output_dir = output_dir / "fluid"
     plot_dir = output_dir / "plots"
 
-    num_workers_single_component: Optional[int] = 5
-    num_workers_cross_component: Optional[int] = 2
+    num_workers_single_component: int | None = 5
+    num_workers_cross_component: int | None = 2
 
     if globals.on_anvil:
         num_workers_single_component = 8
@@ -78,7 +78,7 @@ def main(
     # Computation and plotting
     # =============================================================================
 
-    Ekin_results: Dict[str, np.ndarray] = {}
+    Ekin_results: dict[str, np.ndarray] = {}
     if processing_method == "load":
         with h5py.File(output_dir / "E_kin.h5", "r") as f:
             Ekin_results["E_kin"] = f["E_kin"][:]  # type: ignore
