@@ -109,7 +109,7 @@ def main():
     for i, data_name in enumerate(data_names):
         data_dir: Path = Path("./data") / data_name
         out_dir: Path = Path("./data") / data_name
-        # _compute_single_pdf(data_name, data_dir, U_mean[i], L[i], d_p[i])
+        _compute_single_pdf(data_name, data_dir, U_mean[i], L[i], d_p[i])
 
         result: dict[str, dict] = family_tree.compute_number_density_evolutions_params(
             data_dir,
