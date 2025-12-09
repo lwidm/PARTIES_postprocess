@@ -1853,3 +1853,108 @@ def number_density_evo_sink_source(
         s_quantities,
         s_hline_zero,
     )
+
+
+def cumulative_floculation_balance(
+    data_dir: Path,
+    data_names: list[str],
+    labels: list[str],
+    colours: list[str | tuple[float, float, float, float]],
+    linestyles: list[str],
+    markers: list[str],
+    mass_weighted: bool,
+    corrected: bool,
+    separate_plots: bool,
+) -> tuple[list[PlotSeries], list[PlotSeries], list[PlotSeries], list[PlotSeries], PlotSeries]:
+
+    csv_filename = "floculation_balance_corrected.csv" if corrected else "floculation_balance.csv"
+
+    s_list_coag: list[PlotSeries] = []
+    s_list_frag: list[PlotSeries] = []
+
+    for data_idx, data_name in enumerate(data_names):
+        csv_path = data_dir / data_name / csv_filename
+
+        if mass_weighted:
+            n_p, T_coag_cumsum, T_frag_cumsum = lwidmer.read_csv_columns(
+                csv_path, (0, 7, 8), remove_nan=1
+            )
+        else:
+            n_p, T_coag_cumsum, T_frag_cumsum = lwidmer.read_csv_columns(
+                csv_path, (0, 5, 6), remove_nan=1
+            )
+
+        labels_local_coag: str = ""
+        labels_local_frag: str = ""
+        if separate_plots:
+            labels_local_coag = f"$T_{{coag}}$ ({labels[data_idx]})"
+            labels_local_frag = f"$T_{{frag}}$ ({labels[data_idx]})"
+
+        s_coag = PlotSeries(
+            data={"x": n_p, "y": T_coag_cumsum},
+            x_key="x",
+            y_key="y",
+            plot_method="plot",
+            kwargs={
+                "label": labels_local_coag,
+                "color": colours[data_idx],
+                "linestyle": linestyles[0],
+                "marker": markers[data_idx] if markers[data_idx] else "",
+            },
+        )
+        s_list_coag.append(s_coag)
+
+        s_frag = PlotSeries(
+            data={"x": n_p, "y": T_frag_cumsum},
+            x_key="x",
+            y_key="y",
+            plot_method="plot",
+            kwargs={
+                "label": labels_local_frag,
+                "color": colours[data_idx],
+                "linestyle": linestyles[1],
+                "marker": markers[data_idx] if markers[data_idx] else "",
+            },
+        )
+        s_list_frag.append(s_frag)
+
+    s_quantities: list[PlotSeries] = []
+    s_cases: list[PlotSeries] = []
+    if not separate_plots:
+        quantities: list[tuple[str, str]] = [
+            (r"$T_{coag}$", linestyles[0]),
+            (r"$T_{frag}$", linestyles[1]),
+        ]
+        for i in range(len(quantities)):
+            s_quantities.append(
+                create_proxy_series(
+                    "k",
+                    "white",
+                    "none",
+                    quantities[i][1],
+                    "none",
+                    0.5,
+                    quantities[i][0],
+                )
+            )
+        for i in range(len(labels)):
+            s_cases.append(
+                create_proxy_series(
+                    colours[i], colours[i], "full", "None", "s", 0, labels[i]
+                )
+            )
+
+    s_hline_zero = PlotSeries(
+        data={"y": 0},
+        x_key=None,
+        y_key=None,
+        plot_method="hline",
+        kwargs={
+            "color": "black",
+            "linestyle": "--",
+            "linewidth": 0.8,
+            "alpha": 0.7,
+        },
+    )
+
+    return s_list_coag, s_list_frag, s_cases, s_quantities, s_hline_zero

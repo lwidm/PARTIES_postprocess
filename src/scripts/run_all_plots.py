@@ -1036,12 +1036,16 @@ def number_density_evo_sink_source(
                 s_list_dn_dt[i],
             ]
             plt_templ.number_density_evo_sink_source(
-                output_dir=plot_dir, series_list=series_list, name=data_names[i], xmax=20, mass_weighted=mass_weighted
+                output_dir=plot_dir,
+                series_list=series_list,
+                name=data_names[i],
+                xmax=20,
+                mass_weighted=mass_weighted,
             )
     else:
         series_list: list[PlotSeries] = (
             s_quantities
-            +s_cases
+            + s_cases
             + [s_hline_zero]
             + s_list_gain_coag
             + s_list_loss_coag
@@ -1050,7 +1054,78 @@ def number_density_evo_sink_source(
             + s_list_dn_dt
         )
         plt_templ.number_density_evo_sink_source(
-            output_dir=plot_dir, series_list=series_list, name=None, xmax=20, mass_weighted=mass_weighted
+            output_dir=plot_dir,
+            series_list=series_list,
+            name=None,
+            xmax=20,
+            mass_weighted=mass_weighted,
+        )
+
+
+def cumulative_floculation_balance(
+    plot_dir: Path,
+    data_dir: Path,
+    data_names: list[str],
+    labels: list[str],
+    linestyles: list[str],
+    markers: list[str],
+    colours: list[str | tuple[float, float, float, float]],
+    mass_weighted: bool,
+    corrected: bool,
+    separate_plots: bool,
+):
+    markers = ["" for _ in range(len(markers))]
+    s_list_coag: list[PlotSeries]
+    s_list_frag: list[PlotSeries]
+    s_cases: list[PlotSeries]
+    s_quantities: list[PlotSeries]
+    s_hline_zero: PlotSeries
+    (
+        s_list_coag,
+        s_list_frag,
+        s_cases,
+        s_quantities,
+        s_hline_zero,
+    ) = plt_series.cumulative_floculation_balance(
+        data_dir=data_dir,
+        data_names=data_names,
+        labels=labels,
+        colours=colours,
+        linestyles=linestyles,
+        markers=markers,
+        mass_weighted=mass_weighted,
+        corrected=corrected,
+        separate_plots=separate_plots,
+    )
+
+    if separate_plots:
+        for i in range(len(data_names)):
+            series_list: list[PlotSeries] = [
+                s_hline_zero,
+                s_list_coag[i],
+                s_list_frag[i],
+            ]
+            plt_templ.cumulative_floculation_balance(
+                output_dir=plot_dir,
+                series_list=series_list,
+                name=data_names[i],
+                xmax=20,
+                mass_weighted=mass_weighted,
+            )
+    else:
+        series_list: list[PlotSeries] = (
+            s_quantities
+            + s_cases
+            + [s_hline_zero]
+            + s_list_coag
+            + s_list_frag
+        )
+        plt_templ.cumulative_floculation_balance(
+            output_dir=plot_dir,
+            series_list=series_list,
+            name=None,
+            xmax=20,
+            mass_weighted=mass_weighted,
         )
 
 
@@ -1143,23 +1218,34 @@ def main() -> None:
     #     cmap_formation=blue_cmap,
     # )
     # noncohesive_floc_lifetime(plot_dir)
-    coagulation_kernel(
-        plot_dir, data_dir, data_names, labels, contour_sigmas=coagulation_kernel_sigmas
-    )
-    fragment_size_distribution(
-        plot_dir,
-        data_dir,
-        data_names,
-        labels,
-    )
-    breakage_rate(
-        plot_dir,
-        data_dir,
-        data_names,
-        labels,
-        colours,
-    )
-    number_density_evo_sink_source(
+    # coagulation_kernel(
+    #     plot_dir, data_dir, data_names, labels, contour_sigmas=coagulation_kernel_sigmas
+    # )
+    # fragment_size_distribution(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    # )
+    # breakage_rate(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     colours,
+    # )
+    # number_density_evo_sink_source(
+    #     plot_dir=plot_dir,
+    #     data_dir=data_dir,
+    #     data_names=data_names,
+    #     labels=labels,
+    #     linestyles=linestyles,
+    #     markers=markers,
+    #     colours=colours,
+    #     mass_weighted=True,
+    #     separate_plots=True,
+    # )
+    cumulative_floculation_balance(
         plot_dir=plot_dir,
         data_dir=data_dir,
         data_names=data_names,
@@ -1167,7 +1253,8 @@ def main() -> None:
         linestyles=linestyles,
         markers=markers,
         colours=colours,
-        mass_weighted=True,
+        mass_weighted=False,
+        corrected=True,
         separate_plots=True,
     )
 

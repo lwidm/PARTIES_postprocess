@@ -648,3 +648,40 @@ def number_density_evo_sink_source(
         current_ticks.sort()
         ax.set_xticks(current_ticks)
     my_save_fig(out_path, fig, dpi=150)
+
+
+def cumulative_floculation_balance(
+    output_dir: Path,
+    series_list: Sequence[PlotSeries],
+    name: str | None,
+    xmax: float | None,
+    mass_weighted: bool,
+) -> None:
+    if name is not None:
+        name = f"cumulative_floculation_balance_{name}"
+    else:
+        name = "cumulative_floculation_balance"
+    out_path = output_dir / name
+
+    xlabel: str = r"floc size: $n_p$"
+    ylabel: str
+    if mass_weighted:
+        ylabel = r"$\sum_{i=1}^{n_p} \left( \frac{\partial n_p}{\partial t} \cdot n_p \right)$"
+    else:
+        ylabel = r"$\sum_{i=1}^{n_p} \frac{\partial n_p}{\partial t}$"
+    ax, fig, _ = generic_plot(
+        list(series_list),
+        legend=True,
+        xlabel=xlabel,
+        ylabel=ylabel,
+        xlim=(1, xmax),
+        ylim=(None, None),
+        figsize=(6.5, 5.5),
+        legend_loc="best",
+    )
+    current_ticks = list(ax.get_xticks())
+    if 1 not in current_ticks:
+        current_ticks.append(1)
+        current_ticks.sort()
+        ax.set_xticks(current_ticks)
+    my_save_fig(out_path, fig, dpi=150)
