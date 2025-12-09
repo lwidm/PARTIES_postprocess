@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import TypedDict, Literal
+from typing import TypedDict, Literal, Callable
 import numpy as np
 import h5py
 from tqdm import tqdm
@@ -221,6 +221,145 @@ class AccessFlocFormationLocationAdvanced(AccessorWithMass):
             )
 
 
+class CoagulationFragmentationCalculator:
+    """Calculator for coagulation and fragmentation balance equations.
+
+    This class encapsulates the numerical integration and calculation logic
+    for number density evolution equations including coagulation gains/losses
+    and fragmentation gains/losses.
+    """
+
+    def __init__(
+        self,
+        K: np.ndarray,
+        F: np.ndarray,
+        nu: np.ndarray,
+        p: np.ndarray,
+        n: np.ndarray,
+        x_arr: np.ndarray,
+        x_edges_arr: np.ndarray,
+        x_idx_arr: np.ndarray,
+    ):
+        """Initialize the calculator with physical parameters and discretization.
+
+        Args:
+            K: Coagulation kernel matrix [i, j]
+            F: Fragmentation rate array [i]
+            nu: Number of fragments array [i]
+            p: Fragment size distribution matrix [i, j]
+            n: Number density array [i]
+            x_arr: Array of bin center values (e.g., particle sizes)
+            x_edges_arr: Array of bin edge values
+            x_idx_arr: Array of bin center indices
+        """
+        self.K = K
+        self.F = F
+        self.nu = nu
+        self.p = p
+        self.n = n
+        self.x_arr = x_arr
+        self.x_edges_arr = x_edges_arr
+        self.x_idx_arr = x_idx_arr
+        self.bin_widths = x_edges_arr[1:] - x_edges_arr[:-1]
+        self.x_edges_list = x_edges_arr.tolist()
+
+    def size_integral(
+        self, lower: int, upper: int, integrand: Callable[[np.ndarray], np.ndarray]
+    ) -> np.floating:
+        """Integrate an integrand over a range of size bins.
+
+        Args:
+            lower: Lower bound index
+            upper: Upper bound index
+            integrand: Function that takes an array of indices and returns values
+
+        Returns:
+            Integral value computed using trapezoidal rule
+        """
+        mask: np.ndarray = (self.x_idx_arr >= lower) & (self.x_idx_arr <= upper)
+        return np.dot(integrand(self.x_idx_arr[mask]), self.bin_widths[mask])
+
+    def integrand_gain_coag(self, x_idx: int, y_idx_arr: np.ndarray) -> np.ndarray:
+        """Integrand for gain by coagulation.
+
+        Computes K(z,y) * n(z) * n(y) where z + y = x
+        """
+        z_val_arr: np.ndarray = self.x_arr[x_idx] - self.x_arr[y_idx_arr]
+        z_idx_arr: np.ndarray = np.digitize(z_val_arr, self.x_edges_list) - 1
+        return self.K[z_idx_arr, y_idx_arr] * self.n[z_idx_arr] * self.n[y_idx_arr]
+
+    def integrand_loss_coag(self, x_idx: int, y_idx_arr: np.ndarray) -> np.ndarray:
+        """Integrand for loss by coagulation.
+
+        Computes K(x,y) * n(y)
+        """
+        return self.K[x_idx, y_idx_arr] * self.n[y_idx_arr]
+
+    def integrand_gain_frag(self, x_idx: int, y_idx_arr: np.ndarray) -> np.ndarray:
+        """Integrand for gain by fragmentation.
+
+        Computes F(y) * nu(y) * p(x,y) * n(y)
+        """
+        return self.F[y_idx_arr] * self.nu[y_idx_arr] * self.p[x_idx, y_idx_arr] * self.n[y_idx_arr]
+
+    def gain_coag(self) -> np.ndarray:
+        """Calculate gain by coagulation for all size bins.
+
+        Returns:
+            Array of gain rates for each size bin
+        """
+        result: np.ndarray = np.zeros_like(self.x_idx_arr, dtype=float)
+        for i, x_idx in enumerate(self.x_idx_arr):
+            result[i] = (
+                1
+                / 2
+                * self.size_integral(
+                    self.x_idx_arr[0],
+                    x_idx,
+                    lambda y_idx_arr: self.integrand_gain_coag(x_idx, y_idx_arr),
+                )
+            )
+        return result
+
+    def loss_coag(self) -> np.ndarray:
+        """Calculate loss by coagulation for all size bins.
+
+        Returns:
+            Array of loss rates for each size bin
+        """
+        result: np.ndarray = np.zeros_like(self.x_idx_arr, dtype=float)
+        for i, x_idx in enumerate(self.x_idx_arr):
+            result[i] = -self.n[x_idx] * self.size_integral(
+                self.x_idx_arr[0],
+                self.x_idx_arr[-1],
+                lambda y_idx_arr: self.integrand_loss_coag(x_idx, y_idx_arr),
+            )
+        return result
+
+    def gain_frag(self) -> np.ndarray:
+        """Calculate gain by fragmentation for all size bins.
+
+        Returns:
+            Array of gain rates for each size bin
+        """
+        result: np.ndarray = np.zeros_like(self.x_idx_arr, dtype=float)
+        for i, x_idx in enumerate(self.x_idx_arr):
+            result[i] = self.size_integral(
+                x_idx,
+                self.x_idx_arr[-1],
+                lambda y_idx_arr: self.integrand_gain_frag(x_idx, y_idx_arr),
+            )
+        return result
+
+    def loss_frag(self) -> np.ndarray:
+        """Calculate loss by fragmentation for all size bins.
+
+        Returns:
+            Array of loss rates for each size bin
+        """
+        return -self.F * self.n
+
+
 def calc_famtree_pdf_steadystate(
     pickle_dir: Path,
     metadata_file: Path,
@@ -423,6 +562,7 @@ def compute_number_density_evolutions_params(
     U_mean: float,
     L: float,
     d_p: float,
+    corrected: bool,
 ) -> dict[str, dict]:
 
     metadata_dict: dict[str, dict[str, int | float | str]] = metadata.read_metadata(
@@ -458,7 +598,9 @@ def compute_number_density_evolutions_params(
     size_list_centers_idx: list[int]
     size_list_edges_idx: list[int]
 
-    with open(pickle_dir / "family_tree.pkl", "rb") as file:
+    pickle_file: str = "family_tree_corrected.pkl" if corrected else "family_tree.pkl"
+
+    with open(pickle_dir / pickle_file, "rb") as file:
         fam_tree: FamilyTreeType = pickle.load(file)
 
         size_max: float = 0.0
@@ -628,3 +770,66 @@ def compute_number_density_evolutions_params(
     }
 
     return {"K": K, "F": F, "nu": nu, "p": p, "c": c, "n": n, "bin_info": bin_info}
+
+
+def compute_balances(params: dict[str, dict]) -> dict[str, np.ndarray]:
+    K_dict: dict[tuple[int, int], float] = params["K"]
+    F_dict: dict[int, float] = params["F"]
+    nu_dict: dict[int, float] = params["nu"]
+    p_dict: dict[tuple[int, int], float] = params["p"]
+    n_dict: dict[int, float] = params["n"]
+    bin_info: dict[str, list[int] | list[float]] = params["bin_info"]
+
+    center_idxs_list: list[int] = bin_info["center_idxs"]  # type: ignore
+    center_sizes_list: list[float] = bin_info["center_sizes"]  # type: ignore
+    edge_sizes_list: list[float] = bin_info["edge_sizes"]  # type: ignore
+
+    center_idxs_arr: np.ndarray = np.asarray(center_idxs_list, dtype=int)
+    center_sizes_arr: np.ndarray = np.asarray(center_sizes_list, dtype=float)
+    edge_sizes_arr: np.ndarray = np.asarray(edge_sizes_list, dtype=float)
+
+    X, _ = np.meshgrid(center_sizes_arr, center_sizes_arr)
+    K: np.ndarray = np.zeros_like(X, dtype=float)
+    for i, x1_idx in enumerate(center_idxs_list):
+        for j, x2_idx in enumerate(center_idxs_list):
+            K[i, j] = K_dict[(x1_idx, x2_idx)]
+    K = np.nan_to_num(K, nan=0.0)
+
+    p: np.ndarray = np.zeros_like(X, dtype=float)
+    for i, x1_idx in enumerate(center_idxs_list):
+        for j, x2_idx in enumerate(center_idxs_list):
+            p[i, j] = p_dict[(x1_idx, x2_idx)]
+    p = np.nan_to_num(p, nan=0.0)
+
+    F: np.ndarray = np.zeros_like(center_sizes_arr, dtype=float)
+    for i, x_idx in enumerate(center_idxs_list):
+        F[i] = F_dict[x_idx]
+    F = np.nan_to_num(F, nan=0.0)
+
+    nu: np.ndarray = np.zeros_like(center_sizes_arr, dtype=float)
+    for i, x_idx in enumerate(center_idxs_list):
+        nu[i] = nu_dict[x_idx]
+    nu = np.nan_to_num(nu, nan=2.0)
+
+    n: np.ndarray = np.zeros_like(center_sizes_arr, dtype=float)
+    for i, x_idx in enumerate(center_idxs_list):
+        n[i] = n_dict[x_idx]
+    n = np.nan_to_num(n, nan=0.0)
+
+    calculator = CoagulationFragmentationCalculator(
+        K=K,
+        F=F,
+        nu=nu,
+        p=p,
+        n=n,
+        x_arr=center_sizes_arr,
+        x_edges_arr=edge_sizes_arr,
+        x_idx_arr=center_idxs_arr,
+    )
+
+    return {
+        "gain_coag": calculator.gain_coag(),
+        "loss_coag": calculator.loss_coag(),
+        "gain_frag": calculator.gain_frag(),
+        "loss_frag": calculator.loss_frag(),
+    }

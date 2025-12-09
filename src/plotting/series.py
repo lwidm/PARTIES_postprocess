@@ -16,6 +16,7 @@ from src.plotting.tools import (
     PlotSeries,
     _gaussian_filter_2d,
 )
+from src.flocs.family_tree import CoagulationFragmentationCalculator
 
 
 def create_proxy_series(
@@ -1747,59 +1748,16 @@ def number_density_evo_sink_source(
             n[i] = n_dict[x_idx]
         n = np.nan_to_num(n, nan=0.0)
 
-        def size_integral(
-            lower: int, upper: int, integrand: Callable[[np.ndarray], np.ndarray]
-        ) -> np.floating:
-            mask: np.ndarray = (x_idx_arr >= lower) & (x_idx_arr <= upper)
-            return np.dot(integrand(x_idx_arr[mask]), bin_widths[mask])
-
-        def integrand_gain_coag(x_idx: int, y_idx_arr: np.ndarray) -> np.ndarray:
-            z_val_arr: np.ndarray = x_arr[x_idx] - x_arr[y_idx_arr]
-            z_idx_arr: np.ndarray = np.digitize(z_val_arr, x_edges_list) - 1
-            return K[z_idx_arr, y_idx_arr] * n[z_idx_arr] * n[y_idx_arr]
-
-        def integrand_loss_coag(x_idx: int, y_idx_arr: np.ndarray) -> np.ndarray:
-            return K[x_idx, y_idx_arr] * n[y_idx_arr]
-
-        def integrand_gain_frag(x_idx: int, y_idx_arr: np.ndarray) -> np.ndarray:
-            return F[y_idx_arr] * nu[y_idx_arr] * p[x_idx, y_idx_arr] * n[y_idx_arr]
-
-        def gain_coag() -> np.ndarray:
-            result: np.ndarray = np.zeros_like(x_idx_arr, dtype=float)
-            for i, x_idx in enumerate(x_idx_arr):
-                result[i] = (
-                    1
-                    / 2
-                    * size_integral(
-                        x_idx_arr[0],
-                        x_idx,
-                        lambda y_idx_arr: integrand_gain_coag(x_idx, y_idx_arr),
-                    )
-                )
-            return result
-
-        def loss_coag() -> np.ndarray:
-            result: np.ndarray = np.zeros_like(x_idx_arr, dtype=float)
-            for i, x_idx in enumerate(x_idx_arr):
-                result[i] = -n[x_idx] * size_integral(
-                    x_idx_arr[0],
-                    x_idx_arr[-1],
-                    lambda y_idx_arr: integrand_loss_coag(x_idx, y_idx_arr),
-                )
-            return result
-
-        def gain_frag() -> np.ndarray:
-            result: np.ndarray = np.zeros_like(x_idx_arr, dtype=float)
-            for i, x_idx in enumerate(x_idx_arr):
-                result[i] = size_integral(
-                    x_idx,
-                    x_idx_arr[-1],
-                    lambda y_idx_arr: integrand_gain_frag(x_idx, y_idx_arr),
-                )
-            return result
-
-        def loss_frag() -> np.ndarray:
-            return - F * n
+        calculator = CoagulationFragmentationCalculator(
+            K=K,
+            F=F,
+            nu=nu,
+            p=p,
+            n=n,
+            x_arr=x_arr,
+            x_edges_arr=x_edges_arr,
+            x_idx_arr=x_idx_arr,
+        )
 
         def dn_dt(
             gain_coag: np.ndarray,
@@ -1812,10 +1770,10 @@ def number_density_evo_sink_source(
         def weight_by_mass(data: np.ndarray) -> np.ndarray:
             return data * x_arr
 
-        y_gain_coag: np.ndarray = gain_coag()
-        y_loss_coag: np.ndarray = loss_coag()
-        y_gain_frag: np.ndarray = gain_frag()
-        y_loss_frag: np.ndarray = loss_frag()
+        y_gain_coag: np.ndarray = calculator.gain_coag()
+        y_loss_coag: np.ndarray = calculator.loss_coag()
+        y_gain_frag: np.ndarray = calculator.gain_frag()
+        y_loss_frag: np.ndarray = calculator.loss_frag()
         y_dn_dt: np.ndarray = dn_dt(y_gain_coag, y_loss_coag, y_gain_frag, y_loss_frag)
 
         if mass_weighted:
