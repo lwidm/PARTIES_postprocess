@@ -106,10 +106,11 @@ def main():
     U_mean: list[float] = [1.0 for _ in data_names]
     L: list[float] = [1.0 for _ in data_names]
     d_p: list[float] = [0.03225806 for _ in data_names]
+    corrected: bool = True
     for i, data_name in enumerate(data_names):
         data_dir: Path = Path("./data") / data_name
         out_dir: Path = Path("./data") / data_name
-        _compute_single_pdf(data_name, data_dir, U_mean[i], L[i], d_p[i])
+        # _compute_single_pdf(data_name, data_dir, U_mean[i], L[i], d_p[i])
 
         result: dict[str, dict] = family_tree.compute_number_density_evolutions_params(
             data_dir,
@@ -121,9 +122,14 @@ def main():
             U_mean=U_mean[i],
             L=L[i],
             d_p=d_p[i],
-            corrected=False
+            corrected=corrected
         )
+        name: str = "number_density_evolution_params.pkl"
+        if corrected:
+            name = "number_density_evolution_params_corrected.pkl"
         myio.output.save_to_pickle(out_dir / "number_density_evolution_params.pkl", result)
+        floc_balance: dict = family_tree.compute_floculation_balances(params=result)
+        myio.lwidmer.save_floculation_balance(out_dir, floc_balance, corrected=corrected)
 
 
 if __name__ == "__name__":

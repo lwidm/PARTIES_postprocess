@@ -1093,56 +1093,56 @@ def main() -> None:
     ]
     markers: list[str] = ["o", "s", "^", "v", "P"]
     linestyles: list[str] = ["-", "--", "-.", ":", ":"]
-    floc(
-        plot_dir,
-        data_dir,
-        data_names,
-        labels,
-        colours,
-        markers,
-        linestyles,
-        plot_evo_fit=False,
-    )
-    fluid_wall_normal(
-        data_dir, plot_dir, data_dir, data_names, labels, colours, use_markers=True
-    )
-    fluid_wall_normal(
-        data_dir, plot_dir, data_dir, data_names, labels, colours, use_markers=False
-    )
-    fuild_velocity_profile(
-        data_dir, plot_dir, data_dir, data_names, labels, colours, use_markers=True
-    )
-    phi_eulerian(plot_dir, data_dir, data_names, labels, colours, False)
-    lagrangian_data(
-        plot_dir,
-        data_dir,
-        data_names,
-        labels,
-        colours,
-        markers,
-        show_errs=False,
-        separate_plots=False,
-    )
-    fam_tree(
-        plot_dir,
-        data_dir,
-        data_names,
-        labels,
-        colours_fam_tree,
-        markers,
-        linestyles,
-        separate_plots=True,
-        unfiltered=3,
-    )
-    floc_timescale(
-        plot_dir=plot_dir,
-        data_dir=data_dir,
-        data_names=data_names,
-        labels=labels,
-        cmap_breakup=red_cmap,
-        cmap_formation=blue_cmap,
-    )
-    noncohesive_floc_lifetime(plot_dir)
+    # floc(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     colours,
+    #     markers,
+    #     linestyles,
+    #     plot_evo_fit=False,
+    # )
+    # fluid_wall_normal(
+    #     data_dir, plot_dir, data_dir, data_names, labels, colours, use_markers=True
+    # )
+    # fluid_wall_normal(
+    #     data_dir, plot_dir, data_dir, data_names, labels, colours, use_markers=False
+    # )
+    # fuild_velocity_profile(
+    #     data_dir, plot_dir, data_dir, data_names, labels, colours, use_markers=True
+    # )
+    # phi_eulerian(plot_dir, data_dir, data_names, labels, colours, False)
+    # lagrangian_data(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     colours,
+    #     markers,
+    #     show_errs=False,
+    #     separate_plots=False,
+    # )
+    # fam_tree(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     colours_fam_tree,
+    #     markers,
+    #     linestyles,
+    #     separate_plots=True,
+    #     unfiltered=3,
+    # )
+    # floc_timescale(
+    #     plot_dir=plot_dir,
+    #     data_dir=data_dir,
+    #     data_names=data_names,
+    #     labels=labels,
+    #     cmap_breakup=red_cmap,
+    #     cmap_formation=blue_cmap,
+    # )
+    # noncohesive_floc_lifetime(plot_dir)
     coagulation_kernel(
         plot_dir, data_dir, data_names, labels, contour_sigmas=coagulation_kernel_sigmas
     )

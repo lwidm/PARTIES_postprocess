@@ -170,3 +170,64 @@ def save_floc_lifetime_stats(
         output.save_to_csv(csv_file, result, header_lines)
 
     return result
+
+def save_floculation_balance(
+    output_dir: Path,
+    stats: dict,
+    corrected: bool,
+) -> dict[str, np.ndarray]:
+
+    n_p: np.ndarray = stats["center_sizes_arr"]
+    T_coag: np.ndarray =   stats["T_coag"]
+    T_frag: np.ndarray =   stats["T_frag"]
+    T_coag_mass: np.ndarray =   stats["T_coag_mass"]
+    T_frag_mass: np.ndarray =   stats["T_frag_mass"]
+    T_coag_cumsum: np.ndarray =   stats["T_coag_cumsum"]
+    T_frag_cumsum: np.ndarray =   stats["T_frag_cumsum"]
+    T_coag_mass_cumsum: np.ndarray =   stats["T_coag_mass_cumsum"]
+    T_frag_mass_cumsum: np.ndarray =   stats["T_frag_mass_cumsum"]
+
+    extra_line: str = "Data computed using uncorrected family tree"
+    if corrected:
+        extra_line = "Data computed using corrected family tree"
+
+    header_lines = [
+        "==================================================================",
+        f"The floculation balance (sink and source terms due to aggregation and fragmentation)",
+        extra_line,
+        "==================================================================",
+        "",
+        "Column descriptions:",
+        f"- n_p: Number of particles in floc",
+        f"- T_coag: sink + source terms due to coagulation at floc size n_p",
+        f"- T_frag: sink + source terms due to fragmenation at floc size n_p",
+        f"- T_coag_mass: mass weighted equivalent (i.e. T_coag * n_p)",
+        f"- T_frag_mass: mass weighted equivalent (i.e. T_frag * n_p)",
+        f"- T_coag_cumsum: cumulative sum from n_p=1 up to n_p of sink + source terms due to coagulation",
+        f"- T_frag_cumsum: cumulative sum from n_p=1 up to n_p of sink + source terms due to fragmentation",
+        f"- T_coag_mass_cumsum: mass weighted equivalent (i.e. T_coag * n_p)",
+        f"- T_frag_mass_cumsum: mass weighted equivalent (i.e. T_frag * n_p)",
+        "",
+    ]
+
+    result: dict[str, np.ndarray] = {
+        f"n_p": n_p,
+        f"T_coag": T_coag,
+        f"T_frag": T_frag,
+        f"T_coag_mass": T_coag_mass,
+        f"T_frag_mass": T_frag_mass,
+        f"T_coag_cumsum": T_coag_cumsum,
+        f"T_frag_cumsum": T_frag_cumsum,
+        f"T_coag_mass_cumsum": T_coag_mass_cumsum,
+        f"T_frag_mass_cumsum": T_frag_mass_cumsum,
+    }
+
+    name: str = f"floculation_balance.csv"
+    if corrected:
+        name = f"floculation_balance_corrected.csv"
+    if output_dir is not None:
+        output_dir.mkdir(exist_ok=True)
+        csv_file: Path = output_dir / name
+        output.save_to_csv(csv_file, result, header_lines)
+
+    return result

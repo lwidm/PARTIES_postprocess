@@ -300,7 +300,12 @@ class CoagulationFragmentationCalculator:
 
         Computes F(y) * nu(y) * p(x,y) * n(y)
         """
-        return self.F[y_idx_arr] * self.nu[y_idx_arr] * self.p[x_idx, y_idx_arr] * self.n[y_idx_arr]
+        return (
+            self.F[y_idx_arr]
+            * self.nu[y_idx_arr]
+            * self.p[x_idx, y_idx_arr]
+            * self.n[y_idx_arr]
+        )
 
     def gain_coag(self) -> np.ndarray:
         """Calculate gain by coagulation for all size bins.
@@ -772,7 +777,7 @@ def compute_number_density_evolutions_params(
     return {"K": K, "F": F, "nu": nu, "p": p, "c": c, "n": n, "bin_info": bin_info}
 
 
-def compute_balances(params: dict[str, dict]) -> dict[str, np.ndarray]:
+def compute_floculation_balances(params: dict[str, dict]) -> dict[str, np.ndarray]:
     K_dict: dict[tuple[int, int], float] = params["K"]
     F_dict: dict[int, float] = params["F"]
     nu_dict: dict[int, float] = params["nu"]
@@ -827,9 +832,45 @@ def compute_balances(params: dict[str, dict]) -> dict[str, np.ndarray]:
         x_idx_arr=center_idxs_arr,
     )
 
-    return {
-        "gain_coag": calculator.gain_coag(),
-        "loss_coag": calculator.loss_coag(),
-        "gain_frag": calculator.gain_frag(),
-        "loss_frag": calculator.loss_frag(),
+    def weight_by_mass(data: np.ndarray) -> np.ndarray:
+        return data * center_sizes_arr
+
+    gain_coag: np.ndarray = calculator.gain_coag()
+    loss_coag: np.ndarray = calculator.loss_coag()
+    gain_frag: np.ndarray = calculator.gain_frag()
+    loss_frag: np.ndarray = calculator.loss_frag()
+    gain_coag_mass: np.ndarray = weight_by_mass(gain_coag)
+    loss_coag_mass: np.ndarray = weight_by_mass(loss_coag)
+    gain_frag_mass: np.ndarray = weight_by_mass(gain_frag)
+    loss_frag_mass: np.ndarray = weight_by_mass(loss_frag)
+    T_coag: np.ndarray = gain_coag + loss_coag
+    T_frag: np.ndarray = gain_frag + loss_frag
+    T_coag_mass: np.ndarray = gain_coag_mass + loss_coag_mass
+    T_frag_mass: np.ndarray = gain_frag_mass + loss_frag_mass
+    T_coag_cumsum: np.ndarray = np.cumsum(T_coag)
+    T_frag_cumsum: np.ndarray = np.cumsum(T_frag)
+    T_coag_mass_cumsum: np.ndarray = np.cumsum(T_coag_mass)
+    T_frag_mass_cumsum: np.ndarray = np.cumsum(T_frag_mass)
+
+    result: dict[str, np.ndarray] = {
+        "center_sizes_arr": center_sizes_arr,
+        "edge_sizes_arr": edge_sizes_arr,
+        "gain_coag": gain_coag,
+        "loss_coag": loss_coag,
+        "gain_frag": gain_frag,
+        "loss_frag": loss_frag,
+        "gain_coag_mass": gain_coag_mass,
+        "loss_coag_mass": loss_coag_mass,
+        "gain_frag_mass": gain_frag_mass,
+        "loss_frag_mass": loss_frag_mass,
+        "T_coag": T_coag,
+        "T_frag": T_frag,
+        "T_coag_mass": T_coag_mass,
+        "T_frag_mass": T_frag_mass,
+        "T_coag_cumsum": T_coag_cumsum,
+        "T_frag_cumsum": T_frag_cumsum,
+        "T_coag_mass_cumsum": T_coag_mass_cumsum,
+        "T_frag_mass_cumsum": T_frag_mass_cumsum,
     }
+
+    return result
