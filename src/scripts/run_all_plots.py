@@ -962,7 +962,7 @@ def fragment_size_distribution(
         # s_contour_list.append(s_contour)
     for i in range(len(data_names)):
         plt_templ.fragment_size_distribution(
-            plot_dir, s_pcolormesh_list[i], s_contour_list[i], data_names[i]
+            plot_dir, s_pcolormesh_list[i], None, data_names[i]
         )
 
 
@@ -1154,7 +1154,7 @@ def main() -> None:
         # "test"
     ]
     coagulation_kernel_sigmas: list[float] = [
-        # 2,
+        2,
         5,
         5,
         5,

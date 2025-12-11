@@ -558,15 +558,21 @@ def coagulation_kernel(
 def fragment_size_distribution(
     output_dir: Path,
     series_pcolormesh: PlotSeries,
-    series_contour: PlotSeries,
+    series_contour: PlotSeries | None,
     name: str,
 ) -> None:
     out_path: Path = output_dir / f"fragment_size_distribution_{name}"
     xlim: tuple[float, float] = series_pcolormesh.data["xlim"]
     ylim: tuple[float, float] = series_pcolormesh.data["ylim"]
 
+    s_list = (
+        [series_pcolormesh, series_contour]
+        if series_contour is not None
+        else [series_pcolormesh]
+    )
+
     ax, fig, mesh = generic_plot(
-        [series_pcolormesh, series_contour],
+        s_list,
         legend=True,
         xlabel="$x \\quad (n_p)$",
         ylabel="$y \\quad (n_p)$",

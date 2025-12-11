@@ -134,6 +134,12 @@ def _gaussian_filter_2d(data: np.ndarray, sigma: float) -> np.ndarray:
     kernel_size = int(4 * sigma + 1)
     if kernel_size % 2 == 0:
         kernel_size += 1
+
+    # Ensure kernel size doesn't exceed data dimensions
+    min_data_dim = min(data.shape[0], data.shape[1])
+    if kernel_size > min_data_dim:
+        kernel_size = min_data_dim if min_data_dim % 2 == 1 else min_data_dim - 1
+
     ax = np.arange(-kernel_size // 2 + 1., kernel_size // 2 + 1.)
     xx, yy = np.meshgrid(ax, ax)
     kernel = np.exp(-(xx**2 + yy**2) / (2. * sigma**2))
@@ -173,13 +179,13 @@ def _plot_one(ax: Axes, series: PlotSeries)  -> Any:
         other: Any = None
 
         x, y = _extract_xy(series)
-        ax_values_tuple: Tuple
+        ax_values_tuple: tuple[np.ndarray, ...]
         if x is None:
             if y is None:
                 raise ValueError("Could not extract both x and y from PlotSeries")
-            ax_values_tuple = (x,)
-        elif y is None:
             ax_values_tuple = (y,)
+        elif y is None:
+            ax_values_tuple = (x,)
         else:
             ax_values_tuple = (x, y)
 
