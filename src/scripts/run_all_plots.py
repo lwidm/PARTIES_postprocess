@@ -1140,14 +1140,14 @@ def main() -> None:
 
     plot_dir: Path = Path("./output/plots")
     data_names: list[str] = [
-        # "phi5p0_noCo",
+        "phi5p0_noCo",
         "phi1p5",
         "phi3p0",
         "phi5p0",
         # "test"
     ]
     labels: list[str] = [
-        # r"$\phi_{5\%}$ no cohesion",
+        r"$\phi_{5\%}$ no cohesion",
         r"$\phi_{1.5\%}$",
         r"$\phi_{3\%}$",
         r"$\phi_{5\%}$",

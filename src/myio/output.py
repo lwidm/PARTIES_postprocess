@@ -180,8 +180,9 @@ def save_to_csv(
             padded_data[key] = arr
 
 
+    now = datetime.now()
     full_header: list[str] = [
-        f"This file was last updated on {datetime.now().strftime('%-m/%-d/%Y')}."
+        f"This file was last updated on {now.month}/{now.day}/{now.year}."
     ] + header_lines
 
     column_headers = list(padded_data.keys())

@@ -10,8 +10,18 @@ source ./python_environment/venv_<name>/bin/activate
 2. Change root level `main.py` to use the correct scripts and modify the scripts to use the correct directories
 3. Run the main.py from the root with the `PYTHONPATH` enviroment variable set to the root
 
+UNIX:
 ```zsh
 PYTHONPATH=. python main.py
+```
+
+Command Prompt (cmd.exe):
+```cmd
+set PYTHONPATH=. && python main.py
+```
+PowerShell:
+```PowerShell
+$env:PYTHONPATH="."; python main.py
 ```
 
 ### running on anvil
