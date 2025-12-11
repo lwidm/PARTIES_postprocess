@@ -1795,7 +1795,7 @@ def number_density_evo_sink_source(
                 data={"x": x_arr, "y": y_data},
                 x_key="x",
                 y_key="y",
-                plot_method="plot",
+                plot_method="semilogx",
                 kwargs={
                     "label": labels_local[idx],
                     "color": colours_local[idx],
@@ -1865,36 +1865,40 @@ def cumulative_floculation_balance(
     mass_weighted: bool,
     corrected: bool,
     separate_plots: bool,
-) -> tuple[list[PlotSeries], list[PlotSeries], list[PlotSeries], list[PlotSeries], PlotSeries]:
+    plot_dn_dt: bool,
+) -> tuple[list[PlotSeries], list[PlotSeries], list[PlotSeries], list[PlotSeries], list[PlotSeries], PlotSeries]:
 
     csv_filename = "floculation_balance_corrected.csv" if corrected else "floculation_balance.csv"
 
     s_list_coag: list[PlotSeries] = []
     s_list_frag: list[PlotSeries] = []
+    s_list_dn_dt: list[PlotSeries] = []
 
     for data_idx, data_name in enumerate(data_names):
         csv_path = data_dir / data_name / csv_filename
 
         if mass_weighted:
-            n_p, T_coag_cumsum, T_frag_cumsum = lwidmer.read_csv_columns(
-                csv_path, (0, 7, 8), remove_nan=1
+            n_p, T_coag_cumsum, T_frag_cumsum, dn_dt_cumsum = lwidmer.read_csv_columns(
+                csv_path, (0, 10, 11, 12), remove_nan=1
             )
         else:
-            n_p, T_coag_cumsum, T_frag_cumsum = lwidmer.read_csv_columns(
-                csv_path, (0, 5, 6), remove_nan=1
+            n_p, T_coag_cumsum, T_frag_cumsum, dn_dt_cumsum = lwidmer.read_csv_columns(
+                csv_path, (0, 7, 8, 9), remove_nan=1
             )
 
         labels_local_coag: str = ""
         labels_local_frag: str = ""
+        labels_local_dn_dt: str = ""
         if separate_plots:
             labels_local_coag = f"$T_{{coag}}$ ({labels[data_idx]})"
             labels_local_frag = f"$T_{{frag}}$ ({labels[data_idx]})"
+            labels_local_dn_dt = f"$dn/dt$ ({labels[data_idx]})"
 
         s_coag = PlotSeries(
             data={"x": n_p, "y": T_coag_cumsum},
             x_key="x",
             y_key="y",
-            plot_method="plot",
+            plot_method="semilogx",
             kwargs={
                 "label": labels_local_coag,
                 "color": colours[data_idx],
@@ -1918,6 +1922,21 @@ def cumulative_floculation_balance(
         )
         s_list_frag.append(s_frag)
 
+        if plot_dn_dt:
+            s_dn_dt = PlotSeries(
+                data={"x": n_p, "y": dn_dt_cumsum},
+                x_key="x",
+                y_key="y",
+                plot_method="plot",
+                kwargs={
+                    "label": labels_local_dn_dt,
+                    "color": colours[data_idx],
+                    "linestyle": linestyles[2] if len(linestyles) > 2 else "-",
+                    "marker": markers[data_idx] if markers[data_idx] else "",
+                },
+            )
+            s_list_dn_dt.append(s_dn_dt)
+
     s_quantities: list[PlotSeries] = []
     s_cases: list[PlotSeries] = []
     if not separate_plots:
@@ -1925,6 +1944,8 @@ def cumulative_floculation_balance(
             (r"$T_{coag}$", linestyles[0]),
             (r"$T_{frag}$", linestyles[1]),
         ]
+        if plot_dn_dt:
+            quantities.append((r"$dn/dt$", linestyles[2] if len(linestyles) > 2 else "-"))
         for i in range(len(quantities)):
             s_quantities.append(
                 create_proxy_series(
@@ -1957,4 +1978,4 @@ def cumulative_floculation_balance(
         },
     )
 
-    return s_list_coag, s_list_frag, s_cases, s_quantities, s_hline_zero
+    return s_list_coag, s_list_frag, s_list_dn_dt, s_cases, s_quantities, s_hline_zero

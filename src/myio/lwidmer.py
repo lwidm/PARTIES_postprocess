@@ -180,12 +180,16 @@ def save_floculation_balance(
     n_p: np.ndarray = stats["center_sizes_arr"]
     T_coag: np.ndarray =   stats["T_coag"]
     T_frag: np.ndarray =   stats["T_frag"]
+    dn_dt: np.ndarray =   stats["dn_dt"]
     T_coag_mass: np.ndarray =   stats["T_coag_mass"]
     T_frag_mass: np.ndarray =   stats["T_frag_mass"]
+    dn_dt_mass: np.ndarray =   stats["dn_dt_mass"]
     T_coag_cumsum: np.ndarray =   stats["T_coag_cumsum"]
     T_frag_cumsum: np.ndarray =   stats["T_frag_cumsum"]
+    dn_dt_cumsum: np.ndarray =   stats["dn_dt_cumsum"]
     T_coag_mass_cumsum: np.ndarray =   stats["T_coag_mass_cumsum"]
     T_frag_mass_cumsum: np.ndarray =   stats["T_frag_mass_cumsum"]
+    dn_dt_mass_cumsum: np.ndarray =   stats["dn_dt_mass_cumsum"]
 
     extra_line: str = "Data computed using uncorrected family tree"
     if corrected:
@@ -201,12 +205,16 @@ def save_floculation_balance(
         f"- n_p: Number of particles in floc",
         f"- T_coag: sink + source terms due to coagulation at floc size n_p",
         f"- T_frag: sink + source terms due to fragmenation at floc size n_p",
+        f"- dn_dt: sum of T_coag and T_frac",
         f"- T_coag_mass: mass weighted equivalent (i.e. T_coag * n_p)",
         f"- T_frag_mass: mass weighted equivalent (i.e. T_frag * n_p)",
+        f"- dn_dt_mass: sum of T_coag_mass and T_frac_mass",
         f"- T_coag_cumsum: cumulative sum from n_p=1 up to n_p of sink + source terms due to coagulation",
         f"- T_frag_cumsum: cumulative sum from n_p=1 up to n_p of sink + source terms due to fragmentation",
+        f"- dn_dt_cumsum: cumulative sum of dn_dt",
         f"- T_coag_mass_cumsum: mass weighted equivalent (i.e. T_coag * n_p)",
         f"- T_frag_mass_cumsum: mass weighted equivalent (i.e. T_frag * n_p)",
+        f"- dn_dt_mass_cumsum: cumulative sum of dn_dt_mass",
         "",
     ]
 
@@ -214,12 +222,16 @@ def save_floculation_balance(
         f"n_p": n_p,
         f"T_coag": T_coag,
         f"T_frag": T_frag,
+        f"dn_dt": dn_dt,
         f"T_coag_mass": T_coag_mass,
         f"T_frag_mass": T_frag_mass,
+        f"dn_dt_mass": dn_dt_mass,
         f"T_coag_cumsum": T_coag_cumsum,
         f"T_frag_cumsum": T_frag_cumsum,
+        f"dn_dt_cumsum": dn_dt_cumsum,
         f"T_coag_mass_cumsum": T_coag_mass_cumsum,
         f"T_frag_mass_cumsum": T_frag_mass_cumsum,
+        f"dn_dt_mass_cumsum": dn_dt_mass_cumsum,
     }
 
     name: str = f"floculation_balance.csv"

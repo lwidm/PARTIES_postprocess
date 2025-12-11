@@ -839,18 +839,22 @@ def compute_floculation_balances(params: dict[str, dict]) -> dict[str, np.ndarra
     loss_coag: np.ndarray = calculator.loss_coag()
     gain_frag: np.ndarray = calculator.gain_frag()
     loss_frag: np.ndarray = calculator.loss_frag()
+    dn_dt: np.ndarray = gain_coag + loss_coag + gain_frag + loss_frag
     gain_coag_mass: np.ndarray = weight_by_mass(gain_coag)
     loss_coag_mass: np.ndarray = weight_by_mass(loss_coag)
     gain_frag_mass: np.ndarray = weight_by_mass(gain_frag)
     loss_frag_mass: np.ndarray = weight_by_mass(loss_frag)
+    dn_dt_mass: np.ndarray = weight_by_mass(dn_dt)
     T_coag: np.ndarray = gain_coag + loss_coag
     T_frag: np.ndarray = gain_frag + loss_frag
     T_coag_mass: np.ndarray = gain_coag_mass + loss_coag_mass
     T_frag_mass: np.ndarray = gain_frag_mass + loss_frag_mass
     T_coag_cumsum: np.ndarray = np.cumsum(T_coag)
     T_frag_cumsum: np.ndarray = np.cumsum(T_frag)
+    dn_dt_cumsum: np.ndarray = np.cumsum(dn_dt)
     T_coag_mass_cumsum: np.ndarray = np.cumsum(T_coag_mass)
     T_frag_mass_cumsum: np.ndarray = np.cumsum(T_frag_mass)
+    dn_dt_mass_cumsum: np.ndarray = np.cumsum(dn_dt_mass)
 
     result: dict[str, np.ndarray] = {
         "center_sizes_arr": center_sizes_arr,
@@ -859,18 +863,22 @@ def compute_floculation_balances(params: dict[str, dict]) -> dict[str, np.ndarra
         "loss_coag": loss_coag,
         "gain_frag": gain_frag,
         "loss_frag": loss_frag,
+        "dn_dt": dn_dt,
         "gain_coag_mass": gain_coag_mass,
         "loss_coag_mass": loss_coag_mass,
         "gain_frag_mass": gain_frag_mass,
         "loss_frag_mass": loss_frag_mass,
+        "dn_dt_mass": dn_dt_mass,
         "T_coag": T_coag,
         "T_frag": T_frag,
         "T_coag_mass": T_coag_mass,
         "T_frag_mass": T_frag_mass,
         "T_coag_cumsum": T_coag_cumsum,
         "T_frag_cumsum": T_frag_cumsum,
+        "dn_dt_cumsum": dn_dt_cumsum,
         "T_coag_mass_cumsum": T_coag_mass_cumsum,
         "T_frag_mass_cumsum": T_frag_mass_cumsum,
+        "dn_dt_mass_cumsum": dn_dt_mass_cumsum,
     }
 
     return result
