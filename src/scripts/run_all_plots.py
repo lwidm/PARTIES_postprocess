@@ -916,6 +916,7 @@ def coagulation_kernel(
     data_names: list[str],
     labels: list[str],
     contour_sigmas: list[float],
+    corrected: bool,
 ):
 
     cmap: Colormap = plt.get_cmap("Blues")
@@ -932,15 +933,18 @@ def coagulation_kernel(
             contour_interp_factor=1,
             contour_sigma=contour_sigmas[i],
             contour_levels=10,
+            corrected=corrected,
         )
         s_pcolormesh_list.append(s_pcolormesh)
         s_contour_list.append(s_contour)
+
+    suffix = "_corrected" if corrected else "_uncorrected"
     for i in range(len(data_names)):
         # plt_templ.coagulation_kernel(
         #     plot_dir, s_pcolormesh_list[i], s_contour_list[i], data_names[i]
         # )
         plt_templ.coagulation_kernel(
-            plot_dir, s_pcolormesh_list[i], None, data_names[i]
+            plot_dir, s_pcolormesh_list[i], None, data_names[i] + suffix
         )
 
 
@@ -949,6 +953,7 @@ def fragment_size_distribution(
     data_dir: Path,
     data_names: list[str],
     labels: list[str],
+    corrected: bool,
 ):
 
     cmap: Colormap = plt.get_cmap("Blues")
@@ -956,13 +961,15 @@ def fragment_size_distribution(
     s_contour_list: list[PlotSeries] = []
     for i, data_name in enumerate(data_names):
         s_pcolormesh, _ = plt_series.fragment_size_distribution(
-            data_dir / data_name, labels[i], cmap, xlim=(1, 50)
+            data_dir / data_name, labels[i], cmap, xlim=(1, 50), corrected=corrected
         )
         s_pcolormesh_list.append(s_pcolormesh)
         # s_contour_list.append(s_contour)
+
+    suffix = "_corrected" if corrected else "_uncorrected"
     for i in range(len(data_names)):
         plt_templ.fragment_size_distribution(
-            plot_dir, s_pcolormesh_list[i], None, data_names[i]
+            plot_dir, s_pcolormesh_list[i], None, data_names[i] + suffix
         )
 
 
@@ -972,6 +979,7 @@ def breakage_rate(
     data_names: list[str],
     labels: list[str],
     colours: list[str | tuple[float, float, float, float]],
+    corrected: bool,
 ) -> None:
     s_list: list[PlotSeries] = []
     for i, data_name in enumerate(data_names):
@@ -981,6 +989,7 @@ def breakage_rate(
                 colour=colours[i],
                 linestyle="-",
                 label=labels[i],
+                corrected=corrected,
             )
         )
     plt_templ.breakage_rate(plot_dir, s_list, n_p_max=20)
@@ -996,6 +1005,7 @@ def number_density_evo_sink_source(
     colours: list[str | tuple[float, float, float, float]],
     mass_weighted: bool,
     separate_plots: bool,
+    corrected: bool,
 ):
     markers = ["" for _ in range(len(markers))]
     s_list_gain_coag: list[PlotSeries]
@@ -1024,6 +1034,7 @@ def number_density_evo_sink_source(
         markers=markers,
         mass_weighted=mass_weighted,
         separate_plots=separate_plots,
+        corrected=corrected,
     )
     if separate_plots:
         for i in range(len(data_names)):
@@ -1136,6 +1147,213 @@ def cumulative_floculation_balance(
         )
 
 
+def coagulation_kernel_diff(
+    plot_dir: Path,
+    data_dir: Path,
+    data_names: list[str],
+    labels: list[str],
+    contour_sigmas: list[float],
+):
+    s_pcolormesh_list: list[PlotSeries] = []
+    for i, data_name in enumerate(data_names):
+        s_pcolormesh = plt_series.coagulation_kernel_diff(
+            data_dir / data_name,
+            labels[i],
+            xlim=(1, 50),
+        )
+        s_pcolormesh_list.append(s_pcolormesh)
+
+    for i in range(len(data_names)):
+        plt_templ.coagulation_kernel(
+            plot_dir, s_pcolormesh_list[i], None, data_names[i] + "_diff"
+        )
+
+
+def fragment_size_distribution_diff(
+    plot_dir: Path,
+    data_dir: Path,
+    data_names: list[str],
+    labels: list[str],
+):
+    s_pcolormesh_list: list[PlotSeries] = []
+    for i, data_name in enumerate(data_names):
+        s_pcolormesh = plt_series.fragment_size_distribution_diff(
+            data_dir / data_name, labels[i], xlim=(1, 50)
+        )
+        s_pcolormesh_list.append(s_pcolormesh)
+
+    for i in range(len(data_names)):
+        plt_templ.fragment_size_distribution(
+            plot_dir, s_pcolormesh_list[i], None, data_names[i] + "_diff"
+        )
+
+
+def breakage_rate_diff(
+    plot_dir: Path,
+    data_dir: Path,
+    data_names: list[str],
+    labels: list[str],
+    colours: list[str | tuple[float, float, float, float]],
+) -> None:
+    s_list: list[PlotSeries] = []
+    for i, data_name in enumerate(data_names):
+        s_list.append(
+            plt_series.breakage_rate_diff(
+                pickle_dir=data_dir / data_name,
+                colour=colours[i],
+                linestyle="-",
+                label=labels[i],
+            )
+        )
+    plt_templ.breakage_rate(plot_dir, s_list, n_p_max=20)
+
+
+def number_density_evo_sink_source_diff(
+    plot_dir: Path,
+    data_dir: Path,
+    data_names: list[str],
+    labels: list[str],
+    linestyles: list[str],
+    markers: list[str],
+    colours: list[str | tuple[float, float, float, float]],
+    mass_weighted: bool,
+    separate_plots: bool,
+):
+    markers = ["" for _ in range(len(markers))]
+    s_list_gain_coag: list[PlotSeries]
+    s_list_loss_coag: list[PlotSeries]
+    s_list_gain_frag: list[PlotSeries]
+    s_list_loss_frag: list[PlotSeries]
+    s_list_dn_dt: list[PlotSeries]
+    s_cases: list[PlotSeries]
+    s_quantities: list[PlotSeries]
+    s_hline_zero: PlotSeries
+    (
+        s_list_gain_coag,
+        s_list_loss_coag,
+        s_list_gain_frag,
+        s_list_loss_frag,
+        s_list_dn_dt,
+        s_cases,
+        s_quantities,
+        s_hline_zero,
+    ) = plt_series.number_density_evo_sink_source_diff(
+        data_dir=data_dir,
+        data_names=data_names,
+        labels=labels,
+        colours=colours,
+        linestyles=linestyles,
+        markers=markers,
+        mass_weighted=mass_weighted,
+        separate_plots=separate_plots,
+    )
+    if separate_plots:
+        for i in range(len(data_names)):
+            series_list: list[PlotSeries] = [
+                s_hline_zero,
+                s_list_gain_coag[i],
+                s_list_loss_coag[i],
+                s_list_gain_frag[i],
+                s_list_loss_frag[i],
+                s_list_dn_dt[i],
+            ]
+            plt_templ.number_density_evo_sink_source(
+                output_dir=plot_dir,
+                series_list=series_list,
+                name=data_names[i] + "_diff",
+                xmax=10^3,
+                mass_weighted=mass_weighted,
+            )
+    else:
+        series_list: list[PlotSeries] = (
+            s_quantities
+            + s_cases
+            + [s_hline_zero]
+            + s_list_gain_coag
+            + s_list_loss_coag
+            + s_list_gain_frag
+            + s_list_loss_frag
+            + s_list_dn_dt
+        )
+        plt_templ.number_density_evo_sink_source(
+            output_dir=plot_dir,
+            series_list=series_list,
+            name="diff",
+            xmax=10^3,
+            mass_weighted=mass_weighted,
+        )
+
+
+def cumulative_floculation_balance_diff(
+    plot_dir: Path,
+    data_dir: Path,
+    data_names: list[str],
+    labels: list[str],
+    linestyles: list[str],
+    markers: list[str],
+    colours: list[str | tuple[float, float, float, float]],
+    mass_weighted: bool,
+    separate_plots: bool,
+    plot_dn_dt: bool,
+):
+    markers = ["" for _ in range(len(markers))]
+    s_list_coag: list[PlotSeries]
+    s_list_frag: list[PlotSeries]
+    s_list_dn_dt: list[PlotSeries]
+    s_cases: list[PlotSeries]
+    s_quantities: list[PlotSeries]
+    s_hline_zero: PlotSeries
+    (
+        s_list_coag,
+        s_list_frag,
+        s_list_dn_dt,
+        s_cases,
+        s_quantities,
+        s_hline_zero,
+    ) = plt_series.cumulative_floculation_balance_diff(
+        data_dir=data_dir,
+        data_names=data_names,
+        labels=labels,
+        colours=colours,
+        linestyles=linestyles,
+        markers=markers,
+        mass_weighted=mass_weighted,
+        separate_plots=separate_plots,
+        plot_dn_dt=plot_dn_dt,
+    )
+
+    if separate_plots:
+        for i in range(len(data_names)):
+            series_list: list[PlotSeries] = [
+                s_hline_zero,
+                s_list_coag[i],
+                s_list_frag[i],
+            ]
+            if plot_dn_dt:
+                series_list.append(s_list_dn_dt[i])
+            plt_templ.cumulative_floculation_balance(
+                output_dir=plot_dir,
+                series_list=series_list,
+                name=data_names[i] + "_diff",
+                xmax=10**3,
+                mass_weighted=mass_weighted,
+            )
+    else:
+        series_list: list[PlotSeries] = s_quantities + s_cases + [s_hline_zero]
+        for i in range(len(data_names)):
+            series_list.append(s_list_coag[i])
+            series_list.append(s_list_frag[i])
+            if plot_dn_dt:
+                series_list.append(s_list_dn_dt[i])
+        plt_templ.cumulative_floculation_balance(
+            output_dir=plot_dir,
+            series_list=series_list,
+            name="diff",
+            xmax=10**3,
+            mass_weighted=mass_weighted,
+        )
+
+
 def main() -> None:
 
     plot_dir: Path = Path("./output/plots")
@@ -1225,23 +1443,129 @@ def main() -> None:
     #     cmap_formation=blue_cmap,
     # )
     # noncohesive_floc_lifetime(plot_dir)
-    coagulation_kernel(
-        plot_dir, data_dir, data_names, labels, contour_sigmas=coagulation_kernel_sigmas
-    )
-    fragment_size_distribution(
-        plot_dir,
-        data_dir,
-        data_names,
-        labels,
-    )
-    breakage_rate(
-        plot_dir,
-        data_dir,
-        data_names,
-        labels,
-        colours,
-    )
-    number_density_evo_sink_source(
+
+    # Corrected plots
+    # coagulation_kernel(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     contour_sigmas=coagulation_kernel_sigmas,
+    #     corrected=True,
+    # )
+    # fragment_size_distribution(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     corrected=True,
+    # )
+    # breakage_rate(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     colours,
+    #     corrected=True,
+    # )
+    # number_density_evo_sink_source(
+    #     plot_dir=plot_dir,
+    #     data_dir=data_dir,
+    #     data_names=data_names,
+    #     labels=labels,
+    #     linestyles=linestyles,
+    #     markers=markers,
+    #     colours=colours,
+    #     mass_weighted=True,
+    #     separate_plots=True,
+    #     corrected=True,
+    # )
+    # cumulative_floculation_balance(
+    #     plot_dir=plot_dir,
+    #     data_dir=data_dir,
+    #     data_names=data_names,
+    #     labels=labels,
+    #     linestyles=linestyles,
+    #     markers=markers,
+    #     colours=colours,
+    #     mass_weighted=True,
+    #     corrected=True,
+    #     separate_plots=False,
+    #     plot_dn_dt=True,
+    # )
+
+    # Uncorrected plots
+    # coagulation_kernel(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     contour_sigmas=coagulation_kernel_sigmas,
+    #     corrected=False,
+    # )
+    # fragment_size_distribution(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     corrected=False,
+    # )
+    # breakage_rate(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     colours,
+    #     corrected=False,
+    # )
+    # number_density_evo_sink_source(
+    #     plot_dir=plot_dir,
+    #     data_dir=data_dir,
+    #     data_names=data_names,
+    #     labels=labels,
+    #     linestyles=linestyles,
+    #     markers=markers,
+    #     colours=colours,
+    #     mass_weighted=True,
+    #     separate_plots=True,
+    #     corrected=False,
+    # )
+    # cumulative_floculation_balance(
+    #     plot_dir=plot_dir,
+    #     data_dir=data_dir,
+    #     data_names=data_names,
+    #     labels=labels,
+    #     linestyles=linestyles,
+    #     markers=markers,
+    #     colours=colours,
+    #     mass_weighted=True,
+    #     corrected=False,
+    #     separate_plots=False,
+    #     plot_dn_dt=True,
+    # )
+
+    # Difference plots
+    # coagulation_kernel_diff(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     contour_sigmas=coagulation_kernel_sigmas,
+    # )
+    # fragment_size_distribution_diff(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    # )
+    # breakage_rate_diff(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     colours,
+    # )
+    number_density_evo_sink_source_diff(
         plot_dir=plot_dir,
         data_dir=data_dir,
         data_names=data_names,
@@ -1252,19 +1576,18 @@ def main() -> None:
         mass_weighted=True,
         separate_plots=True,
     )
-    cumulative_floculation_balance(
-        plot_dir=plot_dir,
-        data_dir=data_dir,
-        data_names=data_names,
-        labels=labels,
-        linestyles=linestyles,
-        markers=markers,
-        colours=colours,
-        mass_weighted=True,
-        corrected=True,
-        separate_plots=False,
-        plot_dn_dt=True,
-    )
+    # cumulative_floculation_balance_diff(
+    #     plot_dir=plot_dir,
+    #     data_dir=data_dir,
+    #     data_names=data_names,
+    #     labels=labels,
+    #     linestyles=linestyles,
+    #     markers=markers,
+    #     colours=colours,
+    #     mass_weighted=True,
+    #     separate_plots=False,
+    #     plot_dn_dt=True,
+    # )
 
     if not globals.on_anvil:
         plt.show()

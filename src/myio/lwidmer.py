@@ -174,7 +174,8 @@ def save_floc_lifetime_stats(
 def save_floculation_balance(
     output_dir: Path,
     stats: dict,
-    corrected: bool,
+    corrected: bool | None = None,
+    is_difference: bool = False,
 ) -> dict[str, np.ndarray]:
 
     n_p: np.ndarray = stats["center_sizes_arr"]
@@ -191,52 +192,64 @@ def save_floculation_balance(
     T_frag_mass_cumsum: np.ndarray =   stats["T_frag_mass_cumsum"]
     dn_dt_mass_cumsum: np.ndarray =   stats["dn_dt_mass_cumsum"]
 
-    extra_line: str = "Data computed using uncorrected family tree"
-    if corrected:
-        extra_line = "Data computed using corrected family tree"
+    if is_difference:
+        extra_line = "Data represents difference (corrected - uncorrected)"
+        title = "The floculation balance difference (corrected - uncorrected)"
+        name = "floculation_balance_diff.csv"
+        coag_desc = "- T_coag: difference in sink + source terms due to coagulation at floc size n_p"
+        frag_desc = "- T_frag: difference in sink + source terms due to fragmentation at floc size n_p"
+        dn_dt_desc = "- dn_dt: differneces of sum of T_coag and T_frag"
+    else:
+        extra_line = "Data computed using uncorrected family tree"
+        if corrected:
+            extra_line = "Data computed using corrected family tree"
+        title = "The floculation balance (sink and source terms due to aggregation and fragmentation)"
+        name = "floculation_balance.csv"
+        if corrected:
+            name = "floculation_balance_corrected.csv"
+        coag_desc = "- T_coag: sink + source terms due to coagulation at floc size n_p"
+        frag_desc = "- T_frag: sink + source terms due to fragmentation at floc size n_p"
+        dn_dt_desc = "- dn_dt: sum of T_coag and T_frag"
 
     header_lines = [
         "==================================================================",
-        f"The floculation balance (sink and source terms due to aggregation and fragmentation)",
+        title,
         extra_line,
         "==================================================================",
         "",
         "Column descriptions:",
-        f"- n_p: Number of particles in floc",
-        f"- T_coag: sink + source terms due to coagulation at floc size n_p",
-        f"- T_frag: sink + source terms due to fragmenation at floc size n_p",
-        f"- dn_dt: sum of T_coag and T_frac",
-        f"- T_coag_mass: mass weighted equivalent (i.e. T_coag * n_p)",
-        f"- T_frag_mass: mass weighted equivalent (i.e. T_frag * n_p)",
-        f"- dn_dt_mass: sum of T_coag_mass and T_frac_mass",
-        f"- T_coag_cumsum: cumulative sum from n_p=1 up to n_p of sink + source terms due to coagulation",
-        f"- T_frag_cumsum: cumulative sum from n_p=1 up to n_p of sink + source terms due to fragmentation",
-        f"- dn_dt_cumsum: cumulative sum of dn_dt",
-        f"- T_coag_mass_cumsum: mass weighted equivalent (i.e. T_coag * n_p)",
-        f"- T_frag_mass_cumsum: mass weighted equivalent (i.e. T_frag * n_p)",
-        f"- dn_dt_mass_cumsum: cumulative sum of dn_dt_mass",
+        "- n_p: Number of particles in floc",
+        coag_desc,
+        frag_desc,
+        dn_dt_desc,
+        "- T_coag_mass: mass weighted equivalent (i.e. T_coag * n_p)",
+        "- T_frag_mass: mass weighted equivalent (i.e. T_frag * n_p)",
+        "- dn_dt_mass: sum of T_coag_mass and T_frag_mass",
+        "- T_coag_cumsum: cumulative sum from n_p=1 up to n_p of sink + source terms due to coagulation",
+        "- T_frag_cumsum: cumulative sum from n_p=1 up to n_p of sink + source terms due to fragmentation",
+        "- dn_dt_cumsum: cumulative sum of dn_dt",
+        "- T_coag_mass_cumsum: mass weighted equivalent (i.e. T_coag * n_p)",
+        "- T_frag_mass_cumsum: mass weighted equivalent (i.e. T_frag * n_p)",
+        "- dn_dt_mass_cumsum: cumulative sum of dn_dt_mass",
         "",
     ]
 
     result: dict[str, np.ndarray] = {
-        f"n_p": n_p,
-        f"T_coag": T_coag,
-        f"T_frag": T_frag,
-        f"dn_dt": dn_dt,
-        f"T_coag_mass": T_coag_mass,
-        f"T_frag_mass": T_frag_mass,
-        f"dn_dt_mass": dn_dt_mass,
-        f"T_coag_cumsum": T_coag_cumsum,
-        f"T_frag_cumsum": T_frag_cumsum,
-        f"dn_dt_cumsum": dn_dt_cumsum,
-        f"T_coag_mass_cumsum": T_coag_mass_cumsum,
-        f"T_frag_mass_cumsum": T_frag_mass_cumsum,
-        f"dn_dt_mass_cumsum": dn_dt_mass_cumsum,
+        "n_p": n_p,
+        "T_coag": T_coag,
+        "T_frag": T_frag,
+        "dn_dt": dn_dt,
+        "T_coag_mass": T_coag_mass,
+        "T_frag_mass": T_frag_mass,
+        "dn_dt_mass": dn_dt_mass,
+        "T_coag_cumsum": T_coag_cumsum,
+        "T_frag_cumsum": T_frag_cumsum,
+        "dn_dt_cumsum": dn_dt_cumsum,
+        "T_coag_mass_cumsum": T_coag_mass_cumsum,
+        "T_frag_mass_cumsum": T_frag_mass_cumsum,
+        "dn_dt_mass_cumsum": dn_dt_mass_cumsum,
     }
 
-    name: str = f"floculation_balance.csv"
-    if corrected:
-        name = f"floculation_balance_corrected.csv"
     if output_dir is not None:
         output_dir.mkdir(exist_ok=True)
         csv_file: Path = output_dir / name

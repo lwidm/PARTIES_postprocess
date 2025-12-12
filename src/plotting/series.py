@@ -9,7 +9,8 @@ from scipy.interpolate import RectBivariateSpline
 import numpy as np
 import pickle
 
-from matplotlib.colors import Colormap, LogNorm
+from matplotlib.colors import Colormap, LogNorm, TwoSlopeNorm
+from matplotlib import pyplot as plt
 from src.theory import law_of_the_wall as low
 from src.myio import output, utils, lwidmer
 from src.plotting.tools import (
@@ -1386,13 +1387,19 @@ def coagulation_kernel(
     contour_interp_factor: int,
     contour_sigma: float,
     contour_levels: int,
+    corrected: bool,
     contour_color: str | None = "black",
     contour_cmap: Colormap | None = None,
 ) -> tuple[PlotSeries, PlotSeries]:
 
     ylim = xlim
 
-    with open(pickle_dir / "number_density_evolution_params.pkl", "rb") as file:
+    pickle_file = (
+        "number_density_evolution_params_corrected.pkl"
+        if corrected
+        else "number_density_evolution_params_uncorrected.pkl"
+    )
+    with open(pickle_dir / pickle_file, "rb") as file:
         results: dict[str, dict] = pickle.load(file)
 
     K: dict[tuple[int, int], float] = results["K"]
@@ -1504,6 +1511,7 @@ def fragment_size_distribution(
     label: str | None,
     cmap: Colormap,
     xlim: tuple[float, float] | None,
+    corrected: bool,
     contour_sigma: float = 1.5,
     contour_levels: int = 10,
     contour_color: str | None = "black",
@@ -1515,7 +1523,12 @@ def fragment_size_distribution(
 
     ylim = xlim
 
-    with open(pickle_dir / "number_density_evolution_params.pkl", "rb") as file:
+    pickle_file = (
+        "number_density_evolution_params_corrected.pkl"
+        if corrected
+        else "number_density_evolution_params_uncorrected.pkl"
+    )
+    with open(pickle_dir / pickle_file, "rb") as file:
         results: dict[str, dict] = pickle.load(file)
 
     p: dict[tuple[int, int], float] = results["p"]
@@ -1631,9 +1644,15 @@ def breakage_rate(
     colour: str | tuple[float, float, float, float],
     linestyle: str,
     label: str | None,
+    corrected: bool,
 ) -> PlotSeries:
 
-    with open(pickle_dir / "number_density_evolution_params.pkl", "rb") as file:
+    pickle_file = (
+        "number_density_evolution_params_corrected.pkl"
+        if corrected
+        else "number_density_evolution_params_uncorrected.pkl"
+    )
+    with open(pickle_dir / pickle_file, "rb") as file:
         results: dict[str, dict] = pickle.load(file)
 
     F: dict[int, float] = results["F"]
@@ -1674,6 +1693,7 @@ def number_density_evo_sink_source(
     markers: list[str],
     mass_weighted: bool,
     separate_plots: bool,
+    corrected: bool,
 ) -> tuple[
     list[PlotSeries],
     list[PlotSeries],
@@ -1699,10 +1719,13 @@ def number_density_evo_sink_source(
         r"$\frac{\partial n(n_p)}{\partial t}$",
     ]
 
+    pickle_file = (
+        "number_density_evolution_params_corrected.pkl"
+        if corrected
+        else "number_density_evolution_params_uncorrected.pkl"
+    )
     for data_idx, data_name in enumerate(data_names):
-        with open(
-            data_dir / data_name / "number_density_evolution_params.pkl", "rb"
-        ) as file:
+        with open(data_dir / data_name / pickle_file, "rb") as file:
             results: dict[str, dict] = pickle.load(file)
 
         K_dict: dict[tuple[int, int], float] = results["K"]
@@ -1789,7 +1812,9 @@ def number_density_evo_sink_source(
                 colours[data_idx] for _ in range(len(quantities))
             ]
             if separate_plots:
-                labels_local = [f"{quantity} ({labels[data_idx]})" for quantity in quantities]
+                labels_local = [
+                    f"{quantity} ({labels[data_idx]})" for quantity in quantities
+                ]
                 colours_local = colours
             return PlotSeries(
                 data={"x": x_arr, "y": y_data},
@@ -1813,7 +1838,9 @@ def number_density_evo_sink_source(
     s_quantities: list[PlotSeries] = []
     s_cases: list[PlotSeries] = []
     if not separate_plots:
-        for i in range(len(quantities)): s_quantities.append( create_proxy_series(
+        for i in range(len(quantities)):
+            s_quantities.append(
+                create_proxy_series(
                     "k",
                     "white",
                     "none",
@@ -1866,9 +1893,18 @@ def cumulative_floculation_balance(
     corrected: bool,
     separate_plots: bool,
     plot_dn_dt: bool,
-) -> tuple[list[PlotSeries], list[PlotSeries], list[PlotSeries], list[PlotSeries], list[PlotSeries], PlotSeries]:
+) -> tuple[
+    list[PlotSeries],
+    list[PlotSeries],
+    list[PlotSeries],
+    list[PlotSeries],
+    list[PlotSeries],
+    PlotSeries,
+]:
 
-    csv_filename = "floculation_balance_corrected.csv" if corrected else "floculation_balance.csv"
+    csv_filename = (
+        "floculation_balance_corrected.csv" if corrected else "floculation_balance.csv"
+    )
 
     s_list_coag: list[PlotSeries] = []
     s_list_frag: list[PlotSeries] = []
@@ -1945,7 +1981,648 @@ def cumulative_floculation_balance(
             (r"$T_{frag}$", linestyles[1]),
         ]
         if plot_dn_dt:
-            quantities.append((r"$dn/dt$", linestyles[2] if len(linestyles) > 2 else "-"))
+            quantities.append(
+                (r"$dn/dt$", linestyles[2] if len(linestyles) > 2 else "-")
+            )
+        for i in range(len(quantities)):
+            s_quantities.append(
+                create_proxy_series(
+                    "k",
+                    "white",
+                    "none",
+                    quantities[i][1],
+                    "none",
+                    0.5,
+                    quantities[i][0],
+                )
+            )
+        for i in range(len(labels)):
+            s_cases.append(
+                create_proxy_series(
+                    colours[i], colours[i], "full", "None", "s", 0, labels[i]
+                )
+            )
+
+    s_hline_zero = PlotSeries(
+        data={"y": 0},
+        x_key=None,
+        y_key=None,
+        plot_method="hline",
+        kwargs={
+            "color": "black",
+            "linestyle": "--",
+            "linewidth": 0.8,
+            "alpha": 0.7,
+        },
+    )
+
+    return s_list_coag, s_list_frag, s_list_dn_dt, s_cases, s_quantities, s_hline_zero
+
+
+# ==================== DIFFERENCE PLOTTING FUNCTIONS ====================
+
+
+def coagulation_kernel_diff(
+    pickle_dir: Path,
+    label: str | None,
+    xlim: tuple[float, float] | None,
+) -> PlotSeries:
+
+    ylim = xlim
+
+    # Load corrected data
+    with open(
+        pickle_dir / "number_density_evolution_params_corrected.pkl", "rb"
+    ) as file:
+        results_corr: dict[str, dict] = pickle.load(file)
+
+    # Load uncorrected data
+    with open(
+        pickle_dir / "number_density_evolution_params_uncorrected.pkl", "rb"
+    ) as file:
+        results_uncorr: dict[str, dict] = pickle.load(file)
+
+    K_corr: dict[tuple[int, int], float] = results_corr["K"]
+    K_uncorr: dict[tuple[int, int], float] = results_uncorr["K"]
+    x_list: list[float] = results_corr["bin_info"]["center_sizes"]
+    x_idx_list: list[int] = results_corr["bin_info"]["center_idxs"]
+
+    x_arr: np.ndarray = np.asarray(x_list, dtype=float)
+    X, Y = np.meshgrid(x_arr, x_arr)
+    C_corr: np.ndarray = np.zeros_like(X, dtype=float)
+    C_uncorr: np.ndarray = np.zeros_like(X, dtype=float)
+
+    for i, x1_idx in enumerate(x_idx_list):
+        for j, x2_idx in enumerate(x_idx_list):
+            C_corr[i, j] = K_corr[(x1_idx, x2_idx)]
+            C_uncorr[i, j] = K_uncorr[(x1_idx, x2_idx)]
+
+    # Compute difference
+    C = C_corr - C_uncorr
+    C = np.nan_to_num(C, nan=0.0)
+
+    x_data_max = np.nanmax(x_arr)
+    y_data_max = np.nanmax(x_arr)
+
+    if xlim is not None:
+        x_min_plot, x_max_plot = xlim
+    else:
+        x_min_plot, x_max_plot = 1, x_data_max
+
+    if ylim is not None:
+        y_min_plot, y_max_plot = ylim
+    else:
+        y_min_plot, y_max_plot = 1, y_data_max
+
+    x_max_plot = min(x_max_plot, x_data_max)
+    y_max_plot = min(y_max_plot, y_data_max)
+
+    # Use diverging colormap centered at zero
+    cmap = plt.cm.RdBu_r
+    vmax = np.nanmax(np.abs(C))
+    vmin = -vmax
+
+    pcolormesh_kwargs = {
+        "label": label,
+        "cmap": cmap,
+        "edgecolors": None,
+        "norm": TwoSlopeNorm(vmin=vmin, vcenter=0, vmax=vmax),
+    }
+
+    s_pcolormesh: PlotSeries = PlotSeries(
+        data={
+            "X": X,
+            "Y": Y,
+            "C": C,
+            "xlim": (x_min_plot, x_max_plot),
+            "ylim": (y_min_plot, y_max_plot),
+        },
+        x_key="x",
+        y_key="y",
+        plot_method="pcolormesh",
+        kwargs=pcolormesh_kwargs,
+    )
+
+    return s_pcolormesh
+
+
+def fragment_size_distribution_diff(
+    pickle_dir: Path,
+    label: str | None,
+    xlim: tuple[float, float] | None,
+) -> PlotSeries:
+
+    ylim = xlim
+
+    # Load corrected data
+    with open(
+        pickle_dir / "number_density_evolution_params_corrected.pkl", "rb"
+    ) as file:
+        results_corr: dict[str, dict] = pickle.load(file)
+
+    # Load uncorrected data
+    with open(
+        pickle_dir / "number_density_evolution_params_uncorrected.pkl", "rb"
+    ) as file:
+        results_uncorr: dict[str, dict] = pickle.load(file)
+
+    p_corr: dict[tuple[int, int], float] = results_corr["p"]
+    p_uncorr: dict[tuple[int, int], float] = results_uncorr["p"]
+    x_list: list[float] = results_corr["bin_info"]["center_sizes"]
+    x_idx_list: list[int] = results_corr["bin_info"]["center_idxs"]
+
+    x_arr: np.ndarray = np.asarray(x_list, dtype=float)
+    X, Y = np.meshgrid(x_arr, x_arr)
+    C_corr: np.ndarray = np.zeros_like(X, dtype=float)
+    C_uncorr: np.ndarray = np.zeros_like(X, dtype=float)
+
+    for i, x1_idx in enumerate(x_idx_list):
+        for j, x2_idx in enumerate(x_idx_list):
+            C_corr[i, j] = p_corr[(x1_idx, x2_idx)]
+            C_uncorr[i, j] = p_uncorr[(x1_idx, x2_idx)]
+
+    # Compute difference
+    C = C_corr - C_uncorr
+    C = np.nan_to_num(C, nan=0.0)
+
+    x_data_max = np.nanmax(x_arr)
+    y_data_max = np.nanmax(x_arr)
+
+    if xlim is not None:
+        x_min_plot, x_max_plot = xlim
+    else:
+        x_min_plot, x_max_plot = 1, None
+
+    if ylim is not None:
+        y_min_plot, y_max_plot = ylim
+    else:
+        y_min_plot, y_max_plot = 1, None
+
+    if x_max_plot is None or x_data_max < x_max_plot:
+        x_max_plot = x_data_max
+    if y_max_plot is None or y_data_max < y_max_plot:
+        y_max_plot = y_data_max
+
+    # Use diverging colormap centered at zero
+    cmap = plt.cm.RdBu_r
+    vmax = np.nanmax(np.abs(C))
+    vmin = -vmax
+
+    pcolormesh_kwargs = {
+        "label": label,
+        "cmap": cmap,
+        "edgecolors": None,
+        "norm": TwoSlopeNorm(vmin=vmin, vcenter=0, vmax=vmax),
+    }
+
+    s_pcolormesh: PlotSeries = PlotSeries(
+        data={
+            "X": X,
+            "Y": Y,
+            "C": C,
+            "xlim": (x_min_plot, x_max_plot),
+            "ylim": (y_min_plot, y_max_plot),
+        },
+        x_key="x",
+        y_key="y",
+        plot_method="pcolormesh",
+        kwargs=pcolormesh_kwargs,
+    )
+
+    return s_pcolormesh
+
+
+def breakage_rate_diff(
+    pickle_dir: Path,
+    colour: str | tuple[float, float, float, float],
+    linestyle: str,
+    label: str | None,
+) -> PlotSeries:
+    # Load corrected data
+    with open(
+        pickle_dir / "number_density_evolution_params_corrected.pkl", "rb"
+    ) as file:
+        results_corr: dict[str, dict] = pickle.load(file)
+
+    # Load uncorrected data
+    with open(
+        pickle_dir / "number_density_evolution_params_uncorrected.pkl", "rb"
+    ) as file:
+        results_uncorr: dict[str, dict] = pickle.load(file)
+
+    F_corr: dict[int, float] = results_corr["F"]
+    F_uncorr: dict[int, float] = results_uncorr["F"]
+    x: list[float] = results_corr["bin_info"]["center_sizes"]
+    x_idx_list: list[int] = results_corr["bin_info"]["center_idxs"]
+
+    x_arr: np.ndarray = np.asarray(x, dtype=float)
+    F_arr_corr: np.ndarray = np.zeros_like(x_arr, dtype=float)
+    F_arr_uncorr: np.ndarray = np.zeros_like(x_arr, dtype=float)
+
+    for i, x_idx in enumerate(x_idx_list):
+        F_arr_corr[i] = F_corr[x_idx]
+        F_arr_uncorr[i] = F_uncorr[x_idx]
+
+    # Compute difference
+    F_arr_diff: np.ndarray = F_arr_corr - F_arr_uncorr
+    F_arr_diff = np.nan_to_num(F_arr_diff, nan=0.0)
+
+    s: PlotSeries = PlotSeries(
+        data={"x": x_arr, "y": F_arr_diff},
+        x_key="x",
+        y_key="y",
+        plot_method="plot",
+        kwargs={
+            "label": label,
+            "color": colour,
+            "linestyle": linestyle,
+        },
+    )
+
+    return s
+
+
+def number_density_evo_sink_source_diff(
+    data_dir: Path,
+    data_names: list[str],
+    labels: list[str],
+    colours: list[str | tuple[float, float, float, float]],
+    linestyles: list[str],
+    markers: list[str],
+    mass_weighted: bool,
+    separate_plots: bool,
+) -> tuple[
+    list[PlotSeries],
+    list[PlotSeries],
+    list[PlotSeries],
+    list[PlotSeries],
+    list[PlotSeries],
+    list[PlotSeries],
+    list[PlotSeries],
+    PlotSeries,
+]:
+    s_list_gain_coag: list[PlotSeries] = []
+    s_list_loss_coag: list[PlotSeries] = []
+    s_list_gain_frag: list[PlotSeries] = []
+    s_list_loss_frag: list[PlotSeries] = []
+    s_list_dn_dt: list[PlotSeries] = []
+
+    quantities: list[str] = [
+        "gain by coagulation (diff)",
+        "loss by coagulation (diff)",
+        "gain by fragmentation (diff)",
+        "loss by fragmentation (diff)",
+        r"$\frac{\partial n(n_p)}{\partial t}$ (diff)",
+    ]
+
+    for data_idx, data_name in enumerate(data_names):
+        # Load corrected data
+        with open(
+            data_dir / data_name / "number_density_evolution_params_corrected.pkl", "rb"
+        ) as file:
+            results_corr: dict[str, dict] = pickle.load(file)
+
+        # Load uncorrected data
+        with open(
+            data_dir / data_name / "number_density_evolution_params_uncorrected.pkl",
+            "rb",
+        ) as file:
+            results_uncorr: dict[str, dict] = pickle.load(file)
+
+        # Extract corrected data
+        K_dict_corr: dict[tuple[int, int], float] = results_corr["K"]
+        p_dict_corr: dict[tuple[int, int], float] = results_corr["p"]
+        F_dict_corr: dict[int, float] = results_corr["F"]
+        nu_dict_corr: dict[int, float] = results_corr["nu"]
+        n_dict_corr: dict[int, float] = results_corr["n"]
+
+        # Extract uncorrected data
+        K_dict_uncorr: dict[tuple[int, int], float] = results_uncorr["K"]
+        p_dict_uncorr: dict[tuple[int, int], float] = results_uncorr["p"]
+        F_dict_uncorr: dict[int, float] = results_uncorr["F"]
+        nu_dict_uncorr: dict[int, float] = results_uncorr["nu"]
+        n_dict_uncorr: dict[int, float] = results_uncorr["n"]
+
+        x_list: list[float] = results_corr["bin_info"]["center_sizes"]
+        x_edges_list: list[float] = results_corr["bin_info"]["edge_sizes"]
+        x_idx_list: list[int] = results_corr["bin_info"]["center_idxs"]
+        x_arr: np.ndarray = np.asarray(x_list, dtype=float)
+        x_edges_arr: np.ndarray = np.asarray(x_edges_list, dtype=float)
+        bin_widths: np.ndarray = x_edges_arr[1:] - x_edges_arr[:-1]
+        x_idx_arr: np.ndarray = np.asarray(x_idx_list, dtype=int)
+        X, _ = np.meshgrid(x_arr, x_arr)
+
+        # Build arrays for corrected data
+        K_corr: np.ndarray = np.zeros_like(X, dtype=float)
+        for i, x1_idx in enumerate(x_idx_list):
+            for j, x2_idx in enumerate(x_idx_list):
+                K_corr[i, j] = K_dict_corr[(x1_idx, x2_idx)]
+        K_corr = np.nan_to_num(K_corr, nan=0.0)
+
+        p_corr: np.ndarray = np.zeros_like(X, dtype=float)
+        for i, x1_idx in enumerate(x_idx_list):
+            for j, x2_idx in enumerate(x_idx_list):
+                p_corr[i, j] = p_dict_corr[(x1_idx, x2_idx)]
+        p_corr = np.nan_to_num(p_corr, nan=0.0)
+
+        F_corr: np.ndarray = np.zeros_like(x_arr, dtype=float)
+        for i, x_idx in enumerate(x_idx_list):
+            F_corr[i] = F_dict_corr[x_idx]
+        F_corr = np.nan_to_num(F_corr, nan=0.0)
+
+        nu_corr: np.ndarray = np.zeros_like(x_arr, dtype=float)
+        for i, x_idx in enumerate(x_idx_list):
+            nu_corr[i] = nu_dict_corr[x_idx]
+        nu_corr = np.nan_to_num(nu_corr, nan=2.0)
+
+        n_corr: np.ndarray = np.zeros_like(x_arr, dtype=float)
+        for i, x_idx in enumerate(x_idx_list):
+            n_corr[i] = n_dict_corr[x_idx]
+        n_corr = np.nan_to_num(n_corr, nan=0.0)
+
+        # Build arrays for uncorrected data
+        K_uncorr: np.ndarray = np.zeros_like(X, dtype=float)
+        for i, x1_idx in enumerate(x_idx_list):
+            for j, x2_idx in enumerate(x_idx_list):
+                K_uncorr[i, j] = K_dict_uncorr[(x1_idx, x2_idx)]
+        K_uncorr = np.nan_to_num(K_uncorr, nan=0.0)
+
+        p_uncorr: np.ndarray = np.zeros_like(X, dtype=float)
+        for i, x1_idx in enumerate(x_idx_list):
+            for j, x2_idx in enumerate(x_idx_list):
+                p_uncorr[i, j] = p_dict_uncorr[(x1_idx, x2_idx)]
+        p_uncorr = np.nan_to_num(p_uncorr, nan=0.0)
+
+        F_uncorr: np.ndarray = np.zeros_like(x_arr, dtype=float)
+        for i, x_idx in enumerate(x_idx_list):
+            F_uncorr[i] = F_dict_uncorr[x_idx]
+        F_uncorr = np.nan_to_num(F_uncorr, nan=0.0)
+
+        nu_uncorr: np.ndarray = np.zeros_like(x_arr, dtype=float)
+        for i, x_idx in enumerate(x_idx_list):
+            nu_uncorr[i] = nu_dict_uncorr[x_idx]
+        nu_uncorr = np.nan_to_num(nu_uncorr, nan=2.0)
+
+        n_uncorr: np.ndarray = np.zeros_like(x_arr, dtype=float)
+        for i, x_idx in enumerate(x_idx_list):
+            n_uncorr[i] = n_dict_uncorr[x_idx]
+        n_uncorr = np.nan_to_num(n_uncorr, nan=0.0)
+
+        # Calculate corrected values
+        calculator_corr = CoagulationFragmentationCalculator(
+            K=K_corr,
+            F=F_corr,
+            nu=nu_corr,
+            p=p_corr,
+            n=n_corr,
+            x_arr=x_arr,
+            x_edges_arr=x_edges_arr,
+            x_idx_arr=x_idx_arr,
+        )
+
+        # Calculate uncorrected values
+        calculator_uncorr = CoagulationFragmentationCalculator(
+            K=K_uncorr,
+            F=F_uncorr,
+            nu=nu_uncorr,
+            p=p_uncorr,
+            n=n_uncorr,
+            x_arr=x_arr,
+            x_edges_arr=x_edges_arr,
+            x_idx_arr=x_idx_arr,
+        )
+
+        def dn_dt(
+            gain_coag: np.ndarray,
+            loss_coag: np.ndarray,
+            gain_frag: np.ndarray,
+            loss_frag: np.ndarray,
+        ) -> np.ndarray:
+            return gain_coag + loss_coag + gain_frag + loss_frag
+
+        def weight_by_mass(data: np.ndarray) -> np.ndarray:
+            return data * x_arr
+
+        # Compute differences
+        y_gain_coag_diff: np.ndarray = (
+            calculator_corr.gain_coag() - calculator_uncorr.gain_coag()
+        )
+        y_loss_coag_diff: np.ndarray = (
+            calculator_corr.loss_coag() - calculator_uncorr.loss_coag()
+        )
+        y_gain_frag_diff: np.ndarray = (
+            calculator_corr.gain_frag() - calculator_uncorr.gain_frag()
+        )
+        y_loss_frag_diff: np.ndarray = (
+            calculator_corr.loss_frag() - calculator_uncorr.loss_frag()
+        )
+        y_dn_dt_diff: np.ndarray = dn_dt(
+            y_gain_coag_diff, y_loss_coag_diff, y_gain_frag_diff, y_loss_frag_diff
+        )
+
+        if mass_weighted:
+            y_gain_coag_diff = weight_by_mass(y_gain_coag_diff)
+            y_loss_coag_diff = weight_by_mass(y_loss_coag_diff)
+            y_gain_frag_diff = weight_by_mass(y_gain_frag_diff)
+            y_loss_frag_diff = weight_by_mass(y_loss_frag_diff)
+            y_dn_dt_diff = weight_by_mass(y_dn_dt_diff)
+
+        def create_series(idx: int, y_data: np.ndarray) -> PlotSeries:
+            labels_local: list[str] = ["" for _ in range(len(quantities))]
+            colours_local: list[str | tuple[float, float, float, float]] = [
+                colours[data_idx] for _ in range(len(quantities))
+            ]
+            if separate_plots:
+                labels_local = [
+                    f"{quantity} ({labels[data_idx]})" for quantity in quantities
+                ]
+                colours_local = colours
+
+            return PlotSeries(
+                data={"x": x_arr, "y": y_data},
+                x_key="x",
+                y_key="y",
+                plot_method="plot",
+                kwargs={
+                    "label": labels_local[idx],
+                    "color": colours_local[idx],
+                    "linestyle": (
+                        linestyles[idx] if not separate_plots else linestyles[0]
+                    ),
+                    "marker": markers[data_idx] if markers[data_idx] else "",
+                },
+            )
+
+        s_list_gain_coag.append(create_series(0, y_gain_coag_diff))
+        s_list_loss_coag.append(create_series(1, y_loss_coag_diff))
+        s_list_gain_frag.append(create_series(2, y_gain_frag_diff))
+        s_list_loss_frag.append(create_series(3, y_loss_frag_diff))
+        s_list_dn_dt.append(create_series(4, y_dn_dt_diff))
+
+    s_quantities: list[PlotSeries] = []
+    s_cases: list[PlotSeries] = []
+    if not separate_plots:
+        for i in range(len(quantities)):
+            s_quantities.append(
+                create_proxy_series(
+                    "k",
+                    "white",
+                    "none",
+                    linestyles[i],
+                    "none",
+                    0.5,
+                    quantities[i],
+                )
+            )
+        for i in range(len(labels)):
+            s_cases.append(
+                create_proxy_series(
+                    colours[i], colours[i], "full", "None", "s", 0, labels[i]
+                )
+            )
+
+    s_hline_zero = PlotSeries(
+        data={"y": 0},
+        x_key=None,
+        y_key=None,
+        plot_method="hline",
+        kwargs={
+            "color": "black",
+            "linestyle": "--",
+            "linewidth": 0.8,
+            "alpha": 0.7,
+        },
+    )
+
+    return (
+        s_list_gain_coag,
+        s_list_loss_coag,
+        s_list_gain_frag,
+        s_list_loss_frag,
+        s_list_dn_dt,
+        s_cases,
+        s_quantities,
+        s_hline_zero,
+    )
+
+
+def cumulative_floculation_balance_diff(
+    data_dir: Path,
+    data_names: list[str],
+    labels: list[str],
+    colours: list[str | tuple[float, float, float, float]],
+    linestyles: list[str],
+    markers: list[str],
+    mass_weighted: bool,
+    separate_plots: bool,
+    plot_dn_dt: bool,
+) -> tuple[
+    list[PlotSeries],
+    list[PlotSeries],
+    list[PlotSeries],
+    list[PlotSeries],
+    list[PlotSeries],
+    PlotSeries,
+]:
+    s_list_coag: list[PlotSeries] = []
+    s_list_frag: list[PlotSeries] = []
+    s_list_dn_dt: list[PlotSeries] = []
+
+    for data_idx, data_name in enumerate(data_names):
+        csv_path_corr = data_dir / data_name / "floculation_balance_corrected.csv"
+        csv_path_uncorr = data_dir / data_name / "floculation_balance.csv"
+
+        if mass_weighted:
+            n_p_corr, T_coag_cumsum_corr, T_frag_cumsum_corr, dn_dt_cumsum_corr = (
+                lwidmer.read_csv_columns(csv_path_corr, (0, 10, 11, 12), remove_nan=1)
+            )
+            (
+                n_p_uncorr,
+                T_coag_cumsum_uncorr,
+                T_frag_cumsum_uncorr,
+                dn_dt_cumsum_uncorr,
+            ) = lwidmer.read_csv_columns(csv_path_uncorr, (0, 10, 11, 12), remove_nan=1)
+        else:
+            n_p_corr, T_coag_cumsum_corr, T_frag_cumsum_corr, dn_dt_cumsum_corr = (
+                lwidmer.read_csv_columns(csv_path_corr, (0, 7, 8, 9), remove_nan=1)
+            )
+            (
+                n_p_uncorr,
+                T_coag_cumsum_uncorr,
+                T_frag_cumsum_uncorr,
+                dn_dt_cumsum_uncorr,
+            ) = lwidmer.read_csv_columns(csv_path_uncorr, (0, 7, 8, 9), remove_nan=1)
+
+        # Compute differences
+        T_coag_cumsum_diff: np.ndarray = T_coag_cumsum_corr - T_coag_cumsum_uncorr
+        T_frag_cumsum_diff: np.ndarray = T_frag_cumsum_corr - T_frag_cumsum_uncorr
+        dn_dt_cumsum_diff = dn_dt_cumsum_corr - dn_dt_cumsum_uncorr
+        T_coag_cumsum_diff = np.nan_to_num(T_coag_cumsum_diff, nan=0.0)
+        T_frag_cumsum_diff = np.nan_to_num(T_frag_cumsum_diff, nan=0.0)
+        dn_dt_cumsum_diff = np.nan_to_num(dn_dt_cumsum_diff, nan=0.0)
+
+        labels_local_coag: str = ""
+        labels_local_frag: str = ""
+        labels_local_dn_dt: str = ""
+        if separate_plots:
+            labels_local_coag = f"$T_{{coag}}$ diff ({labels[data_idx]})"
+            labels_local_frag = f"$T_{{frag}}$ diff ({labels[data_idx]})"
+            labels_local_dn_dt = f"$dn/dt$ diff ({labels[data_idx]})"
+
+        s_coag = PlotSeries(
+            data={"x": n_p_corr, "y": T_coag_cumsum_diff},
+            x_key="x",
+            y_key="y",
+            plot_method="semilogx",
+            kwargs={
+                "label": labels_local_coag,
+                "color": colours[data_idx],
+                "linestyle": linestyles[0],
+                "marker": markers[data_idx] if markers[data_idx] else "",
+            },
+        )
+        s_list_coag.append(s_coag)
+
+        s_frag = PlotSeries(
+            data={"x": n_p_corr, "y": T_frag_cumsum_diff},
+            x_key="x",
+            y_key="y",
+            plot_method="plot",
+            kwargs={
+                "label": labels_local_frag,
+                "color": colours[data_idx],
+                "linestyle": linestyles[1],
+                "marker": markers[data_idx] if markers[data_idx] else "",
+            },
+        )
+        s_list_frag.append(s_frag)
+
+        if plot_dn_dt:
+            s_dn_dt = PlotSeries(
+                data={"x": n_p_corr, "y": dn_dt_cumsum_diff},
+                x_key="x",
+                y_key="y",
+                plot_method="plot",
+                kwargs={
+                    "label": labels_local_dn_dt,
+                    "color": colours[data_idx],
+                    "linestyle": linestyles[2] if len(linestyles) > 2 else "-",
+                    "marker": markers[data_idx] if markers[data_idx] else "",
+                },
+            )
+            s_list_dn_dt.append(s_dn_dt)
+
+    s_quantities: list[PlotSeries] = []
+    s_cases: list[PlotSeries] = []
+    if not separate_plots:
+        quantities: list[tuple[str, str]] = [
+            (r"$T_{coag}$ diff", linestyles[0]),
+            (r"$T_{frag}$ diff", linestyles[1]),
+        ]
+        if plot_dn_dt:
+            quantities.append(
+                (r"$dn/dt$ diff", linestyles[2] if len(linestyles) > 2 else "-")
+            )
         for i in range(len(quantities)):
             s_quantities.append(
                 create_proxy_series(
