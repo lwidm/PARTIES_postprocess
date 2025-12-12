@@ -192,18 +192,24 @@ def save_floculation_balance(
     T_frag_mass_cumsum: np.ndarray =   stats["T_frag_mass_cumsum"]
     dn_dt_mass_cumsum: np.ndarray =   stats["dn_dt_mass_cumsum"]
 
+    title: str
+    extra_line: str
+    name: str
+    coag_desc: str
+    frag_desc: str
+    dn_dt_desc: str
     if is_difference:
-        extra_line = "Data represents difference (corrected - uncorrected)"
         title = "The floculation balance difference (corrected - uncorrected)"
+        extra_line = "Data represents difference (corrected - uncorrected)"
         name = "floculation_balance_diff.csv"
         coag_desc = "- T_coag: difference in sink + source terms due to coagulation at floc size n_p"
         frag_desc = "- T_frag: difference in sink + source terms due to fragmentation at floc size n_p"
         dn_dt_desc = "- dn_dt: differneces of sum of T_coag and T_frag"
     else:
+        title = "The floculation balance (sink and source terms due to aggregation and fragmentation)"
         extra_line = "Data computed using uncorrected family tree"
         if corrected:
             extra_line = "Data computed using corrected family tree"
-        title = "The floculation balance (sink and source terms due to aggregation and fragmentation)"
         name = "floculation_balance.csv"
         if corrected:
             name = "floculation_balance_corrected.csv"
