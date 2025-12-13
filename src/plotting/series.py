@@ -2656,3 +2656,115 @@ def cumulative_floculation_balance_diff(
     )
 
     return s_list_coag, s_list_frag, s_list_dn_dt, s_cases, s_quantities, s_hline_zero
+
+
+def total_frequencies(
+    data_dir: Path,
+    data_names_sets: list[list[str]],
+    phi_values_sets: list[list[float]],
+    labels: list[str | None],
+    colours: list[str | tuple[float, float, float, float]],
+    floc_markers: list[str],
+    break_markers: list[str],
+    corrected: bool = True,
+) -> tuple[list[PlotSeries], list[PlotSeries]]:
+    import pickle
+
+    markeredgewidth: float = 0.7
+
+    s_list_floc: list[PlotSeries] = []
+    s_list_break: list[PlotSeries] = []
+
+    for set_idx, (data_names, phi_values) in enumerate(zip(data_names_sets, phi_values_sets)):
+        phi_list: list[float] = []
+        floc_freq_list: list[float] = []
+        break_freq_list: list[float] = []
+
+        for data_name, phi in zip(data_names, phi_values):
+            pickle_file: Path
+            if corrected:
+                pickle_file = data_dir / data_name / "number_density_evolution_params_corrected.pkl"
+            else:
+                pickle_file = data_dir / data_name / "number_density_evolution_params_uncorrected.pkl"
+
+            if not pickle_file.exists():
+                continue
+
+            with open(pickle_file, "rb") as f:
+                params: dict = pickle.load(f)
+
+            K_dict: dict[tuple[int, int], float] = params["K"]
+            F_dict: dict[int, float] = params["F"]
+            n_dict: dict[int, float] = params["n"]
+            bin_info: dict[str, list[int] | list[float]] = params["bin_info"]
+
+            center_idxs_list: list[int] = bin_info["center_idxs"]
+            center_sizes_list: list[float] = bin_info["center_sizes"]
+            edge_sizes_list: list[float] = bin_info["edge_sizes"]
+
+            bin_width_eff: float = edge_sizes_list[1] - edge_sizes_list[0]
+
+            center_idxs_arr: np.ndarray = np.asarray(center_idxs_list, dtype=int)
+            center_sizes_arr: np.ndarray = np.asarray(center_sizes_list, dtype=float)
+
+            X, _ = np.meshgrid(center_sizes_arr, center_sizes_arr)
+            K: np.ndarray = np.zeros_like(X, dtype=float)
+            for i, x1_idx in enumerate(center_idxs_list):
+                for j, x2_idx in enumerate(center_idxs_list):
+                    K[i, j] = K_dict[(x1_idx, x2_idx)]
+            K = np.nan_to_num(K, nan=0.0)
+
+            F: np.ndarray = np.zeros_like(center_sizes_arr, dtype=float)
+            for i, x_idx in enumerate(center_idxs_list):
+                F[i] = F_dict[x_idx]
+            F = np.nan_to_num(F, nan=0.0)
+
+            n: np.ndarray = np.zeros_like(center_sizes_arr, dtype=float)
+            for i, x_idx in enumerate(center_idxs_list):
+                n[i] = n_dict[x_idx]
+            n = np.nan_to_num(n, nan=0.0)
+
+            floc_freq: float = 0.5 * float(np.sum(K * n[:, None] * n[None, :] * bin_width_eff**2))
+            break_freq: float = float(np.sum(F * n * bin_width_eff))
+
+            phi_list.append(phi)
+            floc_freq_list.append(floc_freq)
+            break_freq_list.append(break_freq)
+
+        s_floc = PlotSeries(
+            data={"x": phi_list, "y": floc_freq_list},
+            x_key="x",
+            y_key="y",
+            plot_method="plot",
+            kwargs={
+                "label": labels[set_idx] if labels[set_idx] else f"Set {set_idx}",
+                "linestyle": "None",
+                "marker": floc_markers[set_idx],
+                "markerfacecolor": colours[set_idx],
+                "markeredgecolor": "k",
+                "markeredgewidth": markeredgewidth,
+                "color": colours[set_idx],
+                "fillstyle": "full",
+            },
+        )
+        s_list_floc.append(s_floc)
+
+        s_break = PlotSeries(
+            data={"x": phi_list, "y": break_freq_list},
+            x_key="x",
+            y_key="y",
+            plot_method="plot",
+            kwargs={
+                "label": labels[set_idx] if labels[set_idx] else f"Set {set_idx}",
+                "linestyle": "None",
+                "marker": break_markers[set_idx],
+                "markerfacecolor": colours[set_idx],
+                "markeredgecolor": "k",
+                "markeredgewidth": markeredgewidth,
+                "color": colours[set_idx],
+                "fillstyle": "full",
+            },
+        )
+        s_list_break.append(s_break)
+
+    return s_list_floc, s_list_break

@@ -691,3 +691,25 @@ def cumulative_floculation_balance(
         current_ticks.sort()
         ax.set_xticks(current_ticks)
     my_save_fig(out_path, fig, dpi=150)
+
+
+def total_frequency_plot(
+    output_dir: Path,
+    series_list_floc: Sequence[PlotSeries],
+    series_list_break: Sequence[PlotSeries],
+) -> None:
+    out_path = output_dir / "total_frequency"
+
+    combined_series: list[PlotSeries] = list(series_list_floc) + list(series_list_break)
+
+    ax, fig, _ = generic_plot(
+        combined_series,
+        legend=True,
+        xlabel=r"$\phi$ [\%]",
+        ylabel=r"Aggregation/Breakup frequency per $L^3$ per $\tau$, $f \cdot L^4/U$ [-]",
+        xlim=(None, None),
+        ylim=(None, None),
+        figsize=(6.5, 5.5),
+        legend_loc="best",
+    )
+    my_save_fig(out_path, fig, dpi=150)
