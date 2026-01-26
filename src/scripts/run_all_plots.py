@@ -15,8 +15,8 @@ from matplotlib.axes import Axes
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize, Colormap
 
-# parent_dir: Path = Path("/media/usb/UCSB/")
-parent_dir: Path = Path("./")
+parent_dir: Path = Path("/media/usb/UCSB/")
+# parent_dir: Path = Path("./")
 
 
 def fuild_velocity_profile(
@@ -160,145 +160,56 @@ def fluid_wall_normal(
     plt_templ.normal_stress_wall(plot_dir, all_stress_series, use_markers)
 
 
-def floc(
+def floc_evolution(
+    plot_dir: Path,
+    data_dir: Path,
+    data_names: list[str],
+    labels: list[str],
+    colours: list[str | tuple[float, float, float, float]],
+    plot_evo_fit: bool,
+) -> None:
+    data_dirs: list[Path] = [data_dir / data_name for data_name in data_names]
+    plot_dir.mkdir(parents=True, exist_ok=True)
+
+    s_evo_list: list[PlotSeries] = []
+    s_evo_fit_list: list[PlotSeries] = []
+
+    for i in range(len(data_dirs)):
+        s_evo = plt_series.floc_count_evolution(
+            data_dirs[i],
+            colours[i],
+            labels[i],
+            normalised=True,
+            reset_time=True,
+        )
+        s_evo_list.append(s_evo)
+
+        if plot_evo_fit:
+            s_evo_fit = plt_series.floc_count_evolution_fit(
+                data_dirs[i],
+                colours[i],
+                labels[i],
+                normalised=True,
+                reset_time=True,
+            )
+            s_evo_fit_list.append(s_evo_fit)
+
+    if plot_evo_fit:
+        s_evo_list = s_evo_fit_list + s_evo_list
+    plt_templ.floc_count_evolution(plot_dir, s_evo_list, normalised=True)
+
+
+def floc_pdf(
     plot_dir: Path,
     data_dir: Path,
     data_names: list[str],
     labels: list[str],
     colours: list[str | tuple[float, float, float, float]],
     markers: list[str],
-    linestyles: list[str],
-    plot_evo_fit: bool,
 ) -> None:
-
     data_dirs: list[Path] = [data_dir / data_name for data_name in data_names]
-
-    def get_series_floc_evolution(
-        csv_dir: Path,
-        colour: str | tuple[float, float, float, float],
-        label: str,
-    ) -> PlotSeries:
-        s: PlotSeries = plt_series.floc_count_evolution(
-            csv_dir,
-            colour,
-            label,
-            normalised=True,
-            reset_time=True,
-        )
-        return s
-
-    def get_series_floc_evolution_fit(
-        csv_dir: Path,
-        colour: str | tuple[float, float, float, float],
-        label: str,
-    ) -> PlotSeries:
-        s: PlotSeries = plt_series.floc_count_evolution_fit(
-            csv_dir,
-            colour,
-            label,
-            normalised=True,
-            reset_time=True,
-        )
-        return s
-
-    def get_series_pdf(
-        data_dir: Path,
-        colour: str | tuple[float, float, float, float],
-        label: str,
-        marker: str,
-    ) -> tuple[
-        PlotSeries,
-        PlotSeries,
-        PlotSeries,
-        PlotSeries,
-        PlotSeries,
-        PlotSeries,
-        PlotSeries,
-        PlotSeries,
-        PlotSeries,
-        PlotSeries,
-        PlotSeries,
-        PlotSeries,
-    ]:
-        (
-            s_n_p_PDF,
-            s_D_f_d_particle_PDF,
-            s_D_g_d_particle_PDF,
-            s_n_p_PDF_err,
-            s_D_f_d_particle_PDF_err,
-            s_D_g_d_particle_PDF_err,
-            s_mass_n_p_PDF,
-            s_mass_D_f_d_particle_PDF,
-            s_mass_D_g_d_particle_PDF,
-            s_mass_n_p_PDF_err,
-            s_mass_D_f_d_particle_PDF_err,
-            s_mass_D_g_d_particle_PDF_err,
-        ) = plt_series.floc_pdf(
-            floc_dir=data_dir,
-            labels=[label for _ in range(6)],
-            colours=[colour for _ in range(6)],
-            markers=[marker for _ in range(6)],
-        )
-
-        return (
-            s_n_p_PDF,
-            s_D_f_d_particle_PDF,
-            s_D_g_d_particle_PDF,
-            s_n_p_PDF_err,
-            s_D_f_d_particle_PDF_err,
-            s_D_g_d_particle_PDF_err,
-            s_mass_n_p_PDF,
-            s_mass_D_f_d_particle_PDF,
-            s_mass_D_g_d_particle_PDF,
-            s_mass_n_p_PDF_err,
-            s_mass_D_f_d_particle_PDF_err,
-            s_mass_D_g_d_particle_PDF_err,
-        )
-
-    def get_series_avg(
-        data_dir: Path,
-        label: str,
-        colour: str | tuple[float, float, float, float],
-        marker: str,
-    ) -> tuple[
-        PlotSeries,
-        PlotSeries,
-        PlotSeries,
-        PlotSeries,
-        PlotSeries,
-        PlotSeries,
-        PlotSeries,
-        PlotSeries,
-    ]:
-        (
-            s_D_f_d_particle_avg,
-            s_D_g_d_particle_avg,
-            s_D_f_d_particle_mass_avg,
-            s_D_g_d_particle_mass_avg,
-            s_D_f_d_particle_err,
-            s_D_g_d_particle_err,
-            s_D_f_d_particle_mass_err,
-            s_D_g_d_particle_mass_err,
-        ) = plt_series.floc_avg_dir(
-            floc_dir=data_dir,
-            labels=[label for _ in range(4)],
-            colours=[colour for _ in range(4)],
-            markers=[marker for _ in range(4)],
-        )
-        return (
-            s_D_f_d_particle_avg,
-            s_D_g_d_particle_avg,
-            s_D_f_d_particle_mass_avg,
-            s_D_g_d_particle_mass_avg,
-            s_D_f_d_particle_err,
-            s_D_g_d_particle_err,
-            s_D_f_d_particle_mass_err,
-            s_D_g_d_particle_mass_err,
-        )
-
     plot_dir.mkdir(parents=True, exist_ok=True)
-    s_evo_list: list[PlotSeries] = []
-    s_evo_fit_list: list[PlotSeries] = []
+
     s_pdf_np_list: list[PlotSeries] = []
     s_pdf_Df_list: list[PlotSeries] = []
     s_pdf_Dg_list: list[PlotSeries] = []
@@ -311,28 +222,8 @@ def floc(
     s_pdf_np_mass_err_list: list[PlotSeries] = []
     s_pdf_Df_mass_err_list: list[PlotSeries] = []
     s_pdf_Dg_mass_err_list: list[PlotSeries] = []
-    s_avg_Df_list: list[PlotSeries] = []
-    s_avg_Dg_list: list[PlotSeries] = []
-    s_mass_avg_Df_list: list[PlotSeries] = []
-    s_mass_avg_Dg_list: list[PlotSeries] = []
-    s_avg_Df_err_list: list[PlotSeries] = []
-    s_avg_Dg_err_list: list[PlotSeries] = []
-    s_mass_avg_Df_err_list: list[PlotSeries] = []
-    s_mass_avg_Dg_err_list: list[PlotSeries] = []
-    for i in range(len(data_dirs)):
-        s_evo = get_series_floc_evolution(
-            data_dirs[i],
-            colours[i],
-            labels[i],
-        )
-        s_evo_list.append(s_evo)
 
-        s_evo_fit = get_series_floc_evolution_fit(
-            data_dirs[i],
-            colours[i],
-            labels[i],
-        )
-        s_evo_fit_list.append(s_evo_fit)
+    for i in range(len(data_dirs)):
         (
             s_np,
             s_Df,
@@ -346,11 +237,11 @@ def floc(
             s_np_mass_err,
             s_Df_mass_err,
             s_Dg_mass_err,
-        ) = get_series_pdf(
-            data_dirs[i],
-            colours[i],
-            labels[i],
-            markers[i],
+        ) = plt_series.floc_pdf(
+            floc_dir=data_dirs[i],
+            labels=[labels[i] for _ in range(6)],
+            colours=[colours[i] for _ in range(6)],
+            markers=[markers[i] for _ in range(6)],
         )
         s_pdf_np_list.append(s_np)
         s_pdf_Df_list.append(s_Df)
@@ -365,6 +256,35 @@ def floc(
         s_pdf_Df_mass_err_list.append(s_Df_mass_err)
         s_pdf_Dg_mass_err_list.append(s_Dg_mass_err)
 
+    plt_templ.n_p_pdf(plot_dir, s_pdf_np_err_list + s_pdf_np_list)
+    plt_templ.D_f_pdf(plot_dir, s_pdf_Df_err_list + s_pdf_Df_list)
+    plt_templ.D_g_pdf(plot_dir, s_pdf_Dg_err_list + s_pdf_Dg_list)
+    plt_templ.n_p_mass_pdf(plot_dir, s_pdf_np_mass_err_list + s_pdf_np_mass_list)
+    plt_templ.D_f_mass_pdf(plot_dir, s_pdf_Df_mass_err_list + s_pdf_Df_mass_list)
+    plt_templ.D_g_mass_pdf(plot_dir, s_pdf_Dg_mass_err_list + s_pdf_Dg_mass_list)
+
+
+def floc_avg_diameters(
+    plot_dir: Path,
+    data_dir: Path,
+    data_names: list[str],
+    labels: list[str],
+    colours: list[str | tuple[float, float, float, float]],
+    markers: list[str],
+) -> None:
+    data_dirs: list[Path] = [data_dir / data_name for data_name in data_names]
+    plot_dir.mkdir(parents=True, exist_ok=True)
+
+    s_avg_Df_list: list[PlotSeries] = []
+    s_avg_Dg_list: list[PlotSeries] = []
+    s_mass_avg_Df_list: list[PlotSeries] = []
+    s_mass_avg_Dg_list: list[PlotSeries] = []
+    s_avg_Df_err_list: list[PlotSeries] = []
+    s_avg_Dg_err_list: list[PlotSeries] = []
+    s_mass_avg_Df_err_list: list[PlotSeries] = []
+    s_mass_avg_Dg_err_list: list[PlotSeries] = []
+
+    for i in range(len(data_dirs)):
         (
             s_avg_Df,
             s_avg_Dg,
@@ -374,7 +294,12 @@ def floc(
             s_err_Dg,
             s_mass_err_Df,
             s_mass_err_Dg,
-        ) = get_series_avg(data_dirs[i], labels[i], colours[i], markers[i])
+        ) = plt_series.floc_avg_dir(
+            floc_dir=data_dirs[i],
+            labels=[labels[i] for _ in range(4)],
+            colours=[colours[i] for _ in range(4)],
+            markers=[markers[i] for _ in range(4)],
+        )
         s_avg_Df_list.append(s_avg_Df)
         s_avg_Dg_list.append(s_avg_Dg)
         s_mass_avg_Df_list.append(s_mass_avg_Df)
@@ -384,42 +309,15 @@ def floc(
         s_mass_avg_Df_err_list.append(s_mass_err_Df)
         s_mass_avg_Dg_err_list.append(s_mass_err_Dg)
 
-    if plot_evo_fit:
-        s_evo_list = s_evo_fit_list + s_evo_list
-    plt_templ.floc_count_evolution(plot_dir, s_evo_list, normalised=True)
-    plt_templ.n_p_pdf(plot_dir, s_pdf_np_err_list + s_pdf_np_list)
-    plt_templ.D_f_pdf(plot_dir, s_pdf_Df_err_list + s_pdf_Df_list)
-    plt_templ.D_g_pdf(plot_dir, s_pdf_Dg_err_list + s_pdf_Dg_list)
-    plt_templ.n_p_mass_pdf(plot_dir, s_pdf_np_mass_err_list + s_pdf_np_mass_list)
-    plt_templ.D_f_mass_pdf(plot_dir, s_pdf_Df_mass_err_list + s_pdf_Df_mass_list)
-    plt_templ.D_g_mass_pdf(plot_dir, s_pdf_Dg_mass_err_list + s_pdf_Dg_mass_list)
+    s_avg_Df_list = s_avg_Df_err_list + s_avg_Df_list
+    s_avg_Dg_list = s_avg_Dg_err_list + s_avg_Dg_list
+    s_mass_avg_Df_list = s_mass_avg_Df_err_list + s_mass_avg_Df_list
+    s_mass_avg_Dg_list = s_mass_avg_Dg_err_list + s_mass_avg_Dg_list
 
-    if True:
-        s_avg_Df_list = s_avg_Df_err_list + s_avg_Df_list
-        s_avg_Dg_list = s_avg_Dg_err_list + s_avg_Dg_list
-        s_avg_Dg_list = s_avg_Dg_err_list + s_avg_Dg_list
-        s_mass_avg_Df_list = s_mass_avg_Df_err_list + s_mass_avg_Df_list
-        s_mass_avg_Dg_list = s_mass_avg_Dg_err_list + s_mass_avg_Dg_list
-    plt_templ.avg_D_f(
-        plot_dir,
-        s_avg_Df_list,
-        inner_units=False,
-    )
-    plt_templ.avg_D_g(
-        plot_dir,
-        s_avg_Dg_list,
-        inner_units=False,
-    )
-    plt_templ.mass_avg_D_f(
-        plot_dir,
-        s_mass_avg_Df_list,
-        inner_units=False,
-    )
-    plt_templ.mass_avg_D_g(
-        plot_dir,
-        s_mass_avg_Dg_list,
-        inner_units=False,
-    )
+    plt_templ.avg_D_f(plot_dir, s_avg_Df_list, inner_units=False)
+    plt_templ.avg_D_g(plot_dir, s_avg_Dg_list, inner_units=False)
+    plt_templ.mass_avg_D_f(plot_dir, s_mass_avg_Df_list, inner_units=False)
+    plt_templ.mass_avg_D_g(plot_dir, s_mass_avg_Dg_list, inner_units=False)
 
 
 def phi_eulerian(
@@ -1050,7 +948,7 @@ def number_density_evo_sink_source(
                 output_dir=plot_dir,
                 series_list=series_list,
                 name=data_names[i],
-                xmax=10^3,
+                xmax=10**3,
                 mass_weighted=mass_weighted,
             )
     else:
@@ -1068,7 +966,7 @@ def number_density_evo_sink_source(
             output_dir=plot_dir,
             series_list=series_list,
             name=None,
-            xmax=10^3,
+            xmax=10**3,
             mass_weighted=mass_weighted,
         )
 
@@ -1391,7 +1289,7 @@ def main() -> None:
         # "phi5p0_noCo",
         "phi1p5",
         "phi3p0",
-        "phi5p0",
+        "phi5p0_new",
         # "test"
     ]
     labels_n_particles: list[str] = [
@@ -1413,7 +1311,7 @@ def main() -> None:
         5,
         5,
     ]
-    data_dir: Path = parent_dir / "data/"
+    data_dir: Path = parent_dir / "output"
     cmap = plt.get_cmap("tab10")
     cb_palette = sns.color_palette("colorblind", n_colors=5)
     blue_cmap = plt.get_cmap("Blues")
@@ -1429,199 +1327,209 @@ def main() -> None:
     ]
     markers: list[str] = ["o", "s", "^", "v", "P"]
     linestyles: list[str] = ["-", "--", "-.", ":", ":"]
-    # floc(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names_n_particles,
-    #     labels_n_particles,
-    #     colours,
-    #     markers,
-    #     linestyles,
-    #     plot_evo_fit=False,
-    # )
-    # fluid_wall_normal(
-    #     data_dir, plot_dir, data_dir, data_names_n_particles, labels_n_particles, colours, use_markers=True
-    # )
-    # fluid_wall_normal(
-    #     data_dir, plot_dir, data_dir, data_names_n_particles, labels_n_particles, colours, use_markers=False
-    # )
-    # fuild_velocity_profile(
-    #     data_dir, plot_dir, data_dir, data_names_n_particles, labels_n_particles, colours, use_markers=True
-    # )
-    # phi_eulerian(plot_dir, data_dir, data_names_n_particles, labels_n_particles, colours, False)
-    # lagrangian_data(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names_n_particles,
-    #     labels_n_particles,
-    #     colours,
-    #     markers,
-    #     show_errs=False,
-    #     separate_plots=False,
-    # )
-    # fam_tree(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names_n_particles,
-    #     labels_n_particles,
-    #     colours_fam_tree,
-    #     markers,
-    #     linestyles,
-    #     separate_plots=True,
-    #     unfiltered=3,
-    # )
-    # floc_timescale(
-    #     plot_dir=plot_dir,
-    #     data_dir=data_dir,
-    #     data_names=data_names_n_particles,
-    #     labels=labels_n_particles,
-    #     cmap_breakup=red_cmap,
-    #     cmap_formation=blue_cmap,
-    # )
-    # noncohesive_floc_lifetime(plot_dir)
-
-    # coagulation_kernel(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names_n_particles,
-    #     labels_n_particles,
-    #     contour_sigmas=coagulation_kernel_sigmas_n_particles,
-    #     corrected=True,
-    # )
-    # fragment_size_distribution(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names_n_particles,
-    #     labels_n_particles,
-    #     corrected=True,
-    # )
-    # breakage_rate(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names_n_particles,
-    #     labels_n_particles,
-    #     colours,
-    #     corrected=True,
-    # )
-    # number_density_evo_sink_source(
-    #     plot_dir=plot_dir,
-    #     data_dir=data_dir,
-    #     data_names=data_names_n_particles,
-    #     labels=labels_n_particles,
-    #     linestyles=linestyles,
-    #     markers=markers,
-    #     colours=colours,
-    #     mass_weighted=True,
-    #     separate_plots=True,
-    #     corrected=True,
-    # )
-    # cumulative_floculation_balance(
-    #     plot_dir=plot_dir,
-    #     data_dir=data_dir,
-    #     data_names=data_names_n_particles,
-    #     labels=labels_n_particles,
-    #     linestyles=linestyles,
-    #     markers=markers,
-    #     colours=colours,
-    #     mass_weighted=True,
-    #     corrected=True,
-    #     separate_plots=False,
-    #     plot_dn_dt=True,
-    # )
-    #
-    # coagulation_kernel(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names_n_particles,
-    #     labels_n_particles,
-    #     contour_sigmas=coagulation_kernel_sigmas_n_particles,
-    #     corrected=False,
-    # )
-    # fragment_size_distribution(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names_n_particles,
-    #     labels_n_particles,
-    #     corrected=False,
-    # )
-    # breakage_rate(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names_n_particles,
-    #     labels_n_particles,
-    #     colours,
-    #     corrected=False,
-    # )
-    # number_density_evo_sink_source(
-    #     plot_dir=plot_dir,
-    #     data_dir=data_dir,
-    #     data_names=data_names_n_particles,
-    #     labels=labels_n_particles,
-    #     linestyles=linestyles,
-    #     markers=markers,
-    #     colours=colours,
-    #     mass_weighted=True,
-    #     separate_plots=True,
-    #     corrected=False,
-    # )
-    # cumulative_floculation_balance(
-    #     plot_dir=plot_dir,
-    #     data_dir=data_dir,
-    #     data_names=data_names_n_particles,
-    #     labels=labels_n_particles,
-    #     linestyles=linestyles,
-    #     markers=markers,
-    #     colours=colours,
-    #     mass_weighted=True,
-    #     corrected=False,
-    #     separate_plots=False,
-    #     plot_dn_dt=True,
-    # )
-    #
-    # coagulation_kernel_diff(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names_n_particles,
-    #     labels_n_particles,
-    #     contour_sigmas=coagulation_kernel_sigmas_n_particles,
-    # )
-    # fragment_size_distribution_diff(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names_n_particles,
-    #     labels_n_particles,
-    # )
-    # breakage_rate_diff(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names_n_particles,
-    #     labels_n_particles,
-    #     colours,
-    # )
-    # number_density_evo_sink_source_diff(
-    #     plot_dir=plot_dir,
-    #     data_dir=data_dir,
-    #     data_names=data_names_n_particles,
-    #     labels=labels_n_particles,
-    #     linestyles=linestyles,
-    #     markers=markers,
-    #     colours=colours,
-    #     mass_weighted=True,
-    #     separate_plots=True,
-    # )
-    # cumulative_floculation_balance_diff(
-    #     plot_dir=plot_dir,
-    #     data_dir=data_dir,
-    #     data_names=data_names_n_particles,
-    #     labels=labels_n_particles,
-    #     linestyles=linestyles,
-    #     markers=markers,
-    #     colours=colours,
-    #     mass_weighted=True,
-    #     separate_plots=False,
-    #     plot_dn_dt=True,
-    # )
-
+    floc_evolution(
+        plot_dir,
+        data_dir,
+        data_names_n_particles,
+        labels_n_particles,
+        colours,
+        plot_evo_fit=False,
+    )
+    floc_pdf(
+        plot_dir,
+        data_dir,
+        data_names_n_particles,
+        labels_n_particles,
+        colours,
+        markers,
+    )
+    floc_avg_diameters(
+        plot_dir,
+        data_dir,
+        data_names_n_particles,
+        labels_n_particles,
+        colours,
+        markers,
+    )
+    fluid_wall_normal(
+        data_dir, plot_dir, data_dir, data_names_n_particles, labels_n_particles, colours, use_markers=True
+    )
+    fluid_wall_normal(
+        data_dir, plot_dir, data_dir, data_names_n_particles, labels_n_particles, colours, use_markers=False
+    )
+    fuild_velocity_profile(
+        data_dir, plot_dir, data_dir, data_names_n_particles, labels_n_particles, colours, use_markers=True
+    )
+    phi_eulerian(plot_dir, data_dir, data_names_n_particles, labels_n_particles, colours, False)
+    lagrangian_data(
+        plot_dir,
+        data_dir,
+        data_names_n_particles,
+        labels_n_particles,
+        colours,
+        markers,
+        show_errs=False,
+        separate_plots=False,
+    )
+    fam_tree(
+        plot_dir,
+        data_dir,
+        data_names_n_particles,
+        labels_n_particles,
+        colours_fam_tree,
+        markers,
+        linestyles,
+        separate_plots=True,
+        unfiltered=3,
+    )
+    floc_timescale(
+        plot_dir=plot_dir,
+        data_dir=data_dir,
+        data_names=data_names_n_particles,
+        labels=labels_n_particles,
+        cmap_breakup=red_cmap,
+        cmap_formation=blue_cmap,
+    )
+    noncohesive_floc_lifetime(plot_dir)
+    coagulation_kernel(
+        plot_dir,
+        data_dir,
+        data_names_n_particles,
+        labels_n_particles,
+        contour_sigmas=coagulation_kernel_sigmas_n_particles,
+        corrected=True,
+    )
+    fragment_size_distribution(
+        plot_dir,
+        data_dir,
+        data_names_n_particles,
+        labels_n_particles,
+        corrected=True,
+    )
+    breakage_rate(
+        plot_dir,
+        data_dir,
+        data_names_n_particles,
+        labels_n_particles,
+        colours,
+        corrected=True,
+    )
+    number_density_evo_sink_source(
+        plot_dir=plot_dir,
+        data_dir=data_dir,
+        data_names=data_names_n_particles,
+        labels=labels_n_particles,
+        linestyles=linestyles,
+        markers=markers,
+        colours=colours,
+        mass_weighted=True,
+        separate_plots=True,
+        corrected=True,
+    )
+    cumulative_floculation_balance(
+        plot_dir=plot_dir,
+        data_dir=data_dir,
+        data_names=data_names_n_particles,
+        labels=labels_n_particles,
+        linestyles=linestyles,
+        markers=markers,
+        colours=colours,
+        mass_weighted=True,
+        corrected=True,
+        separate_plots=False,
+        plot_dn_dt=True,
+    )
+    coagulation_kernel(
+        plot_dir,
+        data_dir,
+        data_names_n_particles,
+        labels_n_particles,
+        contour_sigmas=coagulation_kernel_sigmas_n_particles,
+        corrected=False,
+    )
+    fragment_size_distribution(
+        plot_dir,
+        data_dir,
+        data_names_n_particles,
+        labels_n_particles,
+        corrected=False,
+    )
+    breakage_rate(
+        plot_dir,
+        data_dir,
+        data_names_n_particles,
+        labels_n_particles,
+        colours,
+        corrected=False,
+    )
+    number_density_evo_sink_source(
+        plot_dir=plot_dir,
+        data_dir=data_dir,
+        data_names=data_names_n_particles,
+        labels=labels_n_particles,
+        linestyles=linestyles,
+        markers=markers,
+        colours=colours,
+        mass_weighted=True,
+        separate_plots=True,
+        corrected=False,
+    )
+    cumulative_floculation_balance(
+        plot_dir=plot_dir,
+        data_dir=data_dir,
+        data_names=data_names_n_particles,
+        labels=labels_n_particles,
+        linestyles=linestyles,
+        markers=markers,
+        colours=colours,
+        mass_weighted=True,
+        corrected=False,
+        separate_plots=False,
+        plot_dn_dt=True,
+    )
+    coagulation_kernel_diff(
+        plot_dir,
+        data_dir,
+        data_names_n_particles,
+        labels_n_particles,
+        contour_sigmas=coagulation_kernel_sigmas_n_particles,
+    )
+    fragment_size_distribution_diff(
+        plot_dir,
+        data_dir,
+        data_names_n_particles,
+        labels_n_particles,
+    )
+    breakage_rate_diff(
+        plot_dir,
+        data_dir,
+        data_names_n_particles,
+        labels_n_particles,
+        colours,
+    )
+    number_density_evo_sink_source_diff(
+        plot_dir=plot_dir,
+        data_dir=data_dir,
+        data_names=data_names_n_particles,
+        labels=labels_n_particles,
+        linestyles=linestyles,
+        markers=markers,
+        colours=colours,
+        mass_weighted=True,
+        separate_plots=True,
+    )
+    cumulative_floculation_balance_diff(
+        plot_dir=plot_dir,
+        data_dir=data_dir,
+        data_names=data_names_n_particles,
+        labels=labels_n_particles,
+        linestyles=linestyles,
+        markers=markers,
+        colours=colours,
+        mass_weighted=True,
+        separate_plots=False,
+        plot_dn_dt=True,
+    )
     total_frequency(
         plot_dir=plot_dir,
         data_dir=data_dir,

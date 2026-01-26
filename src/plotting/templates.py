@@ -627,7 +627,7 @@ def number_density_evo_sink_source(
     mass_weighted: bool,
 ) -> None:
     if name is not None:
-        name = "number_density_evo_{name}"
+        name = f"number_density_evo_{name}"
     else:
         name = "number_density_evo"
     out_path = output_dir / name
@@ -700,16 +700,26 @@ def total_frequency_plot(
 ) -> None:
     out_path = output_dir / "total_frequency"
 
+    text_scale_factor = 1.5
+
     combined_series: list[PlotSeries] = list(series_list_floc) + list(series_list_break)
 
     ax, fig, _ = generic_plot(
         combined_series,
         legend=True,
-        xlabel=r"$\phi$ [\%]",
-        ylabel=r"Aggregation/Breakup frequency per $L^3$ per $\tau$, $f \cdot L^4/U$ [-]",
+        xlabel=r"Particle volume fraction $\phi$ [\%]",
+        ylabel=r"Aggregation/Breakup frequency, $\tfrac{f \cdot L^4}{U}$ [-]",
         xlim=(None, None),
         ylim=(None, None),
         figsize=(6.5, 5.5),
         legend_loc="best",
     )
+
+    ax.xaxis.label.set_fontsize(14 * text_scale_factor)
+    ax.yaxis.label.set_fontsize(14 * text_scale_factor)
+    ax.tick_params(axis='both', which='major', labelsize=12 * text_scale_factor)
+    ax.legend(frameon=False, fontsize=12 * text_scale_factor, loc="best")
+
+    plt.tight_layout()
+
     my_save_fig(out_path, fig, dpi=150)

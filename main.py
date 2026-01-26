@@ -80,40 +80,10 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    # scripts.run_floc_analysis.main(
-    #     args.parties_data_dir,
-    #     args.output_dir,
-    #     args.trn,
-    #     args.min_file_index,
-    #     args.max_file_index,
-    #     args.num_workers,
-    # )
-    # scripts.run_statist_steady_analysis.main(
-    #     args.parties_data_dir,
-    #     args.output_dir,
-    #     args.min_file_index,
-    #     args.max_file_index,
-    # )
-    # scripts.run_phi_eulerian.main(
-    #     args.parties_data_dir,
-    #     args.output_dir,
-    #     args.min_file_index,
-    #     args.max_file_index,
-    #     compute=(True,),
-    # )
-    # scripts.run_fluid_wall_analysis.main(
-    #     args.parties_data_dir,
-    #     args.utexas_data_dir,
-    #     args.output_dir,
-    #     args.min_file_index,
-    #     args.max_file_index,
-    #     compute= (True, True),
-    # )
-
     # scripts.run_get_start_steady.main()
-    # scripts.run_fam_tree.main()
+    scripts.run_fam_tree.main()
     # scripts.run_floc_timescales.main()
     # scripts.run_floc_noncohesive_time.main()
-    scripts.run_all_plots.main()
+    # scripts.run_all_plots.main()
     # scripts.run_plot_biggest_floc.main()
     # scripts.run_plot_floc_slice.main()

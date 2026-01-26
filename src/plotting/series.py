@@ -123,9 +123,9 @@ def floc_count_evolution_fit(
 
     fit_data = lwidmer.read_csv_columns(floc_count_fit_csv, (0, 1, 2), remove_nan=1)
 
-    b = float(fit_data[0])
-    Nf_eq = int(fit_data[1])
-    n_particles = int(fit_data[2])
+    b = float(fit_data[0][0])
+    Nf_eq = int(fit_data[1][0])
+    n_particles = int(fit_data[2][0])
 
     if b is None:
         raise ValueError(f'ERROR: Could not obtain "b" from "{floc_count_fit_csv}"!')
@@ -1541,7 +1541,7 @@ def fragment_size_distribution(
 
     for i, x1_idx in enumerate(x_idx_list):
         for j, x2_idx in enumerate(x_idx_list):
-            C[i, j] = p[(x1_idx, x2_idx)]
+            C[j, i] = p[(x1_idx, x2_idx)]
 
     x_min_default, x_max_default = 1.0, 200.0
     y_min_default, y_max_default = 1.0, 200.0
@@ -2138,8 +2138,8 @@ def fragment_size_distribution_diff(
 
     for i, x1_idx in enumerate(x_idx_list):
         for j, x2_idx in enumerate(x_idx_list):
-            C_corr[i, j] = p_corr[(x1_idx, x2_idx)]
-            C_uncorr[i, j] = p_uncorr[(x1_idx, x2_idx)]
+            C_corr[j, i] = p_corr[(x1_idx, x2_idx)]
+            C_uncorr[j, i] = p_uncorr[(x1_idx, x2_idx)]
 
     # Compute difference
     C = C_corr - C_uncorr
@@ -2670,7 +2670,7 @@ def total_frequencies(
 ) -> tuple[list[PlotSeries], list[PlotSeries]]:
     import pickle
 
-    markeredgewidth: float = 0.7
+    markeredgewidth: float = 2
 
     s_list_floc: list[PlotSeries] = []
     s_list_break: list[PlotSeries] = []
@@ -2737,10 +2737,12 @@ def total_frequencies(
             y_key="y",
             plot_method="plot",
             kwargs={
-                "label": labels[set_idx] if labels[set_idx] else f"Set {set_idx}",
+                # "label": labels[set_idx] if labels[set_idx] else f"Set {set_idx}",
+                "label": "Aggregation rate",
                 "linestyle": "None",
                 "marker": floc_markers[set_idx],
                 "markerfacecolor": colours[set_idx],
+                "markersize": 10,
                 "markeredgecolor": "k",
                 "markeredgewidth": markeredgewidth,
                 "color": colours[set_idx],
@@ -2755,10 +2757,12 @@ def total_frequencies(
             y_key="y",
             plot_method="plot",
             kwargs={
-                "label": labels[set_idx] if labels[set_idx] else f"Set {set_idx}",
+                # "label": labels[set_idx] if labels[set_idx] else f"Set {set_idx}",
+                "label": "Breakup rate",
                 "linestyle": "None",
                 "marker": break_markers[set_idx],
                 "markerfacecolor": colours[set_idx],
+                "markersize": 10,
                 "markeredgecolor": "k",
                 "markeredgewidth": markeredgewidth,
                 "color": colours[set_idx],
