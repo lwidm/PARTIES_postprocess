@@ -7,7 +7,9 @@ from typing import TypedDict
 
 on_anvil: bool = os.getenv("MY_MACHINE", "") == "anvil"
 _use_external_drive: bool = True
+# _use_data: list[str] = ["phi1p5", "phi3p0", "phi5p0_new", "phi5p0_noCo"]
 _use_data: list[str] = ["phi1p5", "phi3p0", "phi5p0_new"]
+# _use_data: list[str] = ["phi5p0_noCo"]
 
 plot_dir: Path = Path("./output/plots")
 parent_dir: Path
@@ -27,9 +29,9 @@ _all_datasets: dict[str, DataSet] = {
     "phi1p5":      {"label": r"$\phi_{1.5\%}$",           "trn": False, "phi": 1.5, "coagulation_kernel_sigma": 2},
     "phi3p0":      {"label": r"$\phi_{3\%}$",             "trn": True,  "phi": 3.0, "coagulation_kernel_sigma": 5},
     "phi5p0_new":  {"label": r"$\phi_{5\%}$",             "trn": True,  "phi": 5.0, "coagulation_kernel_sigma": 5},
-    "phi5p0_noCo": {"label": r"$\phi_{5\%}$ no cohesion", "trn": True,  "phi": 5.0, "coagulation_kernel_sigma": 5},
+    "phi5p0_noCo": {"label": r"$\phi_{5\%}$ no cohesion", "trn": False, "phi": 5.0, "coagulation_kernel_sigma": 5},
     "phi5p0":      {"label": r"$\phi_{5\%}$",             "trn": True,  "phi": 5.0, "coagulation_kernel_sigma": 5},
-    "test":        {"label": "test",                       "trn": True,  "phi": 3.0, "coagulation_kernel_sigma": 5},
+    "test":        {"label": "test",                      "trn": True,  "phi": 3.0, "coagulation_kernel_sigma": 5},
 }
 # fmt: on
 

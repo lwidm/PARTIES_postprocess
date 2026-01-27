@@ -1365,7 +1365,7 @@ def main() -> None:
     #     cmap_breakup=red_cmap,
     #     cmap_formation=blue_cmap,
     # )
-    # noncohesive_floc_lifetime(plot_dir, data_dir)
+    noncohesive_floc_lifetime(plot_dir, data_dir)
     # coagulation_kernel(
     #     plot_dir,
     #     data_dir,
@@ -1458,7 +1458,7 @@ def main() -> None:
         markers=markers,
         colours=colours,
         mass_weighted=True,
-        corrected=True,
+        corrected=False,
         separate_plots=False,
         plot_dn_dt=True,
     )
