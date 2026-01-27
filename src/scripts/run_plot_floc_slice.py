@@ -6,16 +6,19 @@ import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib.colors as colors
 
-parent_dir: Path = Path("/media/usb/UCSB")
-# parent_dir: Path = Path("./")
+from src import globals
 
 
 def main() -> None:
 
-    name: str = "phi5p0"
-    plot_dir: Path = parent_dir / "output" / "plots"
-    metadata_path: Path = parent_dir / "data" / name / "metadata.ini"
-    floc_dir: Path = parent_dir / "data" / name / "flocs"
+    data_name: str = "phi5p0"
+
+    data_dir: Path = globals.data_dir
+    output_dir: Path = globals.output_dir
+    plot_dir: Path = globals.plot_dir
+
+    metadata_path: Path = data_dir / data_name / "metadata.ini"
+    floc_dir: Path = data_dir / data_name / "flocs"
     floc_files: List[Path] = utils.find_data_files(floc_dir, "Flocs_*")
     particle_files: List[Path] = utils.find_data_files(floc_dir, "Particles_*")
 
@@ -146,7 +149,7 @@ def main() -> None:
     plt.tight_layout()
     plt.show()
 
-    fig.savefig(str(plot_dir / f"flow_slice_{name}"))
+    fig.savefig(str(plot_dir / f"flow_slice_{data_name}"))
 
 
 if __name__ == "__main__":

@@ -2,18 +2,13 @@ from pathlib import Path
 from src.flocs import family_tree
 import numpy as np
 from src import myio
+from src import globals
 
 
 def main():
-    data_names: list[str] = [
-        # "phi5p0_noCo",
-        "phi1p5",
-        "phi3p0",
-        "phi5p0_new",
-    ]
-    parent_dir: Path = Path("/media/usb/UCSB/")
-    data_dir: Path = parent_dir / "output"
-    out_dir: Path = parent_dir / "output"
+    data_names: list[str] = globals.data_names
+    data_dir: Path = globals.data_dir
+    out_dir: Path = globals.output_dir
 
     U_mean: list[float] = [1.0 for _ in data_names]
     L: list[float] = [1.0 for _ in data_names]

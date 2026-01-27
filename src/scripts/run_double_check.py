@@ -2,7 +2,11 @@ import h5py
 from pathlib import Path
 import numpy as np
 
+from src import globals
+
 def main():
+    if not globals.on_anvil:
+        raise ValueError("run_double_check.py only works on anvil")
     data_path: Path = Path("/anvil/scratch/x-lwidmer/RUN10/Data_526.h5")
     output_data_path: Path = Path("output/RUN10/fluid/parties_reynolds.h5")
     u: np.ndarray

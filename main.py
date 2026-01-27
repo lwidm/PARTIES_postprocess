@@ -6,44 +6,35 @@ from src import globals
 
 if __name__ == "__main__":
 
-    output_dir: Path = Path("./output")
-    parties_data_dir: Path = Path("./data")
-    utexas_data_dir: Path = Path("./data")
-
-    if globals.on_anvil:
-        output_dir = Path("/home/x-lwidmer/Documents/PARTIES_postprocess/output")
-        utexas_data_dir = Path("/home/x-lwidmer/Documents/PARTIES_postprocess/data")
-        parties_data_dir = Path("/anvil/scratch/x-lwidmer/RUN9")
-
     parser = argparse.ArgumentParser(
         prog="PARTIES_postprocess",
         description="Run postprocessing scripts on output data of PARTIES",
         epilog="to change which postprocessing functions are run modify root level main.py",
     )
-    parser.add_argument(
-        "-pd",
-        "--parties_data_dir",
-        nargs="?",
-        type=Path,
-        default=parties_data_dir,
-        help="directory in which PARTIES output data is located",
-    )
-    parser.add_argument(
-        "-ud",
-        "--utexas_data_dir",
-        nargs="?",
-        type=Path,
-        default=utexas_data_dir,
-        help="directory in which utexas data is located",
-    )
-    parser.add_argument(
-        "-od",
-        "--output_dir",
-        nargs="?",
-        type=Path,
-        default=output_dir,
-        help="directory in which output_data should be stored",
-    )
+    # parser.add_argument(
+    #     "-pd",
+    #     "--parties_data_dir",
+    #     nargs="?",
+    #     type=Path,
+    #     default=parties_data_dir,
+    #     help="directory in which PARTIES output data is located",
+    # )
+    # parser.add_argument(
+    #     "-ud",
+    #     "--utexas_data_dir",
+    #     nargs="?",
+    #     type=Path,
+    #     default=utexas_data_dir,
+    #     help="directory in which utexas data is located",
+    # )
+    # parser.add_argument(
+    #     "-od",
+    #     "--output_dir",
+    #     nargs="?",
+    #     type=Path,
+    #     default=output_dir,
+    #     help="directory in which output_data should be stored",
+    # )
     parser.add_argument(
         "-min",
         "--min_file_index",

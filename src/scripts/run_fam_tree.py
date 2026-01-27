@@ -2,6 +2,7 @@ from pathlib import Path
 from src.flocs import family_tree
 import numpy as np
 from src import myio
+from src import globals
 
 
 def _compute_single_pdf(
@@ -90,34 +91,24 @@ def _compute_single_pdf(
 
 
 def main():
-    data_names: list[str] = [
-        # "phi5p0_noCo",
-        "phi1p5",
-        "phi3p0",
-        "phi5p0_new",
-    ]
-    trn: list[bool] = [
-        # False,
-        False,
-        True,
-        True,
-    ]
+    data_names: list[str] = globals.data_names
+    trn: list[bool] = globals.has_trn_data
     U_mean: list[float] = [1.0 for _ in data_names]
     L: list[float] = [1.0 for _ in data_names]
     d_p: list[float] = [0.03225806 for _ in data_names]
 
-    parent_dir: Path = Path("/media/usb/UCSB")
-    # parent_dir: Path = Path("./")
+    data_dir: Path = globals.data_dir
+    output_dir: Path = globals.output_dir
 
     for i, data_name in enumerate(data_names):
-        data_dir: Path = parent_dir / "output" / data_name
-        out_dir: Path = parent_dir / "output" / data_name
-        _compute_single_pdf(data_dir, out_dir, U_mean[i], L[i], d_p[i])
+        dataset_dir: Path = data_dir / data_name
+        out_dataset_dir: Path = output_dir / data_name
+        _compute_single_pdf(dataset_dir, out_dataset_dir, U_mean[i], L[i], d_p[i])
 
         result_corrected: dict[str, dict] = family_tree.compute_number_density_evolutions_params(
-            data_dir,
-            data_dir / "metadata.ini",
-            data_dir,
+            dataset_dir,
+            dataset_dir / "metadata.ini",
+            dataset_dir,
             trn[i],
             "n_p",
             bin_width=1,
@@ -126,12 +117,12 @@ def main():
             d_p=d_p[i],
             corrected=True
         )
-        myio.output.save_to_pickle(out_dir / "number_density_evolution_params_corrected.pkl", result_corrected)
+        myio.output.save_to_pickle(out_dataset_dir / "number_density_evolution_params_corrected.pkl", result_corrected)
 
         result_uncorrected: dict[str, dict] = family_tree.compute_number_density_evolutions_params(
-            data_dir,
-            data_dir / "metadata.ini",
-            data_dir,
+            dataset_dir,
+            dataset_dir / "metadata.ini",
+            dataset_dir,
             trn[i],
             "n_p",
             bin_width=1,
@@ -140,7 +131,7 @@ def main():
             d_p=d_p[i],
             corrected=False
         )
-        myio.output.save_to_pickle(out_dir / "number_density_evolution_params_uncorrected.pkl", result_uncorrected)
+        myio.output.save_to_pickle(out_dataset_dir / "number_density_evolution_params_uncorrected.pkl", result_uncorrected)
 
         result_diff: dict[str, dict] = {}
         for key in result_corrected.keys():
@@ -153,15 +144,15 @@ def main():
                         result_diff[key][subkey] = result_corrected[key][subkey] - result_uncorrected[key][subkey]
                     else:
                         result_diff[key][subkey] = result_corrected[key][subkey]  # Can't subtract non-numeric types
-        myio.output.save_to_pickle(out_dir / "number_density_evolution_params_diff.pkl", result_diff)
+        myio.output.save_to_pickle(out_dataset_dir / "number_density_evolution_params_diff.pkl", result_diff)
 
         # Compute flocculation balances for corrected version
         floc_balance_corrected: dict = family_tree.compute_floculation_balances(params=result_corrected)
-        myio.lwidmer.save_floculation_balance(out_dir, floc_balance_corrected, corrected=True)
+        myio.lwidmer.save_floculation_balance(out_dataset_dir, floc_balance_corrected, corrected=True)
 
         # Compute flocculation balances for uncorrected version
         floc_balance_uncorrected: dict = family_tree.compute_floculation_balances(params=result_uncorrected)
-        myio.lwidmer.save_floculation_balance(out_dir, floc_balance_uncorrected, corrected=False)
+        myio.lwidmer.save_floculation_balance(out_dataset_dir, floc_balance_uncorrected, corrected=False)
 
         # Compute and save difference in flocculation balances
         floc_balance_diff: dict[str, np.ndarray] = {}
@@ -170,7 +161,7 @@ def main():
                 floc_balance_diff[key] = floc_balance_corrected[key]  # Size arrays are the same
             else:
                 floc_balance_diff[key] = floc_balance_corrected[key] - floc_balance_uncorrected[key]
-        myio.lwidmer.save_floculation_balance(out_dir, floc_balance_diff, is_difference=True)
+        myio.lwidmer.save_floculation_balance(out_dataset_dir, floc_balance_diff, is_difference=True)
 
 
 if __name__ == "__name__":

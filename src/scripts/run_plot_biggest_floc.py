@@ -7,6 +7,7 @@ import configparser
 from typing import Any
 
 from src import myio
+from src import globals
 
 
 def get_top_flocs(
@@ -57,12 +58,13 @@ def get_floc_particles(
 
 
 def main() -> None:
-    parent_dir: Path = Path("/media/usb/UCSB/")
 
-    plot_dir: Path =  Path("./output") / "plots"
-    name: str = "phi5p0_new"
-    metadata_path: Path = parent_dir / "output" / name / "metadata.ini"
-    floc_path: Path = parent_dir / "output" / name / "flocs"
+    data_name: str = "phi5p0_new"
+
+    plot_dir: Path =  globals.plot_dir
+    data_dir: Path =  globals.data_dir
+    metadata_path: Path = data_dir / data_name / "metadata.ini"
+    floc_path: Path = data_dir / data_name / "flocs"
 
     # ========== get domain info =========
     metadata = myio.metadata.read_metadata(metadata_path)
