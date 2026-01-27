@@ -6,8 +6,8 @@ import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib.colors as colors
 
-# parent_dir: Path = Path("/media/usb/UCSB")
-parent_dir: Path = Path("./")
+parent_dir: Path = Path("/media/usb/UCSB")
+# parent_dir: Path = Path("./")
 
 
 def main() -> None:

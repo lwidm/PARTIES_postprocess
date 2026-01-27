@@ -38,7 +38,7 @@ def _compute_single_pdf(
 
     pdf_stats: dict[str, dict[str, np.ndarray | dict[str, np.ndarray]]] = (
         family_tree.calc_famtree_pdf_steadystate(
-            pickle_dir=data_dir_dir,
+            pickle_dir=data_dir,
             metadata_file=metadata_file,
             fields=["breakup", "formation"],
             bin_widths={"breakup": 0.04, "formation": 0.04},
@@ -62,7 +62,7 @@ def _compute_single_pdf(
 
     pdf_stats: dict[str, dict[str, np.ndarray | dict[str, np.ndarray]]] = (
         family_tree.calc_famtree_pdf_steadystate(
-            pickle_dir=data_dir_dir,
+            pickle_dir=data_dir,
             metadata_file=metadata_file,
             fields=["breakup", "formation"],
             bin_widths={"breakup": 0.04, "formation": 0.04},
@@ -93,25 +93,26 @@ def main():
     data_names: list[str] = [
         # "phi5p0_noCo",
         "phi1p5",
-        # "phi3p0",
-        # "phi5p0_new",
+        "phi3p0",
+        "phi5p0_new",
     ]
     trn: list[bool] = [
         # False,
         False,
-        # True,
-        # True,
+        True,
+        True,
     ]
     U_mean: list[float] = [1.0 for _ in data_names]
     L: list[float] = [1.0 for _ in data_names]
     d_p: list[float] = [0.03225806 for _ in data_names]
 
     parent_dir: Path = Path("/media/usb/UCSB")
+    # parent_dir: Path = Path("./")
 
     for i, data_name in enumerate(data_names):
         data_dir: Path = parent_dir / "output" / data_name
         out_dir: Path = parent_dir / "output" / data_name
-        # _compute_single_pdf(data_dir, out_dir, U_mean[i], L[i], d_p[i])
+        _compute_single_pdf(data_dir, out_dir, U_mean[i], L[i], d_p[i])
 
         result_corrected: dict[str, dict] = family_tree.compute_number_density_evolutions_params(
             data_dir,

@@ -15,10 +15,6 @@ from matplotlib.axes import Axes
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize, Colormap
 
-parent_dir: Path = Path("/media/usb/UCSB/")
-# parent_dir: Path = Path("./")
-
-
 def fuild_velocity_profile(
     utexas_dir: Path,
     plot_dir: Path,
@@ -1284,6 +1280,11 @@ def total_frequency(
 
 def main() -> None:
 
+    parent_dir: Path = Path("/media/usb/UCSB/")
+    data_dir: Path = parent_dir / "output"
+    # parent_dir: Path = Path("./")
+    # data_dir: Path = parent_dir / "data"
+
     plot_dir: Path = Path("./output/plots")
     data_names_n_particles: list[str] = [
         # "phi5p0_noCo",
@@ -1311,7 +1312,6 @@ def main() -> None:
         5,
         5,
     ]
-    data_dir: Path = parent_dir / "output"
     cmap = plt.get_cmap("tab10")
     cb_palette = sns.color_palette("colorblind", n_colors=5)
     blue_cmap = plt.get_cmap("Blues")
@@ -1327,105 +1327,153 @@ def main() -> None:
     ]
     markers: list[str] = ["o", "s", "^", "v", "P"]
     linestyles: list[str] = ["-", "--", "-.", ":", ":"]
-    floc_evolution(
-        plot_dir,
-        data_dir,
-        data_names_n_particles,
-        labels_n_particles,
-        colours,
-        plot_evo_fit=False,
-    )
-    floc_pdf(
-        plot_dir,
-        data_dir,
-        data_names_n_particles,
-        labels_n_particles,
-        colours,
-        markers,
-    )
-    floc_avg_diameters(
-        plot_dir,
-        data_dir,
-        data_names_n_particles,
-        labels_n_particles,
-        colours,
-        markers,
-    )
-    fluid_wall_normal(
-        data_dir, plot_dir, data_dir, data_names_n_particles, labels_n_particles, colours, use_markers=True
-    )
-    fluid_wall_normal(
-        data_dir, plot_dir, data_dir, data_names_n_particles, labels_n_particles, colours, use_markers=False
-    )
-    fuild_velocity_profile(
-        data_dir, plot_dir, data_dir, data_names_n_particles, labels_n_particles, colours, use_markers=True
-    )
-    phi_eulerian(plot_dir, data_dir, data_names_n_particles, labels_n_particles, colours, False)
-    lagrangian_data(
-        plot_dir,
-        data_dir,
-        data_names_n_particles,
-        labels_n_particles,
-        colours,
-        markers,
-        show_errs=False,
-        separate_plots=False,
-    )
-    fam_tree(
-        plot_dir,
-        data_dir,
-        data_names_n_particles,
-        labels_n_particles,
-        colours_fam_tree,
-        markers,
-        linestyles,
-        separate_plots=True,
-        unfiltered=3,
-    )
-    floc_timescale(
-        plot_dir=plot_dir,
-        data_dir=data_dir,
-        data_names=data_names_n_particles,
-        labels=labels_n_particles,
-        cmap_breakup=red_cmap,
-        cmap_formation=blue_cmap,
-    )
-    noncohesive_floc_lifetime(plot_dir)
-    coagulation_kernel(
-        plot_dir,
-        data_dir,
-        data_names_n_particles,
-        labels_n_particles,
-        contour_sigmas=coagulation_kernel_sigmas_n_particles,
-        corrected=True,
-    )
-    fragment_size_distribution(
-        plot_dir,
-        data_dir,
-        data_names_n_particles,
-        labels_n_particles,
-        corrected=True,
-    )
-    breakage_rate(
-        plot_dir,
-        data_dir,
-        data_names_n_particles,
-        labels_n_particles,
-        colours,
-        corrected=True,
-    )
-    number_density_evo_sink_source(
-        plot_dir=plot_dir,
-        data_dir=data_dir,
-        data_names=data_names_n_particles,
-        labels=labels_n_particles,
-        linestyles=linestyles,
-        markers=markers,
-        colours=colours,
-        mass_weighted=True,
-        separate_plots=True,
-        corrected=True,
-    )
+    # floc_evolution(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names_n_particles,
+    #     labels_n_particles,
+    #     colours,
+    #     plot_evo_fit=False,
+    # )
+    # floc_pdf(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names_n_particles,
+    #     labels_n_particles,
+    #     colours,
+    #     markers,
+    # )
+    # floc_avg_diameters(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names_n_particles,
+    #     labels_n_particles,
+    #     colours,
+    #     markers,
+    # )
+    # fluid_wall_normal(
+    #     data_dir, plot_dir, data_dir, data_names_n_particles, labels_n_particles, colours, use_markers=True
+    # )
+    # fluid_wall_normal(
+    #     data_dir, plot_dir, data_dir, data_names_n_particles, labels_n_particles, colours, use_markers=False
+    # )
+    # fuild_velocity_profile(
+    #     data_dir, plot_dir, data_dir, data_names_n_particles, labels_n_particles, colours, use_markers=True
+    # )
+    # phi_eulerian(plot_dir, data_dir, data_names_n_particles, labels_n_particles, colours, False)
+    # lagrangian_data(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names_n_particles,
+    #     labels_n_particles,
+    #     colours,
+    #     markers,
+    #     show_errs=False,
+    #     separate_plots=False,
+    # )
+    # fam_tree(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names_n_particles,
+    #     labels_n_particles,
+    #     colours_fam_tree,
+    #     markers,
+    #     linestyles,
+    #     separate_plots=True,
+    #     unfiltered=3,
+    # )
+    # floc_timescale(
+    #     plot_dir=plot_dir,
+    #     data_dir=data_dir,
+    #     data_names=data_names_n_particles,
+    #     labels=labels_n_particles,
+    #     cmap_breakup=red_cmap,
+    #     cmap_formation=blue_cmap,
+    # )
+    # noncohesive_floc_lifetime(plot_dir)
+    # coagulation_kernel(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names_n_particles,
+    #     labels_n_particles,
+    #     contour_sigmas=coagulation_kernel_sigmas_n_particles,
+    #     corrected=True,
+    # )
+    # fragment_size_distribution(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names_n_particles,
+    #     labels_n_particles,
+    #     corrected=True,
+    # )
+    # breakage_rate(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names_n_particles,
+    #     labels_n_particles,
+    #     colours,
+    #     corrected=True,
+    # )
+    # number_density_evo_sink_source(
+    #     plot_dir=plot_dir,
+    #     data_dir=data_dir,
+    #     data_names=data_names_n_particles,
+    #     labels=labels_n_particles,
+    #     linestyles=linestyles,
+    #     markers=markers,
+    #     colours=colours,
+    #     mass_weighted=True,
+    #     separate_plots=True,
+    #     corrected=True,
+    # )
+    # cumulative_floculation_balance(
+    #     plot_dir=plot_dir,
+    #     data_dir=data_dir,
+    #     data_names=data_names_n_particles,
+    #     labels=labels_n_particles,
+    #     linestyles=linestyles,
+    #     markers=markers,
+    #     colours=colours,
+    #     mass_weighted=True,
+    #     corrected=True,
+    #     separate_plots=False,
+    #     plot_dn_dt=True,
+    # )
+    # coagulation_kernel(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names_n_particles,
+    #     labels_n_particles,
+    #     contour_sigmas=coagulation_kernel_sigmas_n_particles,
+    #     corrected=False,
+    # )
+    # fragment_size_distribution(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names_n_particles,
+    #     labels_n_particles,
+    #     corrected=False,
+    # )
+    # breakage_rate(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names_n_particles,
+    #     labels_n_particles,
+    #     colours,
+    #     corrected=False,
+    # )
+    # number_density_evo_sink_source(
+    #     plot_dir=plot_dir,
+    #     data_dir=data_dir,
+    #     data_names=data_names_n_particles,
+    #     labels=labels_n_particles,
+    #     linestyles=linestyles,
+    #     markers=markers,
+    #     colours=colours,
+    #     mass_weighted=True,
+    #     separate_plots=True,
+    #     corrected=False,
+    # )
     cumulative_floculation_balance(
         plot_dir=plot_dir,
         data_dir=data_dir,
@@ -1435,110 +1483,62 @@ def main() -> None:
         markers=markers,
         colours=colours,
         mass_weighted=True,
-        corrected=True,
-        separate_plots=False,
-        plot_dn_dt=True,
-    )
-    coagulation_kernel(
-        plot_dir,
-        data_dir,
-        data_names_n_particles,
-        labels_n_particles,
-        contour_sigmas=coagulation_kernel_sigmas_n_particles,
-        corrected=False,
-    )
-    fragment_size_distribution(
-        plot_dir,
-        data_dir,
-        data_names_n_particles,
-        labels_n_particles,
-        corrected=False,
-    )
-    breakage_rate(
-        plot_dir,
-        data_dir,
-        data_names_n_particles,
-        labels_n_particles,
-        colours,
-        corrected=False,
-    )
-    number_density_evo_sink_source(
-        plot_dir=plot_dir,
-        data_dir=data_dir,
-        data_names=data_names_n_particles,
-        labels=labels_n_particles,
-        linestyles=linestyles,
-        markers=markers,
-        colours=colours,
-        mass_weighted=True,
-        separate_plots=True,
-        corrected=False,
-    )
-    cumulative_floculation_balance(
-        plot_dir=plot_dir,
-        data_dir=data_dir,
-        data_names=data_names_n_particles,
-        labels=labels_n_particles,
-        linestyles=linestyles,
-        markers=markers,
-        colours=colours,
-        mass_weighted=True,
         corrected=False,
         separate_plots=False,
         plot_dn_dt=True,
     )
-    coagulation_kernel_diff(
-        plot_dir,
-        data_dir,
-        data_names_n_particles,
-        labels_n_particles,
-        contour_sigmas=coagulation_kernel_sigmas_n_particles,
-    )
-    fragment_size_distribution_diff(
-        plot_dir,
-        data_dir,
-        data_names_n_particles,
-        labels_n_particles,
-    )
-    breakage_rate_diff(
-        plot_dir,
-        data_dir,
-        data_names_n_particles,
-        labels_n_particles,
-        colours,
-    )
-    number_density_evo_sink_source_diff(
-        plot_dir=plot_dir,
-        data_dir=data_dir,
-        data_names=data_names_n_particles,
-        labels=labels_n_particles,
-        linestyles=linestyles,
-        markers=markers,
-        colours=colours,
-        mass_weighted=True,
-        separate_plots=True,
-    )
-    cumulative_floculation_balance_diff(
-        plot_dir=plot_dir,
-        data_dir=data_dir,
-        data_names=data_names_n_particles,
-        labels=labels_n_particles,
-        linestyles=linestyles,
-        markers=markers,
-        colours=colours,
-        mass_weighted=True,
-        separate_plots=False,
-        plot_dn_dt=True,
-    )
-    total_frequency(
-        plot_dir=plot_dir,
-        data_dir=data_dir,
-        data_names_sets=[data_names_n_particles],
-        phi_values_sets=[phi_values_n_particles],
-        labels=["Varying particles"],
-        colours=[colours[0]],
-        corrected=True,
-    )
+    # coagulation_kernel_diff(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names_n_particles,
+    #     labels_n_particles,
+    #     contour_sigmas=coagulation_kernel_sigmas_n_particles,
+    # )
+    # fragment_size_distribution_diff(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names_n_particles,
+    #     labels_n_particles,
+    # )
+    # breakage_rate_diff(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names_n_particles,
+    #     labels_n_particles,
+    #     colours,
+    # )
+    # number_density_evo_sink_source_diff(
+    #     plot_dir=plot_dir,
+    #     data_dir=data_dir,
+    #     data_names=data_names_n_particles,
+    #     labels=labels_n_particles,
+    #     linestyles=linestyles,
+    #     markers=markers,
+    #     colours=colours,
+    #     mass_weighted=True,
+    #     separate_plots=True,
+    # )
+    # cumulative_floculation_balance_diff(
+    #     plot_dir=plot_dir,
+    #     data_dir=data_dir,
+    #     data_names=data_names_n_particles,
+    #     labels=labels_n_particles,
+    #     linestyles=linestyles,
+    #     markers=markers,
+    #     colours=colours,
+    #     mass_weighted=True,
+    #     separate_plots=False,
+    #     plot_dn_dt=True,
+    # )
+    # total_frequency(
+    #     plot_dir=plot_dir,
+    #     data_dir=data_dir,
+    #     data_names_sets=[data_names_n_particles],
+    #     phi_values_sets=[phi_values_n_particles],
+    #     labels=["Varying particles"],
+    #     colours=[colours[0]],
+    #     corrected=True,
+    # )
 
     if not globals.on_anvil:
         plt.show()

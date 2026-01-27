@@ -8,9 +8,6 @@ from typing import Any
 
 from src import myio
 
-# parent_dir: Path = Path("/media/usb/UCSB/")
-parent_dir: Path = Path("./")
-
 
 def get_top_flocs(
     floc_files: List[Path], n_flocs: int
@@ -60,10 +57,12 @@ def get_floc_particles(
 
 
 def main() -> None:
-    plot_dir: Path = parent_dir / "output" / "plots"
-    name: str = "phi5p0"
-    metadata_path: Path = parent_dir / "data" / name / "metadata.ini"
-    floc_path: Path = parent_dir / "data" / name / "flocs"
+    parent_dir: Path = Path("/media/usb/UCSB/")
+
+    plot_dir: Path =  Path("./output") / "plots"
+    name: str = "phi5p0_new"
+    metadata_path: Path = parent_dir / "output" / name / "metadata.ini"
+    floc_path: Path = parent_dir / "output" / name / "flocs"
 
     # ========== get domain info =========
     metadata = myio.metadata.read_metadata(metadata_path)

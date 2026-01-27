@@ -6,20 +6,22 @@ from src import myio
 
 def main():
     data_names: list[str] = [
-        "phi5p0_noCo",
-        # "phi1p5",
-        # "phi3p0",
-        # "phi5p0",
+        # "phi5p0_noCo",
+        "phi1p5",
+        "phi3p0",
+        "phi5p0_new",
     ]
-    out_dir: Path = Path("./data")
+    parent_dir: Path = Path("/media/usb/UCSB/")
+    data_dir: Path = parent_dir / "output"
+    out_dir: Path = parent_dir / "output"
 
     U_mean: list[float] = [1.0 for _ in data_names]
     L: list[float] = [1.0 for _ in data_names]
     d_p: list[float] = [0.03225806 for _ in data_names]
 
     for i, data_name in enumerate(data_names):
-        pickle_dir: Path = Path("./data") / data_name
-        metadata_file: Path = Path("./data") / data_name / "metadata.ini"
+        pickle_dir: Path = data_dir / data_name
+        metadata_file: Path = data_dir / data_name / "metadata.ini"
         result = family_tree.average_floc_lifetime(
             pickle_dir=pickle_dir,
             metadata_file=metadata_file,

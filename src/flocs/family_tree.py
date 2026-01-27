@@ -606,7 +606,12 @@ def compute_number_density_evolutions_params(
     pickle_file: str = "family_tree_corrected.pkl" if corrected else "family_tree.pkl"
 
     with open(pickle_dir / pickle_file, "rb") as file:
-        fam_tree: FamilyTreeType = pickle.load(file)
+        fam_tree_data = pickle.load(file)
+        if corrected:
+            fam_tree: FamilyTreeType = fam_tree_data["family_tree"]
+            # fam_tree: FamilyTreeType = fam_tree_data
+        else:
+            fam_tree: FamilyTreeType = fam_tree_data
 
         size_max: float = 0.0
         size_min: float = np.inf
