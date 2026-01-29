@@ -76,11 +76,11 @@ def update_plot_params() -> None:
 
 
 def format_plot_axes(axes: Axes) -> Axes:
-    axes.spines["top"].set_visible(False)
-    axes.spines["right"].set_visible(False)
-    axes.spines["left"].set_linewidth(1.2)
-    axes.spines["bottom"].set_linewidth(1.0)
-    axes.tick_params(axis="both", which="both", direction="out", labelsize=12)
+    # axes.spines["top"].set_visible(True)
+    # axes.spines["right"].set_visible(True)
+    # axes.spines["left"].set_linewidth(1.0)
+    # axes.spines["bottom"].set_linewidth(1.0)
+    axes.tick_params(axis="both", which="both", direction="in", labelsize=12, top=True, right=True, bottom=True, left=True)
     plt.tight_layout()
     return axes
 

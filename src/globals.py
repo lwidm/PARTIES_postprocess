@@ -9,7 +9,7 @@ on_anvil: bool = os.getenv("MY_MACHINE", "") == "anvil"
 _use_external_drive: bool = True
 # _use_data: list[str] = ["phi1p5", "phi3p0", "phi5p0_new", "phi5p0_noCo"]
 _use_data: list[str] = ["phi1p5", "phi3p0", "phi5p0_new"]
-# _use_data: list[str] = ["phi5p0_noCo"]
+# _use_data: list[str] = ["phi3p0"]
 
 plot_dir: Path = Path("./output/plots")
 parent_dir: Path

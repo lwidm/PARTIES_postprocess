@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Literal, Callable
 import h5py
 from scipy import stats
+from scipy.optimize import curve_fit
 from scipy.interpolate import RectBivariateSpline
 
 import numpy as np
@@ -1641,11 +1642,13 @@ def fragment_size_distribution(
 
 def breakage_rate(
     pickle_dir: Path,
-    colour: str | tuple[float, float, float, float],
     linestyle: str,
+    marker: str,
+    colour: str | tuple[float, float, float, float],
     label: str | None,
     corrected: bool,
-) -> PlotSeries:
+    x_axis_value: Literal["np", "D"],
+) -> tuple[PlotSeries, PlotSeries | None]:
 
     pickle_file = (
         "number_density_evolution_params_corrected.pkl"
@@ -1669,19 +1672,64 @@ def breakage_rate(
     for i, x_idx in enumerate(x_idx_list):
         F_arr[i] = F[x_idx]
 
+    plot_method: str
+    if x_axis_value == "np":
+        plot_method = "plot"
+    else:
+        plot_method = "loglog"
+        x_arr = np.pow(x_arr, 1 / 3)
+
     s: PlotSeries = PlotSeries(
         data={"x": x_arr, "y": F_arr},
         x_key="x",
         y_key="y",
-        plot_method="plot",
+        plot_method=plot_method,
         kwargs={
             "label": label,
             "color": colour,
             "linestyle": linestyle,
+            "marker": marker,
         },
     )
 
-    return s
+    s_fit: PlotSeries | None
+    if x_axis_value == "np":
+        s_fit = None
+    else:
+        x_fit_min: float = 2.0
+        x_fit_max: float = x_arr[-1]
+
+        mask: np.ndarray = (
+            (x_arr >= x_fit_min)
+            & (x_arr <= x_fit_max)
+            & np.isfinite(x_arr)
+            & np.isfinite(F_arr)
+            & (F_arr != 0)
+        )
+
+        log_x = np.log(x_arr[mask])
+        log_y = np.log(F_arr[mask])
+        coeffs = np.polyfit(log_x, log_y, 1)
+        a = coeffs[0]
+        b = np.exp(coeffs[1])
+
+        x_fit: np.ndarray = np.geomspace(x_fit_min, x_fit_max, 100)
+        y_fit: np.ndarray = b * x_fit**a
+
+        s_fit = PlotSeries(
+            data={"x": x_fit, "y": y_fit},
+            x_key="x",
+            y_key="y",
+            plot_method=plot_method,
+            kwargs={
+                "label": f"${b:.3g}\\cdot x^{{{a:.3g}}}$",
+                "color": colour,
+                "linestyle": "--",
+                "marker": "None",
+            },
+        )
+
+    return s, s_fit
 
 
 def number_density_evo_sink_source(
@@ -2675,7 +2723,9 @@ def total_frequencies(
     s_list_floc: list[PlotSeries] = []
     s_list_break: list[PlotSeries] = []
 
-    for set_idx, (data_names, phi_values) in enumerate(zip(data_names_sets, phi_values_sets)):
+    for set_idx, (data_names, phi_values) in enumerate(
+        zip(data_names_sets, phi_values_sets)
+    ):
         phi_list: list[float] = []
         floc_freq_list: list[float] = []
         break_freq_list: list[float] = []
@@ -2683,9 +2733,17 @@ def total_frequencies(
         for data_name, phi in zip(data_names, phi_values):
             pickle_file: Path
             if corrected:
-                pickle_file = data_dir / data_name / "number_density_evolution_params_corrected.pkl"
+                pickle_file = (
+                    data_dir
+                    / data_name
+                    / "number_density_evolution_params_corrected.pkl"
+                )
             else:
-                pickle_file = data_dir / data_name / "number_density_evolution_params_uncorrected.pkl"
+                pickle_file = (
+                    data_dir
+                    / data_name
+                    / "number_density_evolution_params_uncorrected.pkl"
+                )
 
             if not pickle_file.exists():
                 continue
@@ -2724,7 +2782,9 @@ def total_frequencies(
                 n[i] = n_dict[x_idx]
             n = np.nan_to_num(n, nan=0.0)
 
-            floc_freq: float = 0.5 * float(np.sum(K * n[:, None] * n[None, :] * bin_width_eff**2))
+            floc_freq: float = 0.5 * float(
+                np.sum(K * n[:, None] * n[None, :] * bin_width_eff**2)
+            )
             break_freq: float = float(np.sum(F * n * bin_width_eff))
 
             phi_list.append(phi)

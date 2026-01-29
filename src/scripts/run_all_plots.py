@@ -1,4 +1,5 @@
 from os import sep
+import numpy as np
 from typing import Literal, Callable
 from pathlib import Path
 import seaborn as sns
@@ -8,12 +9,14 @@ from src.plotting.tools import PlotSeries
 from src.plotting import series as plt_series
 from src.plotting import templates as plt_templ
 from src import globals
+from src import myio
 
 from matplotlib import pyplot as plt
 from matplotlib.colors import Colormap
 from matplotlib.axes import Axes
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize, Colormap
+
 
 def fuild_velocity_profile(
     utexas_dir: Path,
@@ -872,21 +875,33 @@ def breakage_rate(
     data_dir: Path,
     data_names: list[str],
     labels: list[str],
+    markers: list[str],
     colours: list[str | tuple[float, float, float, float]],
     corrected: bool,
+    x_axis_value: Literal["np", "D"],
 ) -> None:
     s_list: list[PlotSeries] = []
+    s_fit_list: list[PlotSeries | None] = []
     for i, data_name in enumerate(data_names):
-        s_list.append(
-            plt_series.breakage_rate(
+        s, s_fit = plt_series.breakage_rate(
                 pickle_dir=data_dir / data_name,
+                linestyle="None",
+                marker=markers[i],
                 colour=colours[i],
-                linestyle="-",
                 label=labels[i],
                 corrected=corrected,
+                x_axis_value=x_axis_value,
             )
-        )
-    plt_templ.breakage_rate(plot_dir, s_list, n_p_max=20)
+        s_list.append(s)
+        s_fit_list.append(s_fit)
+
+    if x_axis_value == "D":
+        for i, data_name in enumerate(data_names):
+            s_list.append(s_fit_list[i]) # type: ignore
+
+    plt_templ.breakage_rate(
+        plot_dir, s_list, n_p_max=20, D_dp_max=9.1, x_axis_value=x_axis_value
+    )
 
 
 def number_density_evo_sink_source(
@@ -1155,7 +1170,7 @@ def number_density_evo_sink_source_diff(
                 output_dir=plot_dir,
                 series_list=series_list,
                 name=data_names[i] + "_diff",
-                xmax=10^3,
+                xmax=10**3,
                 mass_weighted=mass_weighted,
             )
     else:
@@ -1173,7 +1188,7 @@ def number_density_evo_sink_source_diff(
             output_dir=plot_dir,
             series_list=series_list,
             name="diff",
-            xmax=10^3,
+            xmax=10**3,
             mass_weighted=mass_weighted,
         )
 
@@ -1365,7 +1380,7 @@ def main() -> None:
     #     cmap_breakup=red_cmap,
     #     cmap_formation=blue_cmap,
     # )
-    noncohesive_floc_lifetime(plot_dir, data_dir)
+    # noncohesive_floc_lifetime(plot_dir, data_dir)
     # coagulation_kernel(
     #     plot_dir,
     #     data_dir,
@@ -1381,14 +1396,16 @@ def main() -> None:
     #     labels,
     #     corrected=True,
     # )
-    # breakage_rate(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names,
-    #     labels,
-    #     colours,
-    #     corrected=True,
-    # )
+    breakage_rate(
+        plot_dir,
+        data_dir,
+        data_names,
+        labels,
+        markers,
+        colours,
+        corrected=False,
+        x_axis_value="D",
+    )
     # number_density_evo_sink_source(
     #     plot_dir=plot_dir,
     #     data_dir=data_dir,
@@ -1434,8 +1451,10 @@ def main() -> None:
     #     data_dir,
     #     data_names,
     #     labels,
+    #     markers,
     #     colours,
     #     corrected=False,
+    #     x_axis_value="D",
     # )
     # number_density_evo_sink_source(
     #     plot_dir=plot_dir,
@@ -1449,19 +1468,19 @@ def main() -> None:
     #     separate_plots=True,
     #     corrected=False,
     # )
-    cumulative_floculation_balance(
-        plot_dir=plot_dir,
-        data_dir=data_dir,
-        data_names=data_names,
-        labels=labels,
-        linestyles=linestyles,
-        markers=markers,
-        colours=colours,
-        mass_weighted=True,
-        corrected=False,
-        separate_plots=False,
-        plot_dn_dt=True,
-    )
+    # cumulative_floculation_balance(
+    #     plot_dir=plot_dir,
+    #     data_dir=data_dir,
+    #     data_names=data_names,
+    #     labels=labels,
+    #     linestyles=linestyles,
+    #     markers=markers,
+    #     colours=colours,
+    #     mass_weighted=True,
+    #     corrected=False,
+    #     separate_plots=False,
+    #     plot_dn_dt=True,
+    # )
     # coagulation_kernel_diff(
     #     plot_dir,
     #     data_dir,

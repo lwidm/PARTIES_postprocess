@@ -5,6 +5,7 @@ from typing import Sequence, Literal, Callable, Any
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
+from matplotlib.ticker import ScalarFormatter
 
 from src.plotting.tools import (
     PlotSeries,
@@ -588,7 +589,11 @@ def fragment_size_distribution(
 
 
 def breakage_rate(
-    output_dir: Path, series_list: Sequence[PlotSeries], n_p_max: float
+    output_dir: Path,
+    series_list: Sequence[PlotSeries],
+    n_p_max: float,
+    D_dp_max: float,
+    x_axis_value: Literal["np", "D"],
 ) -> None:
     out_path = output_dir / "breakage_rate"
 
@@ -600,22 +605,35 @@ def breakage_rate(
 
     ymax: float = max([np.nanmax(F[x < n_p_max]) for x, F in zip(x_list, F_list)])
 
+    xlabel: str
+    xlim: tuple[float | None, float | None]
+    if x_axis_value == "np":
+        xlim=(2, n_p_max)
+        xlabel = r"floc size: $x \quad (n_p)$"
+    else:
+        xlim=(0.9, D_dp_max)
+        xlim=(None, None)
+        xlabel = r"floc size: $x \quad (D/d_p \sim \sqrt[3]{n_p})$"
+
     ax, fig, _ = generic_plot(
         list(series_list),
         legend=True,
-        xlabel=r"floc size: $x \quad (n_p)$",
+        xlabel=xlabel,
         ylabel="breakage rate: $F(x)$",
-        xlim=(2, n_p_max),
+        xlim=xlim,
         ylim=(0, ymax),
         figsize=(6.5, 5.5),
-        legend_loc="lower right",
-        legend_bbox=(1.0, 0.80),
+        legend_loc="best",
     )
     current_ticks = list(ax.get_xticks())
-    if 1 not in current_ticks:
-        current_ticks.append(2)
-        current_ticks.sort()
-        ax.set_xticks(current_ticks)
+    if x_axis_value == "np":
+        if 1 not in current_ticks:
+            current_ticks.append(2)
+            current_ticks.sort()
+            ax.set_xticks(current_ticks)
+    else:
+        ax.set_xticks([1, 2, 3, 4, 5, 6, 7, 8, 9])
+        ax.set_xticklabels(['1', '2', '3', '4', '5', '6', '7', '8', '9'])
     my_save_fig(out_path, fig, dpi=150)
 
 
@@ -717,7 +735,7 @@ def total_frequency_plot(
 
     ax.xaxis.label.set_fontsize(14 * text_scale_factor)
     ax.yaxis.label.set_fontsize(14 * text_scale_factor)
-    ax.tick_params(axis='both', which='major', labelsize=12 * text_scale_factor)
+    ax.tick_params(axis="both", which="major", labelsize=12 * text_scale_factor)
     ax.legend(frameon=False, fontsize=12 * text_scale_factor, loc="best")
 
     plt.tight_layout()

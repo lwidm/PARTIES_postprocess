@@ -502,11 +502,13 @@ def average_floc_lifetime(
 
 
 def _get_bin_size(
-    size: float, size_list_centers: list[float], size_list_edges: list[float]
+    size: float,
+    size_centers: list[float] | np.ndarray,
+    size_edges: list[float] | np.ndarray,
 ) -> tuple[int, float]:
-    idx: int = int(np.searchsorted(size_list_edges, size) - 1)
-    idx = int(np.clip(idx, 0, len(size_list_centers) - 1))
-    size_binned: float = float(size_list_centers[idx])
+    idx: int = int(np.searchsorted(size_edges, size) - 1)
+    idx = int(np.clip(idx, 0, len(size_centers) - 1))
+    size_binned: float = float(size_centers[idx])
     return idx, size_binned
 
 
@@ -534,8 +536,8 @@ def _get_bin_size(
 def _get_bin_size_floc_file(
     f: h5py.File | h5py.Group,
     size_type: Literal["n_p", "D_f", "D_g"],
-    size_list_centers: list[float],
-    size_list_edges: list[float],
+    size_list_centers: list[float] | np.ndarray,
+    size_list_edges: list[float] | np.ndarray,
 ) -> tuple[list[int], list[float]]:
     size_arr: np.ndarray
     match size_type:
@@ -557,18 +559,67 @@ def _get_bin_size_floc_file(
     return bin_idx_list, binned_size_list
 
 
+def _is_collision_not_agglomeration(
+    floc_record: FlocRecord, fam_tree: FamilyTreeType
+) -> bool:
+    if len(floc_record["parents"]) != 2 or len(floc_record["children"]) != 2:
+        return False
+
+    parent_constituents = [
+        set(fam_tree[pid]["constituents"]) for pid in floc_record["parents"]
+    ]
+    child_constituents = [
+        set(fam_tree[cid]["constituents"]) for cid in floc_record["children"]
+    ]
+
+    # Check if parents map 1-to-1 to children with identical constituents
+    # Either: parent[0]->child[0] and parent[1]->child[1]
+    # Or:     parent[0]->child[1] and parent[1]->child[0]
+    match_direct = (
+        parent_constituents[0] == child_constituents[0]
+        and parent_constituents[1] == child_constituents[1]
+    )
+    match_crossed = (
+        parent_constituents[0] == child_constituents[1]
+        and parent_constituents[1] == child_constituents[0]
+    )
+
+    return match_direct or match_crossed
+
+
 def compute_number_density_evolutions_params(
     pickle_dir: Path,
     metadata_file: Path,
     data_dir: Path,
     trn: bool,
     size_type: Literal["n_p", "D_f", "D_g"],
-    bin_width: float,
+    _num_bins: int | None,
+    bin_width: float | None,
+    log_bins: bool | None,
+    size_lim: tuple[float | None, float | None],
     U_mean: float,
     L: float,
     d_p: float,
     corrected: bool,
+    filter: bool,
 ) -> dict[str, dict]:
+
+    if _num_bins is not None and bin_width is not None:
+        raise ValueError(
+            f"Both 'bin_width' ({bin_width}) and 'n_bins' ({_num_bins}) specified! Only one of these can be non 'None'"
+        )
+    if _num_bins is None and bin_width is None:
+        raise ValueError(
+            f"Neither 'bin_width' ({bin_width}) nor 'n_bins' ({_num_bins}) specified! One of these must have a non 'None' value"
+        )
+    if log_bins is None and _num_bins is not None:
+        raise ValueError(
+            f"If n_bins is specified ({_num_bins}) 'log_bins' must be non 'None'."
+        )
+    if log_bins is not None and bin_width is not None:
+        raise ValueError(
+            f"Both 'bin_width' ({bin_width}) and 'log_bins' ({"True" if log_bins else "False"}) specified! In case of bin_width specification log_bins must be 'None'"
+        )
 
     metadata_dict: dict[str, dict[str, int | float | str]] = metadata.read_metadata(
         metadata_file
@@ -585,68 +636,95 @@ def compute_number_density_evolutions_params(
 
     V: float = (xmax - xmin) * (ymax - ymin) * (zmax - zmin)
 
-    # poisseulle_u = lambda y: 3 / 2 * U_mean * (1 - ((y - L) / L) ** 2)
-    # poisseulle_du_dy = lambda y: -3 * U_mean * (y - L) / L**2
-    max_poisseulle_du_dy = 3 * U_mean / L
+    min_floc_lifetime: float = 0.0
+    if filter == True:
+        # poisseulle_u = lambda y: 3 / 2 * U_mean * (1 - ((y - L) / L) ** 2)
+        # poisseulle_du_dy = lambda y: -3 * U_mean * (y - L) / L**2
+        max_poisseulle_du_dy = 3 * U_mean / L
 
-    min_floc_lifetime = 2 * d_p / (d_p * max_poisseulle_du_dy)
-    min_floc_lifetime *= 4
-    min_floc_lifetime *= 0
+        min_floc_lifetime = 2 * d_p / (d_p * max_poisseulle_du_dy)
+        min_floc_lifetime *= 4
+        print(
+            f"In number density evolution analysis: Using max floc lifetime filter with a minimum time of {min_floc_lifetime}"
+        )
 
     C_count: dict[tuple[int, int], int]
     F_count: dict[int, int]
     nu_count: dict[int, int]
     p_count: dict[tuple[int, int], int]
 
-    size_list_centers: list[float]
-    size_list_edges: list[float]
-    size_list_centers_idx: list[int]
-    size_list_edges_idx: list[int]
-
-    pickle_file: str = "family_tree_corrected.pkl" if corrected else "family_tree.pkl"
+    pickle_file: str = "family_tree.pkl"
+    if corrected:
+        print(f"In number density evolution analysis: Using corrected family tree")
+        pickle_file = "family_tree_corrected.pkl"
 
     with open(pickle_dir / pickle_file, "rb") as file:
         fam_tree: FamilyTreeType = pickle.load(file)
 
         size_max: float = 0.0
         size_min: float = np.inf
-        for floc_record in fam_tree.values():
-            match size_type:
-                case "n_p":
-                    if size_max < floc_record["size"]:
-                        size_max = floc_record["size"]
-                    if size_min > floc_record["size"]:
-                        size_min = floc_record["size"]
-                case "D_f":
-                    raise NotImplementedError(
-                        "Number Density evolution parameters only works for n_p"
-                    )
-                case "D_g":
-                    raise NotImplementedError(
-                        "Number Density evolution parameters only works for n_p"
-                    )
 
-        num_bins: int = int((size_max - size_min) / bin_width)
-        bin_width_eff: float = (size_max - size_min) / num_bins
-        size_list_centers = np.linspace(
-            size_min, size_max, num_bins + 1, dtype=float
-        ).tolist()
-        size_list_edges = np.linspace(
-            size_min - bin_width_eff / 2,
-            size_max + bin_width_eff / 2,
-            num_bins + 2,
-            dtype=float,
-        ).tolist()
-        size_list_centers_idx = [i for i in range(len(size_list_centers))]
-        size_list_edges_idx = [i for i in range(len(size_list_edges))]
+        if size_lim[0] is None or size_lim[1] is None:
+
+            for floc_record in fam_tree.values():
+                match size_type:
+                    case "n_p":
+                        if size_max < floc_record["size"]:
+                            size_max = floc_record["size"]
+                        if size_min > floc_record["size"]:
+                            size_min = floc_record["size"]
+                    case "D_f":
+                        raise NotImplementedError(
+                            "Number Density evolution parameters only works for n_p"
+                        )
+                    case "D_g":
+                        raise NotImplementedError(
+                            "Number Density evolution parameters only works for n_p"
+                        )
+        if size_lim[0] is not None:
+            size_min = size_lim[0]
+        if size_lim[1] is not None:
+            size_max = size_lim[1]
+
+        num_bins: int
+        size_centers_arr: np.ndarray
+        size_edges_arr: np.ndarray
+        if bin_width is not None:
+            num_bins: int = int((size_max - size_min) / bin_width)
+        else:
+            assert _num_bins is not None
+            num_bins = _num_bins
+
+        # TODO: used to be num_bins + 1
+        if log_bins:
+            size_centers_arr = np.geomspace(size_min, size_max, num_bins, dtype=float)
+        else:
+            size_centers_arr = np.linspace(size_min, size_max, num_bins, dtype=float)
+
+        size_edges_arr = np.zeros(len(size_centers_arr) + 1)
+        if log_bins:
+            size_edges_arr[1:-1] = np.sqrt(size_centers_arr[:-1] * size_centers_arr[1:])
+            size_edges_arr[0] = size_centers_arr[0] ** 2 / size_edges_arr[1]
+            size_edges_arr[-1] = size_centers_arr[-1] ** 2 / size_edges_arr[-2]
+        else:
+            size_edges_arr[1:-1] = (size_centers_arr[:-1] + size_centers_arr[1:]) / 2
+            size_edges_arr[0] = size_centers_arr[0] - (
+                size_edges_arr[1] - size_centers_arr[0]
+            )
+            size_edges_arr[-1] = size_centers_arr[-1] + (
+                size_centers_arr[-1] - size_edges_arr[-2]
+            )
+        bin_width_arr: np.ndarray = size_edges_arr[1:] - size_edges_arr[:-1]
+        size_centers_idx_list = [i for i in range(len(size_centers_arr))]
+        size_edges_idx_list = [i for i in range(len(size_edges_arr))]
 
         C_count = {
-            (i, j): 0 for i in size_list_centers_idx for j in size_list_centers_idx
+            (i, j): 0 for i in size_centers_idx_list for j in size_centers_idx_list
         }
-        F_count = {i: 0 for i in size_list_centers_idx}
-        nu_count = {i: 0 for i in size_list_centers_idx}
+        F_count = {i: 0 for i in size_centers_idx_list}
+        nu_count = {i: 0 for i in size_centers_idx_list}
         p_count = {
-            (i, j): 0 for i in size_list_centers_idx for j in size_list_centers_idx
+            (i, j): 0 for i in size_centers_idx_list for j in size_centers_idx_list
         }
 
         for floc_record in tqdm(
@@ -655,21 +733,26 @@ def compute_number_density_evolutions_params(
             total=len(fam_tree),
             unit=" floc_record",
         ):
-            if (
-                len(floc_record["parents"]) == 2
-                and floc_record["start_time"] >= t_steady
-                and floc_record["end_time"] - floc_record["start_time"]
-                >= min_floc_lifetime
-            ):
-                parent_bin_idx_1, _ = _get_bin_size(
-                    floc_record["parents_sizes"][0], size_list_centers, size_list_edges
-                )
-                parent_bin_idx_2, _ = _get_bin_size(
-                    floc_record["parents_sizes"][1], size_list_centers, size_list_edges
-                )
+            if len(floc_record["parents"]) != 2:
+                continue
+            if floc_record["start_time"] < t_steady:
+                continue
+            is_short_lived = (
+                floc_record["end_time"] - floc_record["start_time"]
+            ) < min_floc_lifetime
+            is_bounce = _is_collision_not_agglomeration(floc_record, fam_tree)
+            if is_short_lived and is_bounce:
+                continue
 
-                C_count[(parent_bin_idx_1, parent_bin_idx_2)] += 1
-                C_count[(parent_bin_idx_2, parent_bin_idx_1)] += 1
+            parent_bin_idx_1, _ = _get_bin_size(
+                floc_record["parents_sizes"][0], size_centers_arr, size_edges_arr
+            )
+            parent_bin_idx_2, _ = _get_bin_size(
+                floc_record["parents_sizes"][1], size_centers_arr, size_edges_arr
+            )
+
+            C_count[(parent_bin_idx_1, parent_bin_idx_2)] += 1
+            C_count[(parent_bin_idx_2, parent_bin_idx_1)] += 1
 
         for floc_record in tqdm(
             fam_tree.values(),
@@ -677,31 +760,36 @@ def compute_number_density_evolutions_params(
             total=len(fam_tree),
             unit=" floc_record",
         ):
-            if (
-                len(floc_record["children"]) == 2
-                and floc_record["start_time"] >= t_steady
-                and floc_record["end_time"] - floc_record["start_time"]
-                >= min_floc_lifetime
-            ):
-                size: float = floc_record["size"]
-                parent_bin_idx: int
-                child_bin_idx_1: int
-                child_bin_idx_2: int
-                parent_bin_idx, _ = _get_bin_size(
-                    size, size_list_centers, size_list_edges
-                )
-                child_bin_idx_1, _ = _get_bin_size(
-                    floc_record["children_sizes"][0], size_list_centers, size_list_edges
-                )
-                child_bin_idx_2, _ = _get_bin_size(
-                    floc_record["children_sizes"][1], size_list_centers, size_list_edges
-                )
+            if len(floc_record["children"]) != 2:
+                continue
+            if floc_record["start_time"] < t_steady:
+                continue
+            is_short_lived = (
+                floc_record["end_time"] - floc_record["start_time"]
+            ) < min_floc_lifetime
+            is_bounce = _is_collision_not_agglomeration(floc_record, fam_tree)
+            if is_short_lived and is_bounce:
+                continue
 
-                F_count[parent_bin_idx] += 1
-                p_count[(child_bin_idx_1, parent_bin_idx)] += 1
-                p_count[(child_bin_idx_2, parent_bin_idx)] += 1
+            size: float = floc_record["size"]
+            parent_bin_idx: int
+            child_bin_idx_1: int
+            child_bin_idx_2: int
+            parent_bin_idx, _ = _get_bin_size(
+                size, size_centers_arr, size_edges_arr
+            )
+            child_bin_idx_1, _ = _get_bin_size(
+                floc_record["children_sizes"][0], size_centers_arr, size_edges_arr
+            )
+            child_bin_idx_2, _ = _get_bin_size(
+                floc_record["children_sizes"][1], size_centers_arr, size_edges_arr
+            )
 
-                nu_count[parent_bin_idx] += 2
+            F_count[parent_bin_idx] += 1
+            p_count[(child_bin_idx_1, parent_bin_idx)] += 1
+            p_count[(child_bin_idx_2, parent_bin_idx)] += 1
+
+            nu_count[parent_bin_idx] += 2
 
     floc_files: list[Path] = myio.utils.get_steadystate_floc_files(
         data_dir / "flocs", metadata_file, trn
@@ -717,61 +805,61 @@ def compute_number_density_evolutions_params(
         unit=" floc files",
     ):
         with h5py.File(str(floc_file), "r") as f:
-            concentration_count_files.append({c: 0.0 for c in size_list_centers_idx})
+            concentration_count_files.append({c: 0.0 for c in size_centers_idx_list})
             binned_idx_arr: list[int]
             binned_idx_arr, _ = _get_bin_size_floc_file(
-                f, size_type, size_list_centers, size_list_edges
+                f, size_type, size_centers_arr, size_edges_arr
             )
             for bin_idx in binned_idx_arr:
                 concentration_count_files[i][bin_idx] += 1
 
     # Compute concentration c[i] (# per volume)
-    c: dict[int, float] = {i: 0.0 for i in size_list_centers_idx}
-    for bin_idx in size_list_centers_idx:
+    c: dict[int, float] = {i: 0.0 for i in size_centers_idx_list}
+    for bin_idx in size_centers_idx_list:
         for file_idx in range(num_files):
             c[bin_idx] += concentration_count_files[file_idx][bin_idx]
         c[bin_idx] /= num_files * V
 
     # Compute number density n[i] (# per volume per floc size)
-    n: dict[int, float] = {i: c[i] / bin_width_eff for i in size_list_centers_idx}
+    n: dict[int, float] = {i: c[i] / bin_width_arr[i] for i in size_centers_idx_list}
 
     K: dict[tuple[int, int], float] = {}
-    for i in size_list_centers_idx:
-        for j in size_list_centers_idx:
+    for i in size_centers_idx_list:
+        for j in size_centers_idx_list:
             if n[i] == 0 or n[j] == 0:
                 K[(i, j)] = np.nan
                 continue
             K[(i, j)] = float(C_count[(i, j)]) / (
-                n[i] * n[j] * V * bin_width_eff**2 * delta_t
+                n[i] * n[j] * V * bin_width_arr[i] * bin_width_arr[j] * delta_t
             )
 
     F: dict[int, float] = {}
-    for i in size_list_centers_idx:
+    for i in size_centers_idx_list:
         if n[i] == 0:
             F[i] = np.nan
             continue
-        F[i] = float(F_count[i]) / (n[i] * V * bin_width_eff * delta_t)
+        F[i] = float(F_count[i]) / (n[i] * V * bin_width_arr[i] * delta_t)
 
     nu: dict[int, float] = {
         i: (float(nu_count[i]) / float(F_count[i]) if F_count[i] != 0 else np.nan)
-        for i in size_list_centers_idx
+        for i in size_centers_idx_list
     }
 
     p: dict[tuple[int, int], float] = {}
-    for i in size_list_centers_idx:
-        for j in size_list_centers_idx:
+    for i in size_centers_idx_list:
+        for j in size_centers_idx_list:
             if F_count[j] == 0:
                 p[(i, j)] = np.nan
                 continue
             p[(i, j)] = float(p_count[(i, j)]) / (
-                float(F_count[j]) * nu[j] * bin_width_eff
+                float(F_count[j]) * nu[j] * bin_width_arr[i]
             )
 
-    bin_info: dict[str, list[int] | list[float]] = {
-        "center_sizes": size_list_centers,
-        "center_idxs": size_list_centers_idx,
-        "edge_sizes": size_list_edges,
-        "edge_idxs": size_list_edges_idx,
+    bin_info: dict[str, list[int] | list[float] | np.ndarray] = {
+        "center_sizes": size_centers_arr,
+        "center_idxs": size_centers_idx_list,
+        "edge_sizes": size_edges_arr,
+        "edge_idxs": size_edges_idx_list,
     }
 
     return {"K": K, "F": F, "nu": nu, "p": p, "c": c, "n": n, "bin_info": bin_info}
