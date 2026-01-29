@@ -514,6 +514,7 @@ def coagulation_kernel(
     series_pcolormesh: PlotSeries,
     series_contour: PlotSeries | None,
     name: str,
+    x_axis_value: Literal["np", "D", "DD"],
 ) -> None:
     out_path: Path = output_dir / f"coagulation_kernel_{name}"
 
@@ -538,11 +539,23 @@ def coagulation_kernel(
         else [series_pcolormesh]
     )
 
+    ylabel: str
+    xlabel: str
+    if x_axis_value == "np":
+        xlabel = "$x, \\quad n_p$"
+        ylabel = "$y, \\quad n_p$"
+    elif x_axis_value == "D":
+        xlabel = "$x, \\quad D/d_p \\sim \\sqrt[3]{n_p}$"
+        ylabel = "$y, \\quad D/d_p \\sim \\sqrt[3]{n_p}$"
+    else:
+        xlabel = "$x^2, \\quad D^2/d_p^2 \\sim (\\sqrt[3]{n_p})^2$"
+        ylabel = "$y^2, \\quad D^2/d_p^2 \\sim (\\sqrt[3]{n_p})^2$"
+
     ax, fig, mesh = generic_plot(
         s_list,
         legend=True,
-        xlabel="$x \\quad (n_p)$",
-        ylabel="$y \\quad (n_p)$",
+        xlabel=xlabel,
+        ylabel=ylabel,
         xlim=xlim,
         ylim=ylim,
         figsize=(6.5, 5.5),
@@ -636,6 +649,58 @@ def breakage_rate(
         ax.set_xticklabels(['1', '2', '3', '4', '5', '6', '7', '8', '9'])
     my_save_fig(out_path, fig, dpi=150)
 
+
+def coalescence_kernel_colletti(
+    output_dir: Path,
+    series_list: Sequence[PlotSeries],
+    n_p_max: float,
+    D_dp_max: float,
+    x_axis_value: Literal["np", "D", "DD"],
+) -> None:
+    out_path = output_dir / "breakage_rate"
+
+    y_list: list[np.ndarray] = []
+    x_list: list[np.ndarray] = []
+    for s in series_list:
+        y_list.append(s.data["y"])
+        x_list.append(s.data["x"])
+
+    ymax: float = max([np.nanmax(F[x < n_p_max]) for x, F in zip(x_list, y_list)])
+
+    xlabel: str
+    xlim: tuple[float | None, float | None]
+    if x_axis_value == "np":
+        xlim=(2, n_p_max)
+        xlabel = r"floc size: $x_1 + x_2, \quad n_{p,1} + n_{p,2})$"
+    elif x_axis_value == "D":
+        xlim=(0.9, D_dp_max)
+        xlim=(None, None)
+        xlabel = r"floc size: $x_1 + x_2, \quad (D_1 + D_2)/d_p \quad D/d_p \sim \sqrt[3]{n_p})$"
+    else:
+        xlim=(0.9, D_dp_max)
+        xlim=(None, None)
+        xlabel = r"floc size: $x_1^2 + x_2^2, \quad (D_1^2 + D_2^2)/d_p^2 \quad D/d_p \sim \sqrt[3]{n_p})$"
+
+    ax, fig, _ = generic_plot(
+        list(series_list),
+        legend=True,
+        xlabel=xlabel,
+        ylabel="Coalescence kernel: $K(x_1, x_2)$",
+        xlim=xlim,
+        ylim=(0, ymax),
+        figsize=(6.5, 5.5),
+        legend_loc="best",
+    )
+    current_ticks = list(ax.get_xticks())
+    if x_axis_value == "np":
+        if 1 not in current_ticks:
+            current_ticks.append(2)
+            current_ticks.sort()
+            ax.set_xticks(current_ticks)
+    else:
+        ax.set_xticks([1, 2, 3, 4, 5, 6, 7, 8, 9])
+        ax.set_xticklabels(['1', '2', '3', '4', '5', '6', '7', '8', '9'])
+    my_save_fig(out_path, fig, dpi=150)
 
 def number_density_evo_sink_source(
     output_dir: Path,

@@ -1389,6 +1389,7 @@ def coagulation_kernel(
     contour_sigma: float,
     contour_levels: int,
     corrected: bool,
+    x_axis_value: Literal["np", "D", "DD"],
     contour_color: str | None = "black",
     contour_cmap: Colormap | None = None,
 ) -> tuple[PlotSeries, PlotSeries]:
@@ -1408,6 +1409,10 @@ def coagulation_kernel(
     x_idx_list: list[int] = results["bin_info"]["center_idxs"]
 
     x_arr: np.ndarray = np.asarray(x_list, dtype=float)
+    if x_axis_value == "D":
+        x_arr = np.pow(x_arr, 1/3)
+    if x_axis_value == "DD":
+        x_arr = np.pow(x_arr, 2/3)
     X, Y = np.meshgrid(x_arr, x_arr)
     C: np.ndarray = np.zeros_like(X, dtype=float)
 
@@ -1415,8 +1420,22 @@ def coagulation_kernel(
         for j, x2_idx in enumerate(x_idx_list):
             C[i, j] = K[(x1_idx, x2_idx)]
 
+
     x_data_max = np.nanmax(x_arr)
     y_data_max = np.nanmax(x_arr)
+
+    column_has_data = np.any(~np.isnan(C), axis=0)
+    valid_columns = np.where(column_has_data)[0]
+    max_nonnan_column = valid_columns[-1] if len(valid_columns) > 0 else -1
+
+    row_has_data = np.any(~np.isnan(C), axis=1)
+    valid_rows = np.where(row_has_data)[0]
+    max_nonnan_row = valid_rows[-1] if len(valid_rows) > 0 else -1
+
+    if x_data_max > x_arr[max_nonnan_column]:
+        x_data_max = x_arr[max_nonnan_column]
+    if y_data_max > x_arr[max_nonnan_row]:
+        y_data_max = x_arr[max_nonnan_row]
 
     if xlim is not None:
         x_min_plot, x_max_plot = xlim
@@ -1640,47 +1659,24 @@ def fragment_size_distribution(
     return s_pcolormesh, s_contour
 
 
-def breakage_rate(
-    pickle_dir: Path,
+def breakage_agglomeration_rate(
     linestyle: str,
     marker: str,
     colour: str | tuple[float, float, float, float],
     label: str | None,
-    corrected: bool,
-    x_axis_value: Literal["np", "D"],
+    x_axis_value: Literal["np", "D", "DD"],
+    x_arr: np.ndarray,
+    y_arr: np.ndarray,
 ) -> tuple[PlotSeries, PlotSeries | None]:
-
-    pickle_file = (
-        "number_density_evolution_params_corrected.pkl"
-        if corrected
-        else "number_density_evolution_params_uncorrected.pkl"
-    )
-    with open(pickle_dir / pickle_file, "rb") as file:
-        results: dict[str, dict] = pickle.load(file)
-
-    F: dict[int, float] = results["F"]
-    x: list[float] = results["bin_info"]["center_sizes"]
-    x_idx_list: list[int] = results["bin_info"]["center_idxs"]
-
-    x_arr: np.ndarray = np.asarray(x, dtype=float)
-    F_arr: np.ndarray = np.zeros_like(x_arr, dtype=float)
-
-    for i, x_idx in enumerate(x_idx_list):
-        F_arr[i] = F[x_idx]
-
-    F_arr: np.ndarray = np.zeros(len(F))
-    for i, x_idx in enumerate(x_idx_list):
-        F_arr[i] = F[x_idx]
 
     plot_method: str
     if x_axis_value == "np":
         plot_method = "plot"
     else:
         plot_method = "loglog"
-        x_arr = np.pow(x_arr, 1 / 3)
 
     s: PlotSeries = PlotSeries(
-        data={"x": x_arr, "y": F_arr},
+        data={"x": x_arr, "y": y_arr},
         x_key="x",
         y_key="y",
         plot_method=plot_method,
@@ -1703,12 +1699,12 @@ def breakage_rate(
             (x_arr >= x_fit_min)
             & (x_arr <= x_fit_max)
             & np.isfinite(x_arr)
-            & np.isfinite(F_arr)
-            & (F_arr != 0)
+            & np.isfinite(y_arr)
+            & (y_arr != 0)
         )
 
         log_x = np.log(x_arr[mask])
-        log_y = np.log(F_arr[mask])
+        log_y = np.log(y_arr[mask])
         coeffs = np.polyfit(log_x, log_y, 1)
         a = coeffs[0]
         b = np.exp(coeffs[1])
@@ -1728,6 +1724,97 @@ def breakage_rate(
                 "marker": "None",
             },
         )
+
+    return s, s_fit
+
+
+def breakage_rate(
+    pickle_dir: Path,
+    linestyle: str,
+    marker: str,
+    colour: str | tuple[float, float, float, float],
+    label: str | None,
+    corrected: bool,
+    x_axis_value: Literal["np", "D"],
+) -> tuple[PlotSeries, PlotSeries | None]:
+
+    pickle_file = (
+        "number_density_evolution_params_corrected.pkl"
+        if corrected
+        else "number_density_evolution_params_uncorrected.pkl"
+    )
+    with open(pickle_dir / pickle_file, "rb") as file:
+        results: dict[str, dict] = pickle.load(file)
+
+    F: dict[int, float] = results["F"]
+    x: np.ndarray = results["bin_info"]["center_sizes"]
+    x_idx_list: list[int] = results["bin_info"]["center_idxs"]
+
+    x_arr: np.ndarray = np.asarray(x, dtype=float)
+    F_arr: np.ndarray = np.zeros_like(x_arr, dtype=float)
+
+    for i, x_idx in enumerate(x_idx_list):
+        F_arr[i] = F[x_idx]
+
+    if x_axis_value == "D":
+        x_arr = np.pow(x_arr, 1 / 3)
+
+    s, s_fit = breakage_agglomeration_rate(
+        linestyle=linestyle,
+        marker=marker,
+        colour=colour,
+        label=label,
+        x_axis_value=x_axis_value,
+        x_arr=x_arr,
+        y_arr=F_arr,
+    )
+
+    return s, s_fit
+
+
+def coalescence_kernel_colletti(
+    pickle_dir: Path,
+    linestyle: str,
+    marker: str,
+    colour: str | tuple[float, float, float, float],
+    label: str | None,
+    corrected: bool,
+    x_axis_value: Literal["np", "D", "DD"],
+) -> tuple[PlotSeries, PlotSeries | None]:
+
+    pickle_file = (
+        "number_density_evolution_params_corrected.pkl"
+        if corrected
+        else "number_density_evolution_params_uncorrected.pkl"
+    )
+    with open(pickle_dir / pickle_file, "rb") as file:
+        results: dict[str, dict] = pickle.load(file)
+
+    K: dict[tuple[int, int], float] = results["K"]
+    x: np.ndarray = results["bin_info"]["center_sizes"]
+    x_idx_list: list[int] = results["bin_info"]["center_idxs"]
+
+    xx_list: list[float] = []
+    y_list: list[float] = []
+    for x1_idx in x_idx_list:
+        for x2_idx in x_idx_list:
+            if x_axis_value == "np":
+                xx_list.append(x[x1_idx] + x[x2_idx])
+            elif x_axis_value == "D":
+                xx_list.append(np.pow(x[x1_idx], 1 / 3) + np.pow(x[x2_idx], 1 / 3))
+            else:
+                xx_list.append(np.pow(x[x1_idx], 2 / 3) + np.pow(x[x2_idx], 2 / 3))
+            y_list.append(K[(x1_idx, x2_idx)])
+
+    s, s_fit = breakage_agglomeration_rate(
+        linestyle=linestyle,
+        marker=marker,
+        colour=colour,
+        label=label,
+        x_axis_value=x_axis_value,
+        x_arr=np.asarray(xx_list),
+        y_arr=np.asarray(y_list),
+    )
 
     return s, s_fit
 

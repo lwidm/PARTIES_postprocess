@@ -917,6 +917,7 @@ def compute_number_density_evolutions_params(
         "center_idxs": size_centers_idx_list,
         "edge_sizes": size_edges_arr,
         "edge_idxs": size_edges_idx_list,
+        "bin_widths": bin_width_arr,
     }
 
     return {"K": K, "F": F, "nu": nu, "p": p, "c": c, "n": n, "bin_info": bin_info}

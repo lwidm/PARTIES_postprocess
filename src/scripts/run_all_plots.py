@@ -814,6 +814,7 @@ def coagulation_kernel(
     labels: list[str],
     contour_sigmas: list[float],
     corrected: bool,
+    x_axis_value: Literal["np", "D", "DD"],
 ):
 
     cmap: Colormap = plt.get_cmap("Blues")
@@ -824,24 +825,28 @@ def coagulation_kernel(
             data_dir / data_name,
             labels[i],
             cmap,
-            xlim=(1, 50),
+            # xlim=(1, 50),
+            xlim=None,
             pcolormesh_log_scale=True,
-            contour_log_scale=True,
+            contour_log_scale=False,
             contour_interp_factor=1,
             contour_sigma=contour_sigmas[i],
             contour_levels=10,
             corrected=corrected,
+            x_axis_value=x_axis_value,
         )
         s_pcolormesh_list.append(s_pcolormesh)
         s_contour_list.append(s_contour)
 
     suffix = "_corrected" if corrected else "_uncorrected"
     for i in range(len(data_names)):
-        # plt_templ.coagulation_kernel(
-        #     plot_dir, s_pcolormesh_list[i], s_contour_list[i], data_names[i]
-        # )
         plt_templ.coagulation_kernel(
-            plot_dir, s_pcolormesh_list[i], None, data_names[i] + suffix
+            plot_dir,
+            s_pcolormesh_list[i],
+            # None,
+            s_contour_list[i],
+            data_names[i] + suffix,
+            x_axis_value=x_axis_value,
         )
 
 
@@ -884,22 +889,56 @@ def breakage_rate(
     s_fit_list: list[PlotSeries | None] = []
     for i, data_name in enumerate(data_names):
         s, s_fit = plt_series.breakage_rate(
-                pickle_dir=data_dir / data_name,
-                linestyle="None",
-                marker=markers[i],
-                colour=colours[i],
-                label=labels[i],
-                corrected=corrected,
-                x_axis_value=x_axis_value,
-            )
+            pickle_dir=data_dir / data_name,
+            linestyle="None",
+            marker=markers[i],
+            colour=colours[i],
+            label=labels[i],
+            corrected=corrected,
+            x_axis_value=x_axis_value,
+        )
         s_list.append(s)
         s_fit_list.append(s_fit)
 
     if x_axis_value == "D":
         for i, data_name in enumerate(data_names):
-            s_list.append(s_fit_list[i]) # type: ignore
+            s_list.append(s_fit_list[i])  # type: ignore
 
     plt_templ.breakage_rate(
+        plot_dir, s_list, n_p_max=20, D_dp_max=9.1, x_axis_value=x_axis_value
+    )
+
+
+def coalescence_kernel_coletti(
+    plot_dir: Path,
+    data_dir: Path,
+    data_names: list[str],
+    labels: list[str],
+    markers: list[str],
+    colours: list[str | tuple[float, float, float, float]],
+    corrected: bool,
+    x_axis_value: Literal["np", "D", "DD"],
+) -> None:
+    s_list: list[PlotSeries] = []
+    s_fit_list: list[PlotSeries | None] = []
+    for i, data_name in enumerate(data_names):
+        s, s_fit = plt_series.coalescence_kernel_colletti(
+            pickle_dir=data_dir / data_name,
+            linestyle="None",
+            marker=markers[i],
+            colour=colours[i],
+            label=labels[i],
+            corrected=corrected,
+            x_axis_value=x_axis_value,
+        )
+        s_list.append(s)
+        s_fit_list.append(s_fit)
+
+    # if x_axis_value == "D" or x_axis_value="DD":
+    #     for i, data_name in enumerate(data_names):
+    #         s_list.append(s_fit_list[i]) # type: ignore
+
+    plt_templ.coalescence_kernel_colletti(
         plot_dir, s_list, n_p_max=20, D_dp_max=9.1, x_axis_value=x_axis_value
     )
 
@@ -1396,14 +1435,24 @@ def main() -> None:
     #     labels,
     #     corrected=True,
     # )
-    breakage_rate(
+    # breakage_rate(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     markers,
+    #     colours,
+    #     corrected=True,
+    #     x_axis_value="D",
+    # )
+    coalescence_kernel_coletti(
         plot_dir,
         data_dir,
         data_names,
         labels,
         markers,
         colours,
-        corrected=True,
+        corrected=False,
         x_axis_value="D",
     )
     # number_density_evo_sink_source(
@@ -1431,14 +1480,15 @@ def main() -> None:
     #     separate_plots=False,
     #     plot_dn_dt=True,
     # )
-    # coagulation_kernel(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names,
-    #     labels,
-    #     contour_sigmas=coagulation_kernel_sigmas,
-    #     corrected=False,
-    # )
+    coagulation_kernel(
+        plot_dir,
+        data_dir,
+        data_names,
+        labels,
+        contour_sigmas=coagulation_kernel_sigmas,
+        corrected=False,
+        x_axis_value = "D",
+    )
     # fragment_size_distribution(
     #     plot_dir,
     #     data_dir,

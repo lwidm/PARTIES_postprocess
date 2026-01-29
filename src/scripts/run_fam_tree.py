@@ -102,8 +102,8 @@ def main():
     output_dir: Path = globals.output_dir
 
     bin_width: float | None = None
-    _num_bins: int = 10
-    filter_bounce: bool = True
+    _num_bins: int = 30
+    filter_bounce: bool = False
     filter_sparse_bins: bool = True
     nonbinary_treatement: Literal["discount", "as_binary", "corrected"] = "discount"
 
