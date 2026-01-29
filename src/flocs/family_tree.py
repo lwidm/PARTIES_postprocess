@@ -601,7 +601,9 @@ def compute_number_density_evolutions_params(
     L: float,
     d_p: float,
     corrected: bool,
-    filter: bool,
+    filter_bounce: bool,
+    filter_sparse_bins: bool,
+    nonbinary_treatement: Literal["discount", "as_binary", "corrected"],
 ) -> dict[str, dict]:
 
     if _num_bins is not None and bin_width is not None:
@@ -637,7 +639,7 @@ def compute_number_density_evolutions_params(
     V: float = (xmax - xmin) * (ymax - ymin) * (zmax - zmin)
 
     min_floc_lifetime: float = 0.0
-    if filter == True:
+    if filter_bounce == True:
         # poisseulle_u = lambda y: 3 / 2 * U_mean * (1 - ((y - L) / L) ** 2)
         # poisseulle_du_dy = lambda y: -3 * U_mean * (y - L) / L**2
         max_poisseulle_du_dy = 3 * U_mean / L
@@ -733,7 +735,10 @@ def compute_number_density_evolutions_params(
             total=len(fam_tree),
             unit=" floc_record",
         ):
-            if len(floc_record["parents"]) != 2:
+            n_parents: int = len(floc_record["parents"])
+            if n_parents < 2:
+                continue
+            if n_parents > 2 and nonbinary_treatement == "discount":
                 continue
             if floc_record["start_time"] < t_steady:
                 continue
@@ -744,15 +749,46 @@ def compute_number_density_evolutions_params(
             if is_short_lived and is_bounce:
                 continue
 
-            parent_bin_idx_1, _ = _get_bin_size(
-                floc_record["parents_sizes"][0], size_centers_arr, size_edges_arr
-            )
-            parent_bin_idx_2, _ = _get_bin_size(
-                floc_record["parents_sizes"][1], size_centers_arr, size_edges_arr
-            )
+            if (
+                nonbinary_treatement == "as_binary"
+                or nonbinary_treatement == "discount"
+            ):
+                parent_bin_idx_1, _ = _get_bin_size(
+                    floc_record["parents_sizes"][0], size_centers_arr, size_edges_arr
+                )
+                parent_bin_idx_2, _ = _get_bin_size(
+                    floc_record["parents_sizes"][1], size_centers_arr, size_edges_arr
+                )
 
-            C_count[(parent_bin_idx_1, parent_bin_idx_2)] += 1
-            C_count[(parent_bin_idx_2, parent_bin_idx_1)] += 1
+                C_count[(parent_bin_idx_1, parent_bin_idx_2)] += 1
+                C_count[(parent_bin_idx_2, parent_bin_idx_1)] += 1
+            elif nonbinary_treatement == "corrected":
+                largest_parent_i: int = 0
+                largest_parent_size: float = -1.0
+                for i in range(n_parents):
+                    parent_size: float = floc_record["parents_sizes"][i]
+                    if parent_size > largest_parent_size:
+                        largest_parent_i = i
+                        largest_parent_size = parent_size
+                largest_parent_bin_idx_1, _ = _get_bin_size(
+                    floc_record["parents_sizes"][largest_parent_i],
+                    size_centers_arr,
+                    size_edges_arr,
+                )
+                for i in range(n_parents):
+                    if i == largest_parent_i:
+                        continue
+                    parent_bin_idx_2, _ = _get_bin_size(
+                        floc_record["parents_sizes"][i],
+                        size_centers_arr,
+                        size_edges_arr,
+                    )
+                    C_count[(largest_parent_bin_idx_1, parent_bin_idx_2)] += 1
+                    C_count[(parent_bin_idx_2, largest_parent_bin_idx_1)] += 1
+            else:
+                raise NotImplementedError(
+                    f'only implemented event counting for nonbinary treatement "as_binary" and "corrected". Instead got "{nonbinary_treatement}"'
+                )
 
         for floc_record in tqdm(
             fam_tree.values(),
@@ -760,7 +796,10 @@ def compute_number_density_evolutions_params(
             total=len(fam_tree),
             unit=" floc_record",
         ):
-            if len(floc_record["children"]) != 2:
+            n_children: int = len(floc_record["children"])
+            if n_children < 2:
+                continue
+            if n_children > 2 and nonbinary_treatement == "discount":
                 continue
             if floc_record["start_time"] < t_steady:
                 continue
@@ -775,9 +814,7 @@ def compute_number_density_evolutions_params(
             parent_bin_idx: int
             child_bin_idx_1: int
             child_bin_idx_2: int
-            parent_bin_idx, _ = _get_bin_size(
-                size, size_centers_arr, size_edges_arr
-            )
+            parent_bin_idx, _ = _get_bin_size(size, size_centers_arr, size_edges_arr)
             child_bin_idx_1, _ = _get_bin_size(
                 floc_record["children_sizes"][0], size_centers_arr, size_edges_arr
             )
@@ -785,9 +822,21 @@ def compute_number_density_evolutions_params(
                 floc_record["children_sizes"][1], size_centers_arr, size_edges_arr
             )
 
-            F_count[parent_bin_idx] += 1
-            p_count[(child_bin_idx_1, parent_bin_idx)] += 1
-            p_count[(child_bin_idx_2, parent_bin_idx)] += 1
+            count: int
+            if (
+                nonbinary_treatement == "as_binary"
+                or nonbinary_treatement == "discount"
+            ):
+                count = 1
+            elif nonbinary_treatement == "corrected":
+                count = n_children - 1
+            else:
+                raise NotImplementedError(
+                    f'only implemented event counting for nonbinary treatement "as_binary" and "corrected". Instead got "{nonbinary_treatement}"'
+                )
+            F_count[parent_bin_idx] += count
+            p_count[(child_bin_idx_1, parent_bin_idx)] += count
+            p_count[(child_bin_idx_2, parent_bin_idx)] += count
 
             nu_count[parent_bin_idx] += 2
 
@@ -813,6 +862,10 @@ def compute_number_density_evolutions_params(
             for bin_idx in binned_idx_arr:
                 concentration_count_files[i][bin_idx] += 1
 
+    min_bin_count: int = 1
+    if filter_sparse_bins:
+        min_bin_count = 100
+
     # Compute concentration c[i] (# per volume)
     c: dict[int, float] = {i: 0.0 for i in size_centers_idx_list}
     for bin_idx in size_centers_idx_list:
@@ -826,7 +879,7 @@ def compute_number_density_evolutions_params(
     K: dict[tuple[int, int], float] = {}
     for i in size_centers_idx_list:
         for j in size_centers_idx_list:
-            if n[i] == 0 or n[j] == 0:
+            if n[i] == 0 or n[j] == 0 or C_count[(i,j)] < min_bin_count:
                 K[(i, j)] = np.nan
                 continue
             K[(i, j)] = float(C_count[(i, j)]) / (
@@ -835,20 +888,24 @@ def compute_number_density_evolutions_params(
 
     F: dict[int, float] = {}
     for i in size_centers_idx_list:
-        if n[i] == 0:
+        if n[i] == 0 or F_count[i] < min_bin_count:
             F[i] = np.nan
             continue
         F[i] = float(F_count[i]) / (n[i] * V * bin_width_arr[i] * delta_t)
 
     nu: dict[int, float] = {
-        i: (float(nu_count[i]) / float(F_count[i]) if F_count[i] != 0 else np.nan)
+        i: (
+            float(nu_count[i]) / float(F_count[i])
+            if F_count[i] >= min_bin_count
+            else np.nan
+        )
         for i in size_centers_idx_list
     }
 
     p: dict[tuple[int, int], float] = {}
     for i in size_centers_idx_list:
         for j in size_centers_idx_list:
-            if F_count[j] == 0:
+            if F_count[j] < min_bin_count:
                 p[(i, j)] = np.nan
                 continue
             p[(i, j)] = float(p_count[(i, j)]) / (

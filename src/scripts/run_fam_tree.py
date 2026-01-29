@@ -3,6 +3,7 @@ from src.flocs import family_tree
 import numpy as np
 from src import myio
 from src import globals
+from typing import Literal
 
 
 def _compute_single_pdf(
@@ -101,13 +102,15 @@ def main():
     output_dir: Path = globals.output_dir
 
     bin_width: float | None = None
-    _num_bins: int = 100
-    filter: bool = True
+    _num_bins: int = 10
+    filter_bounce: bool = True
+    filter_sparse_bins: bool = True
+    nonbinary_treatement: Literal["discount", "as_binary", "corrected"] = "discount"
 
     for i, data_name in enumerate(data_names):
         dataset_dir: Path = data_dir / data_name
         out_dataset_dir: Path = output_dir / data_name
-        _compute_single_pdf(dataset_dir, out_dataset_dir, U_mean[i], L[i], d_p[i])
+        # _compute_single_pdf(dataset_dir, out_dataset_dir, U_mean[i], L[i], d_p[i])
 
         result_corrected: dict[str, dict] = (
             family_tree.compute_number_density_evolutions_params(
@@ -124,7 +127,9 @@ def main():
                 L=L[i],
                 d_p=d_p[i],
                 corrected=True,
-                filter=filter,
+                filter_bounce=filter_bounce,
+                filter_sparse_bins=filter_sparse_bins,
+                nonbinary_treatement=nonbinary_treatement,
             )
         )
         myio.output.save_to_pickle(
@@ -147,7 +152,9 @@ def main():
                 L=L[i],
                 d_p=d_p[i],
                 corrected=False,
-                filter=filter,
+                filter_bounce=filter_bounce,
+                filter_sparse_bins=filter_sparse_bins,
+                nonbinary_treatement=nonbinary_treatement,
             )
         )
         myio.output.save_to_pickle(
