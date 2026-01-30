@@ -1385,7 +1385,6 @@ def coagulation_kernel(
     xlim: tuple[float, float] | None,
     pcolormesh_log_scale: bool,
     contour_log_scale: bool,
-    contour_interp_factor: int,
     contour_sigma: float,
     contour_levels: int,
     corrected: bool,
@@ -1410,16 +1409,15 @@ def coagulation_kernel(
 
     x_arr: np.ndarray = np.asarray(x_list, dtype=float)
     if x_axis_value == "D":
-        x_arr = np.pow(x_arr, 1/3)
+        x_arr = np.pow(x_arr, 1 / 3)
     if x_axis_value == "DD":
-        x_arr = np.pow(x_arr, 2/3)
+        x_arr = np.pow(x_arr, 2 / 3)
     X, Y = np.meshgrid(x_arr, x_arr)
     C: np.ndarray = np.zeros_like(X, dtype=float)
 
     for i, x1_idx in enumerate(x_idx_list):
         for j, x2_idx in enumerate(x_idx_list):
             C[i, j] = K[(x1_idx, x2_idx)]
-
 
     x_data_max = np.nanmax(x_arr)
     y_data_max = np.nanmax(x_arr)
@@ -1496,7 +1494,6 @@ def coagulation_kernel(
     contour_kwargs = {
         "levels": contour_levels,
         "linewidths": 0.8,
-        "interp_factor": contour_interp_factor,
     }
     if contour_log_scale:
         vmin = (
@@ -1536,7 +1533,6 @@ def fragment_size_distribution(
     contour_levels: int = 10,
     contour_color: str | None = "black",
     contour_cmap: Colormap | None = None,
-    contour_interp_factor: int = 5,
     pcolormesh_log_scale: bool = False,
     contour_log_scale: bool = False,
 ) -> tuple[PlotSeries, PlotSeries]:
@@ -1628,7 +1624,6 @@ def fragment_size_distribution(
     contour_kwargs = {
         "levels": contour_levels,
         "linewidths": 0.8,
-        "interp_factor": contour_interp_factor,
     }
     if contour_log_scale:
         # vmin = np.nanmin(C_smoothed[C_smoothed > 0]) if np.any(C_smoothed > 0) else 1e-10
@@ -1664,7 +1659,7 @@ def breakage_agglomeration_rate(
     marker: str,
     colour: str | tuple[float, float, float, float],
     label: str | None,
-    x_axis_value: Literal["np", "D", "DD"],
+    x_axis_value: Literal["np", "D", "DD", "DD+D"],
     x_arr: np.ndarray,
     y_arr: np.ndarray,
 ) -> tuple[PlotSeries, PlotSeries | None]:
@@ -1779,7 +1774,7 @@ def coalescence_kernel_colletti(
     colour: str | tuple[float, float, float, float],
     label: str | None,
     corrected: bool,
-    x_axis_value: Literal["np", "D", "DD"],
+    x_axis_value: Literal["np", "D", "DD", "DD+D"],
 ) -> tuple[PlotSeries, PlotSeries | None]:
 
     pickle_file = (
@@ -1802,8 +1797,15 @@ def coalescence_kernel_colletti(
                 xx_list.append(x[x1_idx] + x[x2_idx])
             elif x_axis_value == "D":
                 xx_list.append(np.pow(x[x1_idx], 1 / 3) + np.pow(x[x2_idx], 1 / 3))
-            else:
+            elif x_axis_value == "DD":
                 xx_list.append(np.pow(x[x1_idx], 2 / 3) + np.pow(x[x2_idx], 2 / 3))
+            elif x_axis_value == "DD+D":
+                xx_list.append(
+                    (np.pow(x[x1_idx], 2 / 3) + np.pow(x[x2_idx], 2 / 3))
+                    * (np.pow(x[x1_idx], 1 / 3) + np.pow(x[x2_idx], 1 / 3))
+                )
+            else:
+                raise NotImplementedError
             y_list.append(K[(x1_idx, x2_idx)])
 
     s, s_fit = breakage_agglomeration_rate(
@@ -1817,6 +1819,82 @@ def coalescence_kernel_colletti(
     )
 
     return s, s_fit
+
+
+def daughter_aggregate_size_distribution(
+    pickle_dir: Path,
+    linestyle: str,
+    marker: str,
+    colour: str | tuple[float, float, float, float],
+    label: str | None,
+    corrected: bool,
+) -> PlotSeries:
+
+    pickle_file = (
+        "daughter_aggregate_size_distribution_corrected.pkl"
+        if corrected
+        else "daughter_aggregate_size_distribution_uncorrected.pkl"
+    )
+    with open(pickle_dir / pickle_file, "rb") as file:
+        results: dict[str, dict] = pickle.load(file)
+
+    p: dict[int, float] = results["p"]
+    sizes: np.ndarray = results["bin_info"]["center_sizes"]
+    sizes_idx_list: list[int] = results["bin_info"]["center_idxs"]
+
+    y_list: list[float] = []
+    for i in sizes_idx_list:
+        y_list.append(p[i])
+
+    s: PlotSeries = PlotSeries(
+        data={"x": sizes, "y": np.asarray(y_list)},
+        x_key="x",
+        y_key="y",
+        plot_method="plot",
+        kwargs={
+            "label": label,
+            "color": colour,
+            "linestyle": linestyle,
+            "marker": marker,
+        },
+    )
+
+    return s
+
+
+def daughter_aggregate_size_distribution_fit(s_list: list[PlotSeries]):
+    x_data: np.ndarray = np.array([])
+    y_data: np.ndarray = np.array([])
+
+    for s in s_list:
+        x_data = np.concatenate((x_data, np.asarray(s.data[s.x_key])))  # type: ignore
+        y_data = np.concatenate((y_data, np.asarray(s.data[s.y_key])))  # type: ignore
+
+    mask = np.isfinite(x_data) & np.isfinite(y_data)
+    x_data = x_data[mask]
+    y_data = y_data[mask]
+
+    def fit_func(x: np.ndarray, a: float, b: float) -> np.ndarray:
+        return a * (x ** (-1) + (1 - x) ** (-1)) + b
+
+    params, _ = curve_fit(fit_func, x_data, y_data)
+    a_fit, b_fit = params
+
+    x_fit: np.ndarray = np.linspace(0.01, 0.99, 200)
+    y_fit: np.ndarray = fit_func(x_fit, a_fit, b_fit)
+    s_fit: PlotSeries = PlotSeries(
+        data={"x": x_fit, "y": y_fit},
+        x_key="x",
+        y_key="y",
+        plot_method="plot",
+        kwargs={
+            "label": "fit",
+            "color": "red",
+            "linestyle": "--",
+            "marker": "None",
+        },
+    )
+    return s_fit
 
 
 def number_density_evo_sink_source(

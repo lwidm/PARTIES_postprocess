@@ -621,11 +621,11 @@ def breakage_rate(
     xlabel: str
     xlim: tuple[float | None, float | None]
     if x_axis_value == "np":
-        xlim=(2, n_p_max)
+        xlim = (2, n_p_max)
         xlabel = r"floc size: $x \quad (n_p)$"
     else:
-        xlim=(0.9, D_dp_max)
-        xlim=(None, None)
+        xlim = (0.9, D_dp_max)
+        xlim = (None, None)
         xlabel = r"floc size: $x \quad (D/d_p \sim \sqrt[3]{n_p})$"
 
     ax, fig, _ = generic_plot(
@@ -646,7 +646,7 @@ def breakage_rate(
             ax.set_xticks(current_ticks)
     else:
         ax.set_xticks([1, 2, 3, 4, 5, 6, 7, 8, 9])
-        ax.set_xticklabels(['1', '2', '3', '4', '5', '6', '7', '8', '9'])
+        ax.set_xticklabels(["1", "2", "3", "4", "5", "6", "7", "8", "9"])
     my_save_fig(out_path, fig, dpi=150)
 
 
@@ -655,9 +655,9 @@ def coalescence_kernel_colletti(
     series_list: Sequence[PlotSeries],
     n_p_max: float,
     D_dp_max: float,
-    x_axis_value: Literal["np", "D", "DD"],
+    x_axis_value: Literal["np", "D", "DD", "DD+D"],
 ) -> None:
-    out_path = output_dir / "breakage_rate"
+    out_path = output_dir / "coalescence_kernel_colletti"
 
     y_list: list[np.ndarray] = []
     x_list: list[np.ndarray] = []
@@ -670,16 +670,22 @@ def coalescence_kernel_colletti(
     xlabel: str
     xlim: tuple[float | None, float | None]
     if x_axis_value == "np":
-        xlim=(2, n_p_max)
+        xlim = (2, n_p_max)
         xlabel = r"floc size: $x_1 + x_2, \quad n_{p,1} + n_{p,2})$"
     elif x_axis_value == "D":
-        xlim=(0.9, D_dp_max)
-        xlim=(None, None)
+        xlim = (0.9, D_dp_max)
+        xlim = (None, None)
         xlabel = r"floc size: $x_1 + x_2, \quad (D_1 + D_2)/d_p \quad D/d_p \sim \sqrt[3]{n_p})$"
-    else:
-        xlim=(0.9, D_dp_max)
-        xlim=(None, None)
+    elif x_axis_value == "DD":
+        xlim = (0.9, D_dp_max)
+        xlim = (None, None)
         xlabel = r"floc size: $x_1^2 + x_2^2, \quad (D_1^2 + D_2^2)/d_p^2 \quad D/d_p \sim \sqrt[3]{n_p})$"
+    elif x_axis_value == "DD+D":
+        xlim = (0.9, D_dp_max)
+        xlim = (None, None)
+        xlabel = r"floc size: $(x_1^2 + x_2^2)(x_1 + x_2), \quad x=D/d_p \sim \sqrt[3]{n_p})$"
+    else:
+        raise NotImplementedError
 
     ax, fig, _ = generic_plot(
         list(series_list),
@@ -699,8 +705,28 @@ def coalescence_kernel_colletti(
             ax.set_xticks(current_ticks)
     else:
         ax.set_xticks([1, 2, 3, 4, 5, 6, 7, 8, 9])
-        ax.set_xticklabels(['1', '2', '3', '4', '5', '6', '7', '8', '9'])
+        ax.set_xticklabels(["1", "2", "3", "4", "5", "6", "7", "8", "9"])
     my_save_fig(out_path, fig, dpi=150)
+
+
+def daughter_aggregate_size_distribution(
+    output_dir: Path,
+    series_list: Sequence[PlotSeries],
+    ymax: float | None,
+) -> None:
+    out_path = output_dir / "daughter_aggregate_size_distribution"
+
+    ax, fig, _ = generic_plot(
+        list(series_list),
+        legend=True,
+        xlabel=r"$n_{p,d} / n_{p,m}$",
+        ylabel="Daughter aggregate size distribution: $p$",
+        figsize=(6.5, 5.5),
+        legend_loc="best",
+        ylim=(0, ymax),
+    )
+    my_save_fig(out_path, fig, dpi=150)
+
 
 def number_density_evo_sink_source(
     output_dir: Path,

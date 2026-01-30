@@ -10,7 +10,6 @@ from src.plotting import series as plt_series
 from src.plotting import templates as plt_templ
 from src import globals
 from src import myio
-
 from matplotlib import pyplot as plt
 from matplotlib.colors import Colormap
 from matplotlib.axes import Axes
@@ -829,7 +828,6 @@ def coagulation_kernel(
             xlim=None,
             pcolormesh_log_scale=True,
             contour_log_scale=False,
-            contour_interp_factor=1,
             contour_sigma=contour_sigmas[i],
             contour_levels=10,
             corrected=corrected,
@@ -917,7 +915,7 @@ def coalescence_kernel_coletti(
     markers: list[str],
     colours: list[str | tuple[float, float, float, float]],
     corrected: bool,
-    x_axis_value: Literal["np", "D", "DD"],
+    x_axis_value: Literal["np", "D", "DD", "DD+D"],
 ) -> None:
     s_list: list[PlotSeries] = []
     s_fit_list: list[PlotSeries | None] = []
@@ -941,6 +939,33 @@ def coalescence_kernel_coletti(
     plt_templ.coalescence_kernel_colletti(
         plot_dir, s_list, n_p_max=20, D_dp_max=9.1, x_axis_value=x_axis_value
     )
+
+
+def daughter_aggregate_size_distribution(
+    plot_dir: Path,
+    data_dir: Path,
+    data_names: list[str],
+    labels: list[str],
+    markers: list[str],
+    colours: list[str | tuple[float, float, float, float]],
+    corrected: bool,
+) -> None:
+    s_list: list[PlotSeries] = []
+    for i, data_name in enumerate(data_names):
+        s = plt_series.daughter_aggregate_size_distribution(
+            pickle_dir=data_dir / data_name,
+            linestyle="None",
+            marker=markers[i],
+            colour=colours[i],
+            label=labels[i],
+            corrected=corrected,
+        )
+        s_list.append(s)
+
+    s_fit: PlotSeries = plt_series.daughter_aggregate_size_distribution_fit(s_list)
+
+
+    plt_templ.daughter_aggregate_size_distribution(plot_dir, [s_fit] + s_list, 4.0)
 
 
 def number_density_evo_sink_source(
@@ -1453,8 +1478,17 @@ def main() -> None:
         markers,
         colours,
         corrected=False,
-        x_axis_value="D",
+        x_axis_value="DD+D",
     )
+    # daughter_aggregate_size_distribution(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     markers,
+    #     colours,
+    #     corrected=False,
+    # )
     # number_density_evo_sink_source(
     #     plot_dir=plot_dir,
     #     data_dir=data_dir,

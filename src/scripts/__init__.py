@@ -12,6 +12,7 @@ from . import (
     run_fam_tree,
     run_floc_timescales,
     run_floc_noncohesive_time,
+    run_compute_daughter_aggregate_size_distribution,
 )
 
 __all__ = [
@@ -22,4 +23,5 @@ __all__ = [
     "run_fam_tree",
     "run_floc_timescales",
     "run_floc_noncohesive_time",
+    "run_compute_daughter_aggregate_size_distribution",
 ]

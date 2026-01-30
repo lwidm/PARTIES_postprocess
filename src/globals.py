@@ -26,7 +26,7 @@ class DataSet(TypedDict):
 
 # fmt: off
 _all_datasets: dict[str, DataSet] = {
-    "phi1p5":      {"label": r"$\phi_{1.5\%}$",           "trn": False, "phi": 1.5, "coagulation_kernel_sigma": 2},
+    "phi1p5":      {"label": r"$\phi_{1.5\%}$",           "trn": False, "phi": 1.5, "coagulation_kernel_sigma": 5},
     "phi3p0":      {"label": r"$\phi_{3\%}$",             "trn": True,  "phi": 3.0, "coagulation_kernel_sigma": 5},
     "phi5p0_new":  {"label": r"$\phi_{5\%}$",             "trn": True,  "phi": 5.0, "coagulation_kernel_sigma": 5},
     "phi5p0_noCo": {"label": r"$\phi_{5\%}$ no cohesion", "trn": False, "phi": 5.0, "coagulation_kernel_sigma": 5},

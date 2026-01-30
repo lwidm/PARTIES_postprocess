@@ -102,10 +102,12 @@ def main():
     output_dir: Path = globals.output_dir
 
     bin_width: float | None = None
-    _num_bins: int = 30
+    _num_bins: int = 50
+    log_bins: bool = True
     filter_bounce: bool = False
-    filter_sparse_bins: bool = True
+    filter_sparse_bins: int = 30
     nonbinary_treatement: Literal["discount", "as_binary", "corrected"] = "discount"
+    size_lim: tuple[float | None, float | None] = (1, None)
 
     for i, data_name in enumerate(data_names):
         dataset_dir: Path = data_dir / data_name
@@ -121,8 +123,8 @@ def main():
                 "n_p",
                 _num_bins=_num_bins,
                 bin_width=bin_width,
-                log_bins=True,
-                size_lim=(None, None),
+                log_bins=log_bins,
+                size_lim=size_lim,
                 U_mean=U_mean[i],
                 L=L[i],
                 d_p=d_p[i],
@@ -146,8 +148,8 @@ def main():
                 "n_p",
                 _num_bins=_num_bins,
                 bin_width=bin_width,
-                log_bins=True,
-                size_lim=(None, None),
+                log_bins=log_bins,
+                size_lim=size_lim,
                 U_mean=U_mean[i],
                 L=L[i],
                 d_p=d_p[i],

@@ -159,6 +159,16 @@ def _gaussian_filter_2d(data: np.ndarray, sigma: float) -> np.ndarray:
 
     result = conv / np.where(norm == 0, 1, norm)
 
+    # Only restore NaN for boundary NaN cells (outside the data region).
+    # A NaN cell is "boundary" if the entire upper-right quadrant
+    # (all cells with larger row AND larger col) has no valid data.
+    nan_mask = ~valid_mask
+    quadrant_sum = np.cumsum(
+        np.cumsum(valid_mask[::-1, ::-1], axis=0), axis=1
+    )[::-1, ::-1]
+    boundary_nan = (quadrant_sum == 0) & nan_mask
+    result[boundary_nan] = np.nan
+
     return result
 
 
@@ -299,8 +309,6 @@ def _plot_one(ax: Axes, series: PlotSeries)  -> Any:
         plot_kwargs = series.kwargs
         other = ax.imshow(C, **plot_kwargs)
     elif method in ("contour", "contourf"):
-        from scipy.interpolate import RectBivariateSpline
-
         plot_kwargs = series.kwargs
         data = series.data
         X = data.get("X")
@@ -320,28 +328,6 @@ def _plot_one(ax: Axes, series: PlotSeries)  -> Any:
                     "Failed to extract either X, Y, x or y when trying to create contour plot"
                 )
             X, Y = np.meshgrid(x, y)
-
-        # Check if interpolation is requested
-        interp_factor = plot_kwargs.pop("interp_factor", 5)
-
-        if interp_factor is not None and interp_factor > 1:
-            # Extract 1D arrays from meshgrid
-            x_1d = X[0, :]
-            y_1d = Y[:, 0]
-
-            # Create interpolation function
-            spline = RectBivariateSpline(y_1d, x_1d, C, kx=3, ky=3)
-
-            # Create finer grid
-            x_fine = np.linspace(x_1d.min(), x_1d.max(), len(x_1d) * interp_factor)
-            y_fine = np.linspace(y_1d.min(), y_1d.max(), len(y_1d) * interp_factor)
-            X_fine, Y_fine = np.meshgrid(x_fine, y_fine)
-
-            # Interpolate
-            C_fine = spline(y_fine, x_fine)
-
-            # Use interpolated data
-            X, Y, C = X_fine, Y_fine, C_fine
 
         levels = plot_kwargs.pop("levels", 10)
         if method == "contour":
