@@ -77,5 +77,6 @@ if __name__ == "__main__":
     # scripts.run_floc_timescales.main()
     # scripts.run_floc_noncohesive_time.main()
     scripts.run_all_plots.main()
+    # scripts.run_fit_kernel.main()
     # scripts.run_plot_biggest_floc.main()
     # scripts.run_plot_floc_slice.main()

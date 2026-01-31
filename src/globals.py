@@ -22,16 +22,17 @@ class DataSet(TypedDict):
     trn: bool
     phi: float
     coagulation_kernel_sigma: float
+    balance_equation_bins: int
 
 
 # fmt: off
 _all_datasets: dict[str, DataSet] = {
-    "phi1p5":      {"label": r"$\phi_{1.5\%}$",           "trn": False, "phi": 1.5, "coagulation_kernel_sigma": 5},
-    "phi3p0":      {"label": r"$\phi_{3\%}$",             "trn": True,  "phi": 3.0, "coagulation_kernel_sigma": 5},
-    "phi5p0_new":  {"label": r"$\phi_{5\%}$",             "trn": True,  "phi": 5.0, "coagulation_kernel_sigma": 5},
-    "phi5p0_noCo": {"label": r"$\phi_{5\%}$ no cohesion", "trn": False, "phi": 5.0, "coagulation_kernel_sigma": 5},
-    "phi5p0":      {"label": r"$\phi_{5\%}$",             "trn": True,  "phi": 5.0, "coagulation_kernel_sigma": 5},
-    "test":        {"label": "test",                      "trn": True,  "phi": 3.0, "coagulation_kernel_sigma": 5},
+    "phi1p5":      {"label": r"$\phi_{1.5\%}$",           "trn": False, "phi": 1.5, "coagulation_kernel_sigma": 0, "balance_equation_bins": 10},
+    "phi3p0":      {"label": r"$\phi_{3\%}$",             "trn": True,  "phi": 3.0, "coagulation_kernel_sigma": 0, "balance_equation_bins": 12},
+    "phi5p0_new":  {"label": r"$\phi_{5\%}$",             "trn": True,  "phi": 5.0, "coagulation_kernel_sigma": 0, "balance_equation_bins": 15},
+    "phi5p0_noCo": {"label": r"$\phi_{5\%}$ no cohesion", "trn": False, "phi": 5.0, "coagulation_kernel_sigma": 0, "balance_equation_bins": 15},
+    "phi5p0":      {"label": r"$\phi_{5\%}$",             "trn": True,  "phi": 5.0, "coagulation_kernel_sigma": 0, "balance_equation_bins": 15},
+    "test":        {"label": "test",                      "trn": True,  "phi": 3.0, "coagulation_kernel_sigma": 0, "balance_equation_bins": 15},
 }
 # fmt: on
 
@@ -43,6 +44,9 @@ coagulation_kernel_sigmas: list[float] = [
     d["coagulation_kernel_sigma"] for d in _datasets.values()
 ]
 has_trn_data: list[bool] = [d["trn"] for d in _datasets.values()]
+balance_equation_bins: list[int] = [
+    d["balance_equation_bins"] for d in _datasets.values()
+]
 
 if on_anvil:
     parent_dir = Path("/anvil/scratch/x-lwidmer")

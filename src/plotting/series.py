@@ -1383,6 +1383,7 @@ def coagulation_kernel(
     label: str | None,
     cmap: Colormap,
     xlim: tuple[float, float] | None,
+    size_filter: tuple[float | None, float | None],
     pcolormesh_log_scale: bool,
     contour_log_scale: bool,
     contour_sigma: float,
@@ -1407,7 +1408,29 @@ def coagulation_kernel(
     x_list: list[float] = results["bin_info"]["center_sizes"]
     x_idx_list: list[int] = results["bin_info"]["center_idxs"]
 
-    x_arr: np.ndarray = np.asarray(x_list, dtype=float)
+    K_filtered: dict[tuple[int, int], float] = {}
+    x_idx_list_filtered = set()
+
+    for x1_idx in x_idx_list:
+        for x2_idx in x_idx_list:
+            min_child_size = 0
+            max_child_size = np.inf
+            if size_filter[0] is not None:
+                min_child_size = size_filter[0]
+            if size_filter[1] is not None:
+                max_child_size = size_filter[1]
+            if (x_list[x1_idx] < min_child_size) or (x_list[x2_idx] < min_child_size):
+                continue
+            if (x_list[x1_idx] <= max_child_size) or (x_list[x2_idx] <= max_child_size):
+                K_filtered[(x1_idx, x2_idx)] = K[(x1_idx, x2_idx)]
+            else:
+                K_filtered[(x1_idx, x2_idx)] = np.nan
+            x_idx_list_filtered |= set([x1_idx, x2_idx])
+
+    x_idx_list_filtered = list(x_idx_list_filtered)
+
+    x_idx_list_filtered = sorted(x_idx_list_filtered)
+    x_arr: np.ndarray = np.asarray([x_list[idx] for idx in x_idx_list_filtered], dtype=float)
     if x_axis_value == "D":
         x_arr = np.pow(x_arr, 1 / 3)
     if x_axis_value == "DD":
@@ -1415,9 +1438,9 @@ def coagulation_kernel(
     X, Y = np.meshgrid(x_arr, x_arr)
     C: np.ndarray = np.zeros_like(X, dtype=float)
 
-    for i, x1_idx in enumerate(x_idx_list):
-        for j, x2_idx in enumerate(x_idx_list):
-            C[i, j] = K[(x1_idx, x2_idx)]
+    for i, x1_idx in enumerate(x_idx_list_filtered):
+        for j, x2_idx in enumerate(x_idx_list_filtered):
+            C[i, j] = K_filtered[(x1_idx, x2_idx)]
 
     x_data_max = np.nanmax(x_arr)
     y_data_max = np.nanmax(x_arr)
@@ -1445,8 +1468,8 @@ def coagulation_kernel(
     else:
         y_min_plot, y_max_plot = 1, y_data_max
 
-    x_max_plot = min(x_max_plot, x_data_max)
-    y_max_plot = min(y_max_plot, y_data_max)
+    # x_max_plot = min(x_max_plot, x_data_max)
+    # y_max_plot = min(y_max_plot, y_data_max)
 
     mask: np.ndarray = (
         (X >= x_min_plot) & (X <= x_max_plot) & (Y >= y_min_plot) & (Y <= y_max_plot)
@@ -1769,6 +1792,7 @@ def breakage_rate(
 
 def coalescence_kernel_colletti(
     pickle_dir: Path,
+    size_filter: tuple[float | None, float | None],
     linestyle: str,
     marker: str,
     colour: str | tuple[float, float, float, float],
@@ -1793,6 +1817,14 @@ def coalescence_kernel_colletti(
     y_list: list[float] = []
     for x1_idx in x_idx_list:
         for x2_idx in x_idx_list:
+            min_child_size = 0
+            max_child_size = np.inf
+            if size_filter[0] is not None:
+                min_child_size = size_filter[0]
+            if size_filter[1] is not None:
+                max_child_size = size_filter[1]
+            if x[x1_idx] < min_child_size or x[x2_idx] < min_child_size:
+                continue
             if x_axis_value == "np":
                 xx_list.append(x[x1_idx] + x[x2_idx])
             elif x_axis_value == "D":
@@ -1806,7 +1838,11 @@ def coalescence_kernel_colletti(
                 )
             else:
                 raise NotImplementedError
-            y_list.append(K[(x1_idx, x2_idx)])
+
+            if (x[x1_idx] <= max_child_size) or (x[x2_idx] <= max_child_size):
+                y_list.append(K[(x1_idx, x2_idx)])
+            else:
+                y_list.append(np.nan)
 
     s, s_fit = breakage_agglomeration_rate(
         linestyle=linestyle,

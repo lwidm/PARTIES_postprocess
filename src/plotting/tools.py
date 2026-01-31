@@ -75,12 +75,41 @@ def update_plot_params() -> None:
     )
 
 
+def set_integer_log_xticks(
+    ax: Axes,
+    xlim: tuple[float, float],
+) -> None:
+    lo, hi = xlim
+    # 1-9 individually, then 10, 20, 30, ..., 100, 200, 300, ... etc.
+    candidates: list[int] = []
+    decade = 1
+    while decade <= hi:
+        for d in range(1, 10):
+            val = d * decade
+            if val > hi:
+                break
+            candidates.append(val)
+        decade *= 10
+    ticks = [t for t in candidates if lo <= t <= hi]
+    ax.set_xticks(ticks)
+    ax.set_xticklabels([str(t) for t in ticks])
+
+
 def format_plot_axes(axes: Axes) -> Axes:
     # axes.spines["top"].set_visible(True)
     # axes.spines["right"].set_visible(True)
     # axes.spines["left"].set_linewidth(1.0)
     # axes.spines["bottom"].set_linewidth(1.0)
-    axes.tick_params(axis="both", which="both", direction="in", labelsize=12, top=True, right=True, bottom=True, left=True)
+    axes.tick_params(
+        axis="both",
+        which="both",
+        direction="in",
+        labelsize=12,
+        top=True,
+        right=True,
+        bottom=True,
+        left=True,
+    )
     plt.tight_layout()
     return axes
 
@@ -125,6 +154,8 @@ def _adjust_color(hexcolor, lighter=0.0, sat_mul=1.0):
 
 
 def _gaussian_filter_2d(data: np.ndarray, sigma: float) -> np.ndarray:
+    if sigma <= 0:
+        return data.copy()
     valid_mask = ~np.isnan(data)
     if not np.any(valid_mask):
         return np.full_like(data, np.nan)
@@ -140,9 +171,9 @@ def _gaussian_filter_2d(data: np.ndarray, sigma: float) -> np.ndarray:
     if kernel_size > min_data_dim:
         kernel_size = min_data_dim if min_data_dim % 2 == 1 else min_data_dim - 1
 
-    ax = np.arange(-kernel_size // 2 + 1., kernel_size // 2 + 1.)
+    ax = np.arange(-kernel_size // 2 + 1.0, kernel_size // 2 + 1.0)
     xx, yy = np.meshgrid(ax, ax)
-    kernel = np.exp(-(xx**2 + yy**2) / (2. * sigma**2))
+    kernel = np.exp(-(xx**2 + yy**2) / (2.0 * sigma**2))
     kernel = kernel / np.sum(kernel)
 
     data_fft = fft2(data_zeroed)
@@ -163,16 +194,16 @@ def _gaussian_filter_2d(data: np.ndarray, sigma: float) -> np.ndarray:
     # A NaN cell is "boundary" if the entire upper-right quadrant
     # (all cells with larger row AND larger col) has no valid data.
     nan_mask = ~valid_mask
-    quadrant_sum = np.cumsum(
-        np.cumsum(valid_mask[::-1, ::-1], axis=0), axis=1
-    )[::-1, ::-1]
+    quadrant_sum = np.cumsum(np.cumsum(valid_mask[::-1, ::-1], axis=0), axis=1)[
+        ::-1, ::-1
+    ]
     boundary_nan = (quadrant_sum == 0) & nan_mask
     result[boundary_nan] = np.nan
 
     return result
 
 
-def _plot_one(ax: Axes, series: PlotSeries)  -> Any:
+def _plot_one(ax: Axes, series: PlotSeries) -> Any:
     method: PlotMethod = series.plot_method or "plot"
 
     if method in (
@@ -290,8 +321,8 @@ def _plot_one(ax: Axes, series: PlotSeries)  -> Any:
             C = data.get("u")
         else:
             raise ValueError(
-                    "Failed to extract either C or u when trying to create pcolormesh plot"
-                )
+                "Failed to extract either C or u when trying to create pcolormesh plot"
+            )
         # fallback: try to construct mesh from x and y
         if X is None or Y is None:
             x, y = _extract_xy(series)

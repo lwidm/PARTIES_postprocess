@@ -13,6 +13,7 @@ from . import (
     run_floc_timescales,
     run_floc_noncohesive_time,
     run_compute_daughter_aggregate_size_distribution,
+    run_fit_kernel,
 )
 
 __all__ = [
@@ -24,4 +25,5 @@ __all__ = [
     "run_floc_timescales",
     "run_floc_noncohesive_time",
     "run_compute_daughter_aggregate_size_distribution",
+    "run_fit_kernel",
 ]

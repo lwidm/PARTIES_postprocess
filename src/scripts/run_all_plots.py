@@ -824,12 +824,13 @@ def coagulation_kernel(
             data_dir / data_name,
             labels[i],
             cmap,
-            # xlim=(1, 50),
-            xlim=None,
+            xlim=(0.9, 9.5),
+            size_filter= (2, None),
+            # xlim=None,
             pcolormesh_log_scale=True,
             contour_log_scale=False,
             contour_sigma=contour_sigmas[i],
-            contour_levels=10,
+            contour_levels=8,
             corrected=corrected,
             x_axis_value=x_axis_value,
         )
@@ -922,6 +923,7 @@ def coalescence_kernel_coletti(
     for i, data_name in enumerate(data_names):
         s, s_fit = plt_series.coalescence_kernel_colletti(
             pickle_dir=data_dir / data_name,
+            size_filter= (2, None),
             linestyle="None",
             marker=markers[i],
             colour=colours[i],
@@ -1530,16 +1532,16 @@ def main() -> None:
     #     labels,
     #     corrected=False,
     # )
-    # breakage_rate(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names,
-    #     labels,
-    #     markers,
-    #     colours,
-    #     corrected=False,
-    #     x_axis_value="D",
-    # )
+    breakage_rate(
+        plot_dir,
+        data_dir,
+        data_names,
+        labels,
+        markers,
+        colours,
+        corrected=False,
+        x_axis_value="D",
+    )
     # number_density_evo_sink_source(
     #     plot_dir=plot_dir,
     #     data_dir=data_dir,

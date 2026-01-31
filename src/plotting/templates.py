@@ -9,6 +9,7 @@ from matplotlib.ticker import ScalarFormatter
 
 from src.plotting.tools import (
     PlotSeries,
+    set_integer_log_xticks,
     generic_plot,
     _plot_one,
     update_plot_params,
@@ -665,7 +666,8 @@ def coalescence_kernel_colletti(
         y_list.append(s.data["y"])
         x_list.append(s.data["x"])
 
-    ymax: float = max([np.nanmax(F[x < n_p_max]) for x, F in zip(x_list, y_list)])
+    # ymax: float = np.nanmax([np.nanmax(F[x < n_p_max]) for x, F in zip(x_list, y_list)])
+    ymax: None = None
 
     xlabel: str
     xlim: tuple[float | None, float | None]
@@ -677,11 +679,9 @@ def coalescence_kernel_colletti(
         xlim = (None, None)
         xlabel = r"floc size: $x_1 + x_2, \quad (D_1 + D_2)/d_p \quad D/d_p \sim \sqrt[3]{n_p})$"
     elif x_axis_value == "DD":
-        xlim = (0.9, D_dp_max)
         xlim = (None, None)
         xlabel = r"floc size: $x_1^2 + x_2^2, \quad (D_1^2 + D_2^2)/d_p^2 \quad D/d_p \sim \sqrt[3]{n_p})$"
     elif x_axis_value == "DD+D":
-        xlim = (0.9, D_dp_max)
         xlim = (None, None)
         xlabel = r"floc size: $(x_1^2 + x_2^2)(x_1 + x_2), \quad x=D/d_p \sim \sqrt[3]{n_p})$"
     else:
@@ -704,8 +704,19 @@ def coalescence_kernel_colletti(
             current_ticks.sort()
             ax.set_xticks(current_ticks)
     else:
-        ax.set_xticks([1, 2, 3, 4, 5, 6, 7, 8, 9])
-        ax.set_xticklabels(["1", "2", "3", "4", "5", "6", "7", "8", "9"])
+        xmax: float = max([max(s.data[s.x_key]) for s in series_list]) # type: ignore
+        xmin: float = min([min(s.data[s.x_key]) for s in series_list]) # type: ignore
+        xlim_ticks: list[float] = [0, 0]
+        if xlim[0] is not None:
+            xlim_ticks[0] = xlim[0]
+        else:
+            xlim_ticks[0] = xmin
+        if xlim[1] is not None:
+            xlim_ticks[1] = xlim[1]
+        else:
+            xlim_ticks[1] = xmax
+        if xmax <= 20:
+            set_integer_log_xticks(ax, tuple(xlim_ticks)) # type: ignore
     my_save_fig(out_path, fig, dpi=150)
 
 
