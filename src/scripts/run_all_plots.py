@@ -934,9 +934,10 @@ def coalescence_kernel_coletti(
         s_list.append(s)
         s_fit_list.append(s_fit)
 
-    # if x_axis_value == "D" or x_axis_value="DD":
-    #     for i, data_name in enumerate(data_names):
-    #         s_list.append(s_fit_list[i]) # type: ignore
+    if x_axis_value != "np":
+        for i, data_name in enumerate(data_names):
+            if s_fit_list[i] is not None:
+                s_list.append(s_fit_list[i])
 
     plt_templ.coalescence_kernel_colletti(
         plot_dir, s_list, n_p_max=20, D_dp_max=9.1, x_axis_value=x_axis_value
@@ -1516,15 +1517,15 @@ def main() -> None:
     #     separate_plots=False,
     #     plot_dn_dt=True,
     # )
-    coagulation_kernel(
-        plot_dir,
-        data_dir,
-        data_names,
-        labels,
-        contour_sigmas=coagulation_kernel_sigmas,
-        corrected=False,
-        x_axis_value = "D",
-    )
+    # coagulation_kernel(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     contour_sigmas=coagulation_kernel_sigmas,
+    #     corrected=False,
+    #     x_axis_value = "D",
+    # )
     # fragment_size_distribution(
     #     plot_dir,
     #     data_dir,
@@ -1532,16 +1533,16 @@ def main() -> None:
     #     labels,
     #     corrected=False,
     # )
-    breakage_rate(
-        plot_dir,
-        data_dir,
-        data_names,
-        labels,
-        markers,
-        colours,
-        corrected=False,
-        x_axis_value="D",
-    )
+    # breakage_rate(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     markers,
+    #     colours,
+    #     corrected=False,
+    #     x_axis_value="D",
+    # )
     # number_density_evo_sink_source(
     #     plot_dir=plot_dir,
     #     data_dir=data_dir,
