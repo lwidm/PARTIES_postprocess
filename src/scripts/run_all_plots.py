@@ -165,12 +165,15 @@ def floc_evolution(
     labels: list[str],
     colours: list[str | tuple[float, float, float, float]],
     plot_evo_fit: bool,
+    show_steady_state: bool,
+    only_base_legend: bool,
 ) -> None:
     data_dirs: list[Path] = [data_dir / data_name for data_name in data_names]
     plot_dir.mkdir(parents=True, exist_ok=True)
 
     s_evo_list: list[PlotSeries] = []
     s_evo_fit_list: list[PlotSeries] = []
+    s_steady_state_list: list[PlotSeries] = []
 
     for i in range(len(data_dirs)):
         s_evo = plt_series.floc_count_evolution(
@@ -183,17 +186,37 @@ def floc_evolution(
         s_evo_list.append(s_evo)
 
         if plot_evo_fit:
+            fit_label = None if only_base_legend else labels[i]
             s_evo_fit = plt_series.floc_count_evolution_fit(
                 data_dirs[i],
                 colours[i],
-                labels[i],
+                fit_label,
                 normalised=True,
                 reset_time=True,
             )
             s_evo_fit_list.append(s_evo_fit)
 
+        if show_steady_state:
+            fit_csv = data_dirs[i] / "flocculation_fit_parameters.csv"
+            fit_data = myio.lwidmer.read_csv_columns(fit_csv, (0,), remove_nan=1)
+            b = float(fit_data[0][0])
+            t_ss = np.log(100.0) / b  # 99% of equilibrium
+            s_steady_state_list.append(
+                PlotSeries(
+                    data={"x": t_ss},
+                    x_key=None,
+                    y_key=None,
+                    plot_method="vline",
+                    kwargs={
+                        "color": colours[i],
+                        "linestyle": "-.",
+                    },
+                )
+            )
+
     if plot_evo_fit:
         s_evo_list = s_evo_fit_list + s_evo_list
+    s_evo_list = s_evo_list + s_steady_state_list
     plt_templ.floc_count_evolution(plot_dir, s_evo_list, normalised=True)
 
 
@@ -825,7 +848,7 @@ def coagulation_kernel(
             labels[i],
             cmap,
             xlim=(0.9, 9.5),
-            size_filter= (2, None),
+            size_filter=(2, None),
             # xlim=None,
             pcolormesh_log_scale=True,
             contour_log_scale=False,
@@ -855,14 +878,33 @@ def fragment_size_distribution(
     data_names: list[str],
     labels: list[str],
     corrected: bool,
+    contour_sigmas: list[float],
+    normalised: bool,
 ):
+
+    data_name_ylim_map: dict[str, int] = {
+        "phi1p5": 23,
+        "phi3p0": 65,
+        "phi5p0_new": 162,
+    }
 
     cmap: Colormap = plt.get_cmap("Blues")
     s_pcolormesh_list: list[PlotSeries] = []
     s_contour_list: list[PlotSeries] = []
     for i, data_name in enumerate(data_names):
         s_pcolormesh, _ = plt_series.fragment_size_distribution(
-            data_dir / data_name, labels[i], cmap, xlim=(1, 50), corrected=corrected
+            data_dir / data_name,
+            labels[i],
+            cmap,
+            ylim=(0.1, data_name_ylim_map[data_name]),
+            corrected=corrected,
+            contour_sigma=contour_sigmas[i],
+            contour_levels=10,
+            contour_color="black",
+            contour_cmap=None,
+            pcolormesh_log_scale=False,
+            contour_log_scale=False,
+            normalised=normalised,
         )
         s_pcolormesh_list.append(s_pcolormesh)
         # s_contour_list.append(s_contour)
@@ -870,7 +912,7 @@ def fragment_size_distribution(
     suffix = "_corrected" if corrected else "_uncorrected"
     for i in range(len(data_names)):
         plt_templ.fragment_size_distribution(
-            plot_dir, s_pcolormesh_list[i], None, data_names[i] + suffix
+            plot_dir, s_pcolormesh_list[i], None, data_names[i] + suffix, normalised=normalised
         )
 
 
@@ -923,7 +965,7 @@ def coalescence_kernel_coletti(
     for i, data_name in enumerate(data_names):
         s, s_fit = plt_series.coalescence_kernel_colletti(
             pickle_dir=data_dir / data_name,
-            size_filter= (2, None),
+            size_filter=(2, None),
             linestyle="None",
             marker=markers[i],
             colour=colours[i],
@@ -966,7 +1008,6 @@ def daughter_aggregate_size_distribution(
         s_list.append(s)
 
     s_fit: PlotSeries = plt_series.daughter_aggregate_size_distribution_fit(s_list)
-
 
     plt_templ.daughter_aggregate_size_distribution(plot_dir, [s_fit] + s_list, 4.0)
 
@@ -1390,7 +1431,9 @@ def main() -> None:
     #     data_names,
     #     labels,
     #     colours,
-    #     plot_evo_fit=False,
+    #     plot_evo_fit=True,
+    #     show_steady_state=True,
+    #     only_base_legend=True,
     # )
     # floc_pdf(
     #     plot_dir,
@@ -1481,7 +1524,7 @@ def main() -> None:
         markers,
         colours,
         corrected=False,
-        x_axis_value="DD+D",
+        x_axis_value="DD",
     )
     # daughter_aggregate_size_distribution(
     #     plot_dir,
@@ -1524,15 +1567,17 @@ def main() -> None:
     #     labels,
     #     contour_sigmas=coagulation_kernel_sigmas,
     #     corrected=False,
-    #     x_axis_value = "D",
+    #     x_axis_value="D",
     # )
-    # fragment_size_distribution(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names,
-    #     labels,
-    #     corrected=False,
-    # )
+    fragment_size_distribution(
+        plot_dir,
+        data_dir,
+        data_names,
+        labels,
+        corrected=True,
+        contour_sigmas=coagulation_kernel_sigmas,
+        normalised=True,
+    )
     # breakage_rate(
     #     plot_dir,
     #     data_dir,

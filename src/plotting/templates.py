@@ -178,8 +178,9 @@ def floc_count_evolution(
         xlabel=r"Dimensionless time, $\tau = L/U$ [-]",
         ylabel=ylabel,
         figsize=(6.5, 5.5),
-        legend_loc="lower right",
-        legend_bbox=(1.0, 0.80),
+        legend_loc="best"
+        # legend_loc="lower right",
+        # legend_bbox=(1.0, 0.80),
     )
     my_save_fig(out_path, fig, dpi=150)
 
@@ -575,6 +576,7 @@ def fragment_size_distribution(
     series_pcolormesh: PlotSeries,
     series_contour: PlotSeries | None,
     name: str,
+    normalised: bool
 ) -> None:
     out_path: Path = output_dir / f"fragment_size_distribution_{name}"
     xlim: tuple[float, float] = series_pcolormesh.data["xlim"]
@@ -586,10 +588,16 @@ def fragment_size_distribution(
         else [series_pcolormesh]
     )
 
+    xlabel: str
+    if normalised:
+        xlabel = "$x/y \\quad (n_p)$"
+    else:
+        xlabel = "$x \\quad (n_p)$"
+
     ax, fig, mesh = generic_plot(
         s_list,
         legend=True,
-        xlabel="$x \\quad (n_p)$",
+        xlabel= xlabel ,
         ylabel="$y \\quad (n_p)$",
         xlim=xlim,
         ylim=ylim,
@@ -598,7 +606,8 @@ def fragment_size_distribution(
     )
 
     cbar = plt.colorbar(mesh[0], ax=ax, orientation="horizontal")
-    ax.set_aspect("equal", adjustable="box")
+    if not normalised:
+        ax.set_aspect("equal", adjustable="box")
     my_save_fig(out_path, fig, dpi=150)
 
 

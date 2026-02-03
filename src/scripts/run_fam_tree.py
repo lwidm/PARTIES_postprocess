@@ -103,7 +103,7 @@ def main():
 
     bin_width: float | None = None
     num_bins_list: list[int] = globals.balance_equation_bins
-    log_bins: bool = True
+    log_bins: bool = False
     filter_bounce: bool = True
     filter_sparse_bins: int = 30
     nonbinary_treatement: Literal["discount", "as_binary", "corrected"] = "discount"
@@ -114,30 +114,30 @@ def main():
         out_dataset_dir: Path = output_dir / data_name
         # _compute_single_pdf(dataset_dir, out_dataset_dir, U_mean[i], L[i], d_p[i])
 
-        # result_corrected: dict[str, dict] = (
-        #     family_tree.compute_number_density_evolutions_params(
-        #         dataset_dir,
-        #         dataset_dir / "metadata.ini",
-        #         dataset_dir,
-        #         trn[i],
-        #         "n_p",
-        #         _num_bins=num_bins_list[i],
-        #         bin_width=bin_width,
-        #         log_bins=log_bins,
-        #         size_lim=size_lim,
-        #         U_mean=U_mean[i],
-        #         L=L[i],
-        #         d_p=d_p[i],
-        #         corrected=True,
-        #         filter_bounce=filter_bounce,
-        #         filter_sparse_bins=filter_sparse_bins,
-        #         nonbinary_treatement=nonbinary_treatement,
-        #     )
-        # )
-        # myio.output.save_to_pickle(
-        #     out_dataset_dir / "number_density_evolution_params_corrected.pkl",
-        #     result_corrected,
-        # )
+        result_corrected: dict[str, dict] = (
+            family_tree.compute_number_density_evolutions_params(
+                dataset_dir,
+                dataset_dir / "metadata.ini",
+                dataset_dir,
+                trn[i],
+                "n_p",
+                _num_bins=num_bins_list[i],
+                bin_width=bin_width,
+                log_bins=log_bins,
+                size_lim=size_lim,
+                U_mean=U_mean[i],
+                L=L[i],
+                d_p=d_p[i],
+                corrected=True,
+                filter_bounce=filter_bounce,
+                filter_sparse_bins=filter_sparse_bins,
+                nonbinary_treatement=nonbinary_treatement,
+            )
+        )
+        myio.output.save_to_pickle(
+            out_dataset_dir / "number_density_evolution_params_corrected.pkl",
+            result_corrected,
+        )
 
         result_uncorrected: dict[str, dict] = (
             family_tree.compute_number_density_evolutions_params(

@@ -11,6 +11,13 @@ from matplotlib import colors as mcolors
 import colorsys
 
 NumericArray = np.ndarray | float | int
+
+# ---- global font size defaults ----
+kFontScale: float = 1.5
+kTickLabelSize: float = 12.0 * kFontScale
+kAxisLabelSize: float = 14.0 * kFontScale
+kTitleSize: float = 14.0 * kFontScale
+kLegendSize: float = 14.0 * kFontScale
 PlotMethod = Literal[
     "plot",
     "semilogx",
@@ -104,7 +111,7 @@ def format_plot_axes(axes: Axes) -> Axes:
         axis="both",
         which="both",
         direction="in",
-        labelsize=12,
+        labelsize=kTickLabelSize,
         top=True,
         right=True,
         bottom=True,
@@ -367,12 +374,14 @@ def _plot_one(ax: Axes, series: PlotSeries) -> Any:
             other = ax.contourf(X, Y, C, levels=levels, **plot_kwargs)
     elif method == "hline":
         plot_kwargs = series.kwargs
+        _add_default_kwargs(["kLineWidth"], plot_kwargs)
         y_value = series.data.get("y")
         if y_value is None:
             raise ValueError("hline requires 'y' value in data dict")
         other = ax.axhline(y=y_value, **plot_kwargs)
     elif method == "vline":
         plot_kwargs = series.kwargs
+        _add_default_kwargs(["kLineWidth"], plot_kwargs)
         x_value = series.data.get("x")
         if x_value is None:
             raise ValueError("vline requires 'x' value in data dict")
@@ -408,18 +417,18 @@ def generic_plot(
             obj_func(ax)
 
     if xlabel:
-        ax.set_xlabel(xlabel, fontsize=14)
+        ax.set_xlabel(xlabel, fontsize=kAxisLabelSize)
     if ylabel:
-        ax.set_ylabel(ylabel, fontsize=14)
+        ax.set_ylabel(ylabel, fontsize=kAxisLabelSize)
     if title:
-        ax.set_title(title)
+        ax.set_title(title, fontsize=kTitleSize)
     if xlim is not None:
         ax.set_xlim(*xlim)
     if ylim is not None:
         ax.set_ylim(*ylim)
 
     if legend:
-        legend_kwargs: dict[str, Any] = {"frameon": False, "fontsize": 12}
+        legend_kwargs: dict[str, Any] = {"frameon": False, "fontsize": kLegendSize}
         if legend_loc is not None:
             legend_kwargs["loc"] = legend_loc
         if legend_bbox is not None:

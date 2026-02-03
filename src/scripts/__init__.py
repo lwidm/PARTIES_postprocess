@@ -14,6 +14,7 @@ from . import (
     run_floc_noncohesive_time,
     run_compute_daughter_aggregate_size_distribution,
     run_fit_kernel,
+    run_correction_analysis,
 )
 
 __all__ = [
@@ -26,4 +27,5 @@ __all__ = [
     "run_floc_noncohesive_time",
     "run_compute_daughter_aggregate_size_distribution",
     "run_fit_kernel",
+    "run_correction_analysis",
 ]

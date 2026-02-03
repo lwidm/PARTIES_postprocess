@@ -1430,7 +1430,9 @@ def coagulation_kernel(
     x_idx_list_filtered = list(x_idx_list_filtered)
 
     x_idx_list_filtered = sorted(x_idx_list_filtered)
-    x_arr: np.ndarray = np.asarray([x_list[idx] for idx in x_idx_list_filtered], dtype=float)
+    x_arr: np.ndarray = np.asarray(
+        [x_list[idx] for idx in x_idx_list_filtered], dtype=float
+    )
     if x_axis_value == "D":
         x_arr = np.pow(x_arr, 1 / 3)
     if x_axis_value == "DD":
@@ -1550,17 +1552,22 @@ def fragment_size_distribution(
     pickle_dir: Path,
     label: str | None,
     cmap: Colormap,
-    xlim: tuple[float, float] | None,
+    ylim: tuple[float, float] | None,
     corrected: bool,
-    contour_sigma: float = 1.5,
-    contour_levels: int = 10,
-    contour_color: str | None = "black",
-    contour_cmap: Colormap | None = None,
-    pcolormesh_log_scale: bool = False,
-    contour_log_scale: bool = False,
+    contour_sigma: float,
+    contour_levels: int,
+    contour_color: str | None,
+    contour_cmap: Colormap | None,
+    pcolormesh_log_scale: bool,
+    contour_log_scale: bool,
+    normalised: bool,
 ) -> tuple[PlotSeries, PlotSeries]:
 
-    ylim = xlim
+    xlim: tuple[float, float] | None = None
+    if normalised:
+        xlim = (0.0, 1.0)
+    elif ylim is not None:
+        xlim = ylim
 
     pickle_file = (
         "number_density_evolution_params_corrected.pkl"
@@ -1575,18 +1582,55 @@ def fragment_size_distribution(
     x_idx_list: list[int] = results["bin_info"]["center_idxs"]
 
     x_arr: np.ndarray = np.asarray(x_list, dtype=float)
-    X, Y = np.meshgrid(x_arr, x_arr)
-    C: np.ndarray = np.zeros_like(X, dtype=float)
+    n: int = len(x_list)
+    X = np.zeros((n, n), dtype=float)
+    Y = np.zeros((n, n), dtype=float)
+    C = np.zeros((n, n), dtype=float)
 
-    for i, x1_idx in enumerate(x_idx_list):
-        for j, x2_idx in enumerate(x_idx_list):
-            C[j, i] = p[(x1_idx, x2_idx)]
+    if normalised:
+        x_uniform = np.linspace(0, 1, n)
+        for i, y_idx in enumerate(x_idx_list):
+            y: float = x_arr[y_idx]
+            if y <= 0:
+                continue
 
-    x_min_default, x_max_default = 1.0, 200.0
-    y_min_default, y_max_default = 1.0, 200.0
+            valid_v: list[float] = []
+            valid_c: list[float] = []
+            for j, x_idx in enumerate(x_idx_list):
+                x = x_arr[x_idx]
+                if x <= y:
+                    valid_v.append(x / y)
+                    valid_c.append(p[(x_idx, y_idx)])
 
-    x_data_max = np.nanmax(x_arr)
-    y_data_max = np.nanmax(x_arr)
+            v_arr = np.array(valid_v)
+            c_arr = np.array(valid_c)
+
+            edges = np.empty(len(v_arr) + 1)
+            edges[0] = 0.0
+            edges[-1] = 1.0
+            for m in range(1, len(v_arr)):
+                edges[m] = (v_arr[m - 1] + v_arr[m]) / 2
+
+            bin_indices = np.clip(np.digitize(x_uniform, edges) - 1, 0, len(c_arr) - 1)
+
+            X[i, :] = x_uniform
+            Y[i, :] = y
+            C[i, :] = c_arr[bin_indices]
+
+            row_integral = np.trapezoid(C[i, :], x_uniform)
+            if row_integral > 0:
+                C[i, :] /= row_integral
+    else:
+        for i, y_idx in enumerate(x_idx_list):
+            y: float = x_arr[y_idx]
+            for j, x_idx in enumerate(x_idx_list):
+                x = x_arr[x_idx]
+                X[i, j] = x
+                Y[i, j] = y
+                C[i, j] = p[(x_idx, y_idx)]
+
+    x_data_max = np.nanmax(X)
+    y_data_max = np.nanmax(Y)
 
     if xlim is not None:
         x_min_plot, x_max_plot = xlim
@@ -1607,12 +1651,14 @@ def fragment_size_distribution(
         (X >= x_min_plot) & (X <= x_max_plot) & (Y >= y_min_plot) & (Y <= y_max_plot)
     )
 
-    n_rows = np.sum(mask[:, 0])
-    n_cols = np.sum(mask[0, :])
+    row_mask = mask.any(axis=1)
+    col_mask = mask.any(axis=0)
+    n_rows = int(row_mask.sum())
+    n_cols = int(col_mask.sum())
 
-    X_filtered: np.ndarray = X[mask].reshape(n_rows, n_cols)
-    Y_filtered: np.ndarray = Y[mask].reshape(n_rows, n_cols)
-    C_filtered = C[mask].reshape(n_rows, n_cols)
+    X_filtered: np.ndarray = X[np.ix_(row_mask, col_mask)]
+    Y_filtered: np.ndarray = Y[np.ix_(row_mask, col_mask)]
+    C_filtered = C[np.ix_(row_mask, col_mask)]
 
     if contour_sigma > 0:
         C_smoothed = _gaussian_filter_2d(C_filtered, contour_sigma)
@@ -1630,12 +1676,14 @@ def fragment_size_distribution(
         vmax = np.nanmax(C)
         pcolormesh_kwargs["norm"] = LogNorm(vmin=vmin, vmax=vmax)
 
+    display_xlim = (-0.01, 1.01) if normalised else (x_min_plot, x_max_plot)
+
     s_pcolormesh: PlotSeries = PlotSeries(
         data={
             "X": X,
             "Y": Y,
             "C": C,
-            "xlim": (x_min_plot, x_max_plot),
+            "xlim": display_xlim,
             "ylim": (y_min_plot, y_max_plot),
         },
         x_key="x",
