@@ -1828,6 +1828,10 @@ def breakage_agglomeration_rate(
 
         x_fit: np.ndarray = np.geomspace(x_fit_min, x_fit_max, 100)
         y_fit: np.ndarray = b * x_fit**a
+        fit_label: str = ""
+        if not only_base_legend:
+            # fit_label =  f"${b:.3g}\\cdot x^{{{a:.3g}}}$"
+            fit_label =  f"$\\sim x^{{{a:.3g}}}$"
 
         s_fit = PlotSeries(
             data={"x": x_fit, "y": y_fit},
@@ -1835,7 +1839,7 @@ def breakage_agglomeration_rate(
             y_key="y",
             plot_method=plot_method,
             kwargs={
-                "label": f"${b:.3g}\\cdot x^{{{a:.3g}}}$" if not only_base_legend else "",
+                "label": fit_label,
                 "color": colour,
                 "linestyle": "--",
                 "marker": "None",

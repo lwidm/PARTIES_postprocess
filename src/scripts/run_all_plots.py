@@ -975,6 +975,7 @@ def breakage_rate(
     corrected: bool,
     x_axis_value: Literal["np", "D"],
     only_base_legend: bool,
+    show_fit: bool
 ) -> None:
     s_list: list[PlotSeries] = []
     s_fit_list: list[PlotSeries | None] = []
@@ -990,11 +991,11 @@ def breakage_rate(
             only_base_legend=only_base_legend,
         )
         s_list.append(s)
-        # s_fit_list.append(s_fit)
+        s_fit_list.append(s_fit)
 
-    # if x_axis_value == "D":
-    #     for i, data_name in enumerate(data_names):
-    #         s_list.append(s_fit_list[i])  # type: ignore
+    if x_axis_value == "D" and show_fit:
+        for i, data_name in enumerate(data_names):
+            s_list.append(s_fit_list[i])  # type: ignore
 
     plt_templ.breakage_rate(
         plot_dir, s_list, n_p_max=20, D_dp_max=9.1, x_axis_value=x_axis_value
@@ -1588,6 +1589,7 @@ def main() -> None:
     #     corrected=False,
     #     x_axis_value="D",
     #     only_base_legend=False,
+    #     show_fit=False
     # )
     # coalescence_kernel_coletti(
     #     plot_dir,
