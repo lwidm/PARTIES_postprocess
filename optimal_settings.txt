@@ -1,0 +1,79 @@
+Order: 1p5, 3p0, 5p0
+
+# ========== p(x|y) pcolormesh and coletti plot =========
+----- Affected plots -----
+fragment_size_distribution non normalised
+fragment_size_distribution normalised
+fragment_size_distribution_normalised
+daughter_aggregate_size_distribution
+
+----- balance_equation_bins ------
+20
+30
+45
+
+----- run family tree options ------
+log_bins = False
+filter_bounce = False
+filter_sparse_bins = 30
+nonbinary_treatement = False
+size_lim: tuple[float | None, float | None] = (2, None)
+
+----- fragment_size_distribution() plot limits -----
+    if normalised:
+        data_name_ylim_map= {
+        "phi1p5": 23,
+        "phi3p0": 65,
+        "phi5p0_new": 162,
+    }
+    else:
+        data_name_ylim_map= {
+        "phi1p5": 33,
+        "phi3p0": 110,
+        "phi5p0_new": 400,
+    }
+
+----- daughter_aggregate_size_distribution() plot limits -----
+ylim = 4.7
+
+----- fragment_size_distribution_normalised() plot limits -----
+    data_name_ylim_map: dict[str, int] = {
+        "phi1p5": 23,
+        "phi3p0": 100,
+        "phi5p0_new": 400,
+    }
+
+
+# ========== K(x,y) pcolormesh and coletti plot =========
+----- Affected plots -----
+coagulation_kernel
+breakage_rate
+coalescence_kernel_coletti
+
+----- balance_equation_bins ------
+10
+12
+15
+----- coagulation_kernel_sigma -----
+0
+0
+0
+
+----- run family tree options ------
+log_bins = True
+filter_bounce = False
+filter_sparse_bins = 30
+nonbinary_treatement = False
+size_lim: tuple[float | None, float | None] = (1, None)
+
+----- coagulation_kernel() plot settings -----
+    data_name_ylim_map: dict[str, float]= {
+        "phi1p5": 3.5,
+        "phi3p0": 5,
+        "phi5p0_new": 8,
+    }
+
+            size_filter=(2, None),
+
+
+

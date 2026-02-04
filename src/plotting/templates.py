@@ -644,7 +644,7 @@ def breakage_rate(
     my_save_fig(out_path, fig, dpi=150)
 
 
-def coalescence_kernel_colletti(
+def coalescence_kernel_coletti(
     output_dir: Path,
     series_list: Sequence[PlotSeries],
     n_p_max: float,

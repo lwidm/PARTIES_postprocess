@@ -103,11 +103,11 @@ def main():
 
     bin_width: float | None = None
     num_bins_list: list[int] = globals.balance_equation_bins
-    log_bins: bool = False
+    log_bins: bool = True
     filter_bounce: bool = True
     filter_sparse_bins: int = 30
     nonbinary_treatement: Literal["discount", "as_binary", "corrected"] = "discount"
-    size_lim: tuple[float | None, float | None] = (2, None)
+    size_lim: tuple[float | None, float | None] = (1, None)
 
     for i, data_name in enumerate(data_names):
         dataset_dir: Path = data_dir / data_name

@@ -838,6 +838,12 @@ def coagulation_kernel(
     x_axis_value: Literal["np", "D", "DD"],
 ):
 
+    data_name_ylim_map: dict[str, float]= {
+        "phi1p5": 3.5,
+        "phi3p0": 5,
+        "phi5p0_new": 8,
+    }
+
     cmap: Colormap = plt.get_cmap("Blues")
     s_pcolormesh_list: list[PlotSeries] = []
     s_contour_list: list[PlotSeries] = []
@@ -846,7 +852,7 @@ def coagulation_kernel(
             data_dir / data_name,
             labels[i],
             cmap,
-            xlim=(0.9, 9.5),
+            xlim=(0.9, data_name_ylim_map[data_name]),
             size_filter=(2, None),
             # xlim=None,
             pcolormesh_log_scale=True,
@@ -881,10 +887,18 @@ def fragment_size_distribution(
     normalised: bool,
 ):
 
-    data_name_ylim_map: dict[str, int] = {
+    data_name_ylim_map: dict[str, int]
+    if normalised:
+        data_name_ylim_map= {
         "phi1p5": 23,
         "phi3p0": 65,
         "phi5p0_new": 162,
+    }
+    else:
+        data_name_ylim_map= {
+        "phi1p5": 33,
+        "phi3p0": 110,
+        "phi5p0_new": 400,
     }
 
     cmap: Colormap = plt.get_cmap("Blues")
@@ -925,8 +939,8 @@ def fragment_size_distribution_normalised(
 
     data_name_ylim_map: dict[str, int] = {
         "phi1p5": 23,
-        "phi3p0": 65,
-        "phi5p0_new": 162,
+        "phi3p0": 100,
+        "phi5p0_new": 400,
     }
 
     cmap: Colormap = plt.get_cmap("Blues")
@@ -1020,7 +1034,7 @@ def coalescence_kernel_coletti(
     #         if s_fit_list[i] is not None:
     #             s_list.append(s_fit_list[i])
 
-    plt_templ.coalescence_kernel_colletti(
+    plt_templ.coalescence_kernel_coletti(
         plot_dir, s_list, n_p_max=20, D_dp_max=9.1, x_axis_value=x_axis_value
     )
 
@@ -1048,7 +1062,7 @@ def daughter_aggregate_size_distribution(
 
     s_fit: PlotSeries = plt_series.daughter_aggregate_size_distribution_fit(s_list)
 
-    plt_templ.daughter_aggregate_size_distribution(plot_dir, [s_fit] + s_list, 4.0)
+    plt_templ.daughter_aggregate_size_distribution(plot_dir, [s_fit] + s_list, 4.7)
 
 
 def number_density_evo_sink_source(
@@ -1530,44 +1544,6 @@ def main() -> None:
     #     cmap_formation=blue_cmap,
     # )
     # noncohesive_floc_lifetime(plot_dir, data_dir)
-    # fragment_size_distribution(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names,
-    #     labels,
-    #     corrected=True,
-    # )
-    # breakage_rate(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names,
-    #     labels,
-    #     markers,
-    #     colours,
-    #     corrected=False,
-    #     x_axis_value="D",
-    #     only_base_legend=False,
-    # )
-    # coalescence_kernel_coletti(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names,
-    #     labels,
-    #     markers,
-    #     colours,
-    #     corrected=False,
-    #     x_axis_value="DD",
-    #     only_base_legend=True,
-    # )
-    # daughter_aggregate_size_distribution(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names,
-    #     labels,
-    #     markers,
-    #     colours,
-    #     corrected=False,
-    # )
     # number_density_evo_sink_source(
     #     plot_dir=plot_dir,
     #     data_dir=data_dir,
@@ -1602,15 +1578,46 @@ def main() -> None:
     #     corrected=False,
     #     x_axis_value="D",
     # )
-    fragment_size_distribution(
-        plot_dir,
-        data_dir,
-        data_names,
-        labels,
-        corrected=False,
-        contour_sigmas=coagulation_kernel_sigmas,
-        normalised=True,
-    )
+    # breakage_rate(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     markers,
+    #     colours,
+    #     corrected=False,
+    #     x_axis_value="D",
+    #     only_base_legend=False,
+    # )
+    # coalescence_kernel_coletti(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     markers,
+    #     colours,
+    #     corrected=False,
+    #     x_axis_value="DD",
+    #     only_base_legend=True,
+    # )
+    # fragment_size_distribution(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     corrected=False,
+    #     contour_sigmas=coagulation_kernel_sigmas,
+    #     normalised=True,
+    # )
+    # fragment_size_distribution(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     corrected=False,
+    #     contour_sigmas=coagulation_kernel_sigmas,
+    #     normalised=False,
+    # )
     # fragment_size_distribution_normalised(
     #     plot_dir,
     #     data_dir,
@@ -1618,6 +1625,15 @@ def main() -> None:
     #     labels,
     #     corrected=False,
     #     x_axis_value="np",
+    # )
+    # daughter_aggregate_size_distribution(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     markers,
+    #     colours,
+    #     corrected=False,
     # )
     # breakage_rate(
     #     plot_dir,
