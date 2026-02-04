@@ -1,8 +1,7 @@
-from os import sep
 import numpy as np
 from typing import Literal, Callable
 from pathlib import Path
-import seaborn as sns
+import seaborn as sns # type: ignore
 import re
 
 from src.plotting.tools import PlotSeries
