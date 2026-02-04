@@ -1,4 +1,3 @@
-from typing import Literal
 from pathlib import Path
 
 from src import globals
@@ -15,7 +14,7 @@ def main():
     data_dir: Path = globals.data_dir
     output_dir: Path = globals.output_dir
 
-    num_bins: int = 14
+    num_bins: int = 20
     cluster_param: float = 1e-4
     filter_bounce: bool = True
     filter_sparse_bins: int = 40
@@ -38,6 +37,7 @@ def main():
                 filter_bounce=filter_bounce,
                 filter_sparse_bins=filter_sparse_bins,
                 size_lim=size_lim,
+                parent_num_bins=num_bins
             )
         )
         myio.output.save_to_pickle(
@@ -58,6 +58,7 @@ def main():
                 filter_bounce=filter_bounce,
                 filter_sparse_bins=filter_sparse_bins,
                 size_lim=size_lim,
+                parent_num_bins=num_bins
             )
         )
         myio.output.save_to_pickle(

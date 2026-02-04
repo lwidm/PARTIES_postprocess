@@ -936,7 +936,8 @@ def compute_daughter_aggregate_size_distribution(
     corrected: bool,
     filter_bounce: bool,
     filter_sparse_bins: int,
-    size_lim: tuple[float | None, float | None]
+    size_lim: tuple[float | None, float | None],
+    parent_num_bins: int,
 ) -> dict[str, dict]:
 
     metadata_dict: dict[str, dict[str, int | float | str]] = metadata.read_metadata(
@@ -994,6 +995,29 @@ def compute_daughter_aggregate_size_distribution(
         p_count = {i: 0 for i in size_centers_idx_list}
         n_fragmentation: int = 0
 
+        parent_max_size = max(
+            (rec["size"] for rec in fam_tree.values()
+             if rec["size"] >= size_min and len(rec["children"]) == 2),
+            default=size_min + 1,
+        )
+        parent_centers_arr: np.ndarray
+        parent_edges_arr: np.ndarray
+        if parent_num_bins == 1:
+            parent_centers_arr = np.array([(size_min + parent_max_size) / 2])
+            parent_edges_arr = np.array([size_min, parent_max_size])
+        else:
+            parent_centers_arr = np.linspace(size_min, parent_max_size, parent_num_bins)
+            parent_edges_arr = np.zeros(parent_num_bins + 1)
+            parent_edges_arr[1:-1] = (parent_centers_arr[:-1] + parent_centers_arr[1:]) / 2
+            parent_edges_arr[0] = parent_centers_arr[0] - (parent_edges_arr[1] - parent_centers_arr[0])
+            parent_edges_arr[-1] = parent_centers_arr[-1] + (parent_centers_arr[-1] - parent_edges_arr[-2])
+        parent_bin_width_arr = parent_edges_arr[1:] - parent_edges_arr[:-1]
+        parent_centers_idx_list = list(range(parent_num_bins))
+        p_count_2d: dict[tuple[int, int], int] = {
+            (i, j): 0 for i in size_centers_idx_list for j in parent_centers_idx_list
+        }
+        n_frag_parent: dict[int, int] = {j: 0 for j in parent_centers_idx_list}
+
         floc_record: FlocRecord
         for floc_record in tqdm(
             fam_tree.values(),
@@ -1002,8 +1026,6 @@ def compute_daughter_aggregate_size_distribution(
             unit=" floc_record",
         ):
 
-            if floc_record["size"] < size_min or floc_record["size"] > size_max:
-                continue
             n_children: int = len(floc_record["children"])
             if n_children != 2:
                 continue
@@ -1035,9 +1057,17 @@ def compute_daughter_aggregate_size_distribution(
                 npd_npm2, size_centers_arr, size_edges_arr
             )
 
-            p_count[child_bin_idx_1] += 1
-            p_count[child_bin_idx_2] += 1
-            n_fragmentation += 1
+            if floc_record["size"] >= size_min and floc_record["size"] <= size_max:
+                p_count[child_bin_idx_1] += 1
+                p_count[child_bin_idx_2] += 1
+                n_fragmentation += 1
+
+            parent_bin_idx, _ = _get_bin_size(
+                size, parent_centers_arr, parent_edges_arr
+            )
+            p_count_2d[(child_bin_idx_1, parent_bin_idx)] += 1
+            p_count_2d[(child_bin_idx_2, parent_bin_idx)] += 1
+            n_frag_parent[parent_bin_idx] += 1
 
     min_bin_count: int = filter_sparse_bins
 
@@ -1056,7 +1086,25 @@ def compute_daughter_aggregate_size_distribution(
         "bin_widths": bin_width_arr,
     }
 
-    return {"p": p, "bin_info": bin_info}
+    p_2d: dict[tuple[int, int], float] = {}
+    for i in size_centers_idx_list:
+        for j in parent_centers_idx_list:
+            if n_frag_parent[j] == 0 or p_count_2d[(i, j)] < min_bin_count:
+                p_2d[(i, j)] = np.nan
+                continue
+            p_2d[(i, j)] = float(p_count_2d[(i, j)]) / (
+                float(n_frag_parent[j]) * 2 * bin_width_arr[i]
+            )
+
+    parent_bin_info: dict[str, list[int] | list[float] | np.ndarray] = {
+        "center_sizes": parent_centers_arr,
+        "center_idxs": parent_centers_idx_list,
+        "edge_sizes": parent_edges_arr,
+        "edge_idxs": list(range(len(parent_edges_arr))),
+        "bin_widths": parent_bin_width_arr,
+    }
+
+    return {"p": p, "p_2d": p_2d, "bin_info": bin_info, "parent_bin_info": parent_bin_info}
 
 
 def compute_floculation_balances(params: dict[str, dict]) -> dict[str, np.ndarray]:

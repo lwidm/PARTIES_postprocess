@@ -5,7 +5,6 @@ from typing import Sequence, Literal, Callable, Any
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
-from matplotlib.ticker import ScalarFormatter
 
 from src.plotting.tools import (
     PlotSeries,
@@ -149,7 +148,7 @@ def normal_stress_wall(
     name: str = "wall_normal_stress"
     if use_marker:
         name: str = "wall_normal_stress_marker"
-    ax, fig, _ = generic_plot(
+    _, fig, _ = generic_plot(
         list(series_list),
         legend=True,
         xlabel=r"$y^+$",
@@ -172,7 +171,7 @@ def floc_count_evolution(
     ylabel: str = r"\#Flocs"
     if normalised:
         ylabel = r"(\#Flocs) / (\#Particles)"
-    ax, fig, _ = generic_plot(
+    _, fig, _ = generic_plot(
         list(series_list),
         legend=True,
         xlabel=r"Dimensionless time, $\tau = L/U$ [-]",
@@ -187,7 +186,7 @@ def floc_count_evolution(
 
 def fluid_Ekin_evolution(output_dir: Path, series_list) -> None:
     out_path = output_dir / "E_kin_evolution"
-    ax, fig, _ = generic_plot(
+    _, fig, _ = generic_plot(
         list(series_list),
         legend=True,
         xlabel=r"Dimensionless time, $\tau = L/U$ [-]",
@@ -212,7 +211,7 @@ def _pdf(
     additional_objects: Sequence[Callable[[Axes], Any]] | None = None,
 ) -> None:
     out_path = output_dir / f"{name}"
-    ax, fig, _ = generic_plot(
+    _, fig, _ = generic_plot(
         list(series_list),
         legend=True,
         xlabel=xlabel,
@@ -318,7 +317,7 @@ def _avg_floc_dir(
     if inner_units:
         xlabel: str = r"$y^+$"
     out_path = output_dir / f"{name}"
-    ax, fig, _ = generic_plot(
+    _, fig, _ = generic_plot(
         list(series_list),
         legend=True,
         xlabel=xlabel,
@@ -382,7 +381,7 @@ def phi_eulerian(
     if normalised:
         ylabel: str = r"$\langle \phi / \phi_0 \rangle$ [-]"
 
-    ax, fig, _ = generic_plot(
+    _, fig, _ = generic_plot(
         list(series_list),
         legend=True,
         xlabel=xlabel,
@@ -520,20 +519,8 @@ def coagulation_kernel(
 ) -> None:
     out_path: Path = output_dir / f"coagulation_kernel_{name}"
 
-    K: np.ndarray = series_pcolormesh.data["C"]
-    X: np.ndarray = series_pcolormesh.data["X"]
-    Y: np.ndarray = series_pcolormesh.data["Y"]
     xlim: tuple[float, float] = series_pcolormesh.data["xlim"]
     ylim: tuple[float, float] = series_pcolormesh.data["ylim"]
-
-    mask = (
-        (X[0, :] >= xlim[0])
-        & (X[0, :] <= xlim[1])
-        & (Y[:, 0] >= ylim[0])
-        & (Y[:, 0] <= ylim[1])
-    )
-
-    cmax: float = np.nanmax(K[mask])
 
     s_list = (
         [series_pcolormesh, series_contour]
@@ -553,7 +540,7 @@ def coagulation_kernel(
         xlabel = "$x^2, \\quad D^2/d_p^2 \\sim (\\sqrt[3]{n_p})^2$"
         ylabel = "$y^2, \\quad D^2/d_p^2 \\sim (\\sqrt[3]{n_p})^2$"
 
-    ax, fig, mesh = generic_plot(
+    ax, fig, _ = generic_plot(
         s_list,
         legend=True,
         xlabel=xlabel,
@@ -564,8 +551,6 @@ def coagulation_kernel(
         legend_loc="best",
     )
 
-    # mesh[0].set_clim(0, cmax)
-    cbar = plt.colorbar(mesh[0], ax=ax, orientation="horizontal")
     ax.set_aspect("equal", adjustable="box")
 
     my_save_fig(out_path, fig, dpi=150)
@@ -594,7 +579,7 @@ def fragment_size_distribution(
     else:
         xlabel = "$x \\quad (n_p)$"
 
-    ax, fig, mesh = generic_plot(
+    ax, fig, _ = generic_plot(
         s_list,
         legend=True,
         xlabel= xlabel ,
@@ -605,7 +590,6 @@ def fragment_size_distribution(
         legend_loc="best",
     )
 
-    cbar = plt.colorbar(mesh[0], ax=ax, orientation="horizontal")
     if not normalised:
         ax.set_aspect("equal", adjustable="box")
     my_save_fig(out_path, fig, dpi=150)
@@ -682,14 +666,14 @@ def coalescence_kernel_colletti(
     xlim: tuple[float | None, float | None]
     if x_axis_value == "np":
         xlim = (2, n_p_max)
-        xlabel = r"floc size: $x_1 + x_2, \quad n_{p,1} + n_{p,2})$"
+        xlabel = r"floc size: $x_1 + x_2, \quad x=n_p$"
     elif x_axis_value == "D":
         xlim = (0.9, D_dp_max)
         xlim = (None, None)
-        xlabel = r"floc size: $x_1 + x_2, \quad (D_1 + D_2)/d_p \quad D/d_p \sim \sqrt[3]{n_p})$"
+        xlabel = r"floc size: $x_1 + x_2, \quad x = D/d_p \sim \sqrt[3]{n_p})$"
     elif x_axis_value == "DD":
         xlim = (None, None)
-        xlabel = r"floc size: $x_1^2 + x_2^2, \quad (D_1^2 + D_2^2)/d_p^2 \quad D/d_p \sim \sqrt[3]{n_p})$"
+        xlabel = r"floc size: $x_1^2 + x_2^2, \quad  x=D/d_p \sim \sqrt[3]{n_p})$"
     elif x_axis_value == "DD+D":
         xlim = (None, None)
         xlabel = r"floc size: $(x_1^2 + x_2^2)(x_1 + x_2), \quad x=D/d_p \sim \sqrt[3]{n_p})$"
@@ -736,7 +720,7 @@ def daughter_aggregate_size_distribution(
 ) -> None:
     out_path = output_dir / "daughter_aggregate_size_distribution"
 
-    ax, fig, _ = generic_plot(
+    _, fig, _ = generic_plot(
         list(series_list),
         legend=True,
         xlabel=r"$n_{p,d} / n_{p,m}$",

@@ -915,6 +915,42 @@ def fragment_size_distribution(
             plot_dir, s_pcolormesh_list[i], None, data_names[i] + suffix, normalised=normalised
         )
 
+def fragment_size_distribution_normalised(
+    plot_dir: Path,
+    data_dir: Path,
+    data_names: list[str],
+    labels: list[str],
+    corrected: bool,
+    x_axis_value: Literal["np", "D", "DD"],
+):
+
+    data_name_ylim_map: dict[str, int] = {
+        "phi1p5": 23,
+        "phi3p0": 65,
+        "phi5p0_new": 162,
+    }
+
+    cmap: Colormap = plt.get_cmap("Blues")
+    s_pcolormesh_list: list[PlotSeries] = []
+    s_contour_list: list[PlotSeries] = []
+    for i, data_name in enumerate(data_names):
+        s_pcolormesh = plt_series.fragment_size_distribution_normalised(
+            data_dir / data_name,
+            labels[i],
+            cmap,
+            ylim=(0.1, data_name_ylim_map[data_name]),
+            corrected = corrected,
+            x_axis_value = x_axis_value,
+        )
+        s_pcolormesh_list.append(s_pcolormesh)
+        # s_contour_list.append(s_contour)
+
+    suffix = "_corrected" if corrected else "_uncorrected"
+    for i in range(len(data_names)):
+        plt_templ.fragment_size_distribution(
+            plot_dir, s_pcolormesh_list[i], None, data_names[i] + suffix, normalised=True
+        )
+
 
 def breakage_rate(
     plot_dir: Path,
@@ -925,6 +961,7 @@ def breakage_rate(
     colours: list[str | tuple[float, float, float, float]],
     corrected: bool,
     x_axis_value: Literal["np", "D"],
+    only_base_legend: bool,
 ) -> None:
     s_list: list[PlotSeries] = []
     s_fit_list: list[PlotSeries | None] = []
@@ -937,13 +974,14 @@ def breakage_rate(
             label=labels[i],
             corrected=corrected,
             x_axis_value=x_axis_value,
+            only_base_legend=only_base_legend,
         )
         s_list.append(s)
-        s_fit_list.append(s_fit)
+        # s_fit_list.append(s_fit)
 
-    if x_axis_value == "D":
-        for i, data_name in enumerate(data_names):
-            s_list.append(s_fit_list[i])  # type: ignore
+    # if x_axis_value == "D":
+    #     for i, data_name in enumerate(data_names):
+    #         s_list.append(s_fit_list[i])  # type: ignore
 
     plt_templ.breakage_rate(
         plot_dir, s_list, n_p_max=20, D_dp_max=9.1, x_axis_value=x_axis_value
@@ -959,11 +997,12 @@ def coalescence_kernel_coletti(
     colours: list[str | tuple[float, float, float, float]],
     corrected: bool,
     x_axis_value: Literal["np", "D", "DD", "DD+D"],
+    only_base_legend: bool,
 ) -> None:
     s_list: list[PlotSeries] = []
     s_fit_list: list[PlotSeries | None] = []
     for i, data_name in enumerate(data_names):
-        s, s_fit = plt_series.coalescence_kernel_colletti(
+        s, s_fit = plt_series.coalescence_kernel_coletti(
             pickle_dir=data_dir / data_name,
             size_filter=(2, None),
             linestyle="None",
@@ -972,14 +1011,15 @@ def coalescence_kernel_coletti(
             label=labels[i],
             corrected=corrected,
             x_axis_value=x_axis_value,
+            only_base_legend=only_base_legend,
         )
         s_list.append(s)
-        s_fit_list.append(s_fit)
+        # s_fit_list.append(s_fit)
 
-    if x_axis_value != "np":
-        for i, data_name in enumerate(data_names):
-            if s_fit_list[i] is not None:
-                s_list.append(s_fit_list[i])
+    # if x_axis_value != "np":
+    #     for i, data_name in enumerate(data_names):
+    #         if s_fit_list[i] is not None:
+    #             s_list.append(s_fit_list[i])
 
     plt_templ.coalescence_kernel_colletti(
         plot_dir, s_list, n_p_max=20, D_dp_max=9.1, x_axis_value=x_axis_value
@@ -1491,14 +1531,6 @@ def main() -> None:
     #     cmap_formation=blue_cmap,
     # )
     # noncohesive_floc_lifetime(plot_dir, data_dir)
-    # coagulation_kernel(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names,
-    #     labels,
-    #     contour_sigmas=coagulation_kernel_sigmas,
-    #     corrected=True,
-    # )
     # fragment_size_distribution(
     #     plot_dir,
     #     data_dir,
@@ -1513,19 +1545,21 @@ def main() -> None:
     #     labels,
     #     markers,
     #     colours,
-    #     corrected=True,
+    #     corrected=False,
     #     x_axis_value="D",
+    #     only_base_legend=False,
     # )
-    coalescence_kernel_coletti(
-        plot_dir,
-        data_dir,
-        data_names,
-        labels,
-        markers,
-        colours,
-        corrected=False,
-        x_axis_value="DD",
-    )
+    # coalescence_kernel_coletti(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     markers,
+    #     colours,
+    #     corrected=False,
+    #     x_axis_value="DD",
+    #     only_base_legend=True,
+    # )
     # daughter_aggregate_size_distribution(
     #     plot_dir,
     #     data_dir,
@@ -1574,10 +1608,18 @@ def main() -> None:
         data_dir,
         data_names,
         labels,
-        corrected=True,
+        corrected=False,
         contour_sigmas=coagulation_kernel_sigmas,
         normalised=True,
     )
+    # fragment_size_distribution_normalised(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     corrected=False,
+    #     x_axis_value="np",
+    # )
     # breakage_rate(
     #     plot_dir,
     #     data_dir,

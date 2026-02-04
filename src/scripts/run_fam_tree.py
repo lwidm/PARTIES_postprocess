@@ -107,12 +107,12 @@ def main():
     filter_bounce: bool = True
     filter_sparse_bins: int = 30
     nonbinary_treatement: Literal["discount", "as_binary", "corrected"] = "discount"
-    size_lim: tuple[float | None, float | None] = (1, None)
+    size_lim: tuple[float | None, float | None] = (2, None)
 
     for i, data_name in enumerate(data_names):
         dataset_dir: Path = data_dir / data_name
         out_dataset_dir: Path = output_dir / data_name
-        # _compute_single_pdf(dataset_dir, out_dataset_dir, U_mean[i], L[i], d_p[i])
+        _compute_single_pdf(dataset_dir, out_dataset_dir, U_mean[i], L[i], d_p[i])
 
         result_corrected: dict[str, dict] = (
             family_tree.compute_number_density_evolutions_params(
@@ -164,58 +164,58 @@ def main():
             result_uncorrected,
         )
 
-        # result_diff: dict[str, dict] = {}
-        # for key in result_corrected.keys():
-        #     if key == "bin_info":
-        #         result_diff[key] = result_corrected[
-        #             key
-        #         ]  # bin_info is the same for both
-        #     else:
-        #         result_diff[key] = {}
-        #         for subkey in result_corrected[key].keys():
-        #             if isinstance(result_corrected[key][subkey], (int, float)):
-        #                 result_diff[key][subkey] = (
-        #                     result_corrected[key][subkey]
-        #                     - result_uncorrected[key][subkey]
-        #                 )
-        #             else:
-        #                 result_diff[key][subkey] = result_corrected[key][
-        #                     subkey
-        #                 ]  # Can't subtract non-numeric types
-        # myio.output.save_to_pickle(
-        #     out_dataset_dir / "number_density_evolution_params_diff.pkl", result_diff
-        # )
-        #
-        # # Compute flocculation balances for corrected version
-        # floc_balance_corrected: dict = family_tree.compute_floculation_balances(
-        #     params=result_corrected
-        # )
-        # myio.lwidmer.save_floculation_balance(
-        #     out_dataset_dir, floc_balance_corrected, corrected=True
-        # )
-        #
-        # # Compute flocculation balances for uncorrected version
-        # floc_balance_uncorrected: dict = family_tree.compute_floculation_balances(
-        #     params=result_uncorrected
-        # )
-        # myio.lwidmer.save_floculation_balance(
-        #     out_dataset_dir, floc_balance_uncorrected, corrected=False
-        # )
-        #
-        # # Compute and save difference in flocculation balances
-        # floc_balance_diff: dict[str, np.ndarray] = {}
-        # for key in floc_balance_corrected.keys():
-        #     if key == "center_sizes_arr" or key == "edge_sizes_arr":
-        #         floc_balance_diff[key] = floc_balance_corrected[
-        #             key
-        #         ]  # Size arrays are the same
-        #     else:
-        #         floc_balance_diff[key] = (
-        #             floc_balance_corrected[key] - floc_balance_uncorrected[key]
-        #         )
-        # myio.lwidmer.save_floculation_balance(
-        #     out_dataset_dir, floc_balance_diff, is_difference=True
-        # )
+        result_diff: dict[str, dict] = {}
+        for key in result_corrected.keys():
+            if key == "bin_info":
+                result_diff[key] = result_corrected[
+                    key
+                ]  # bin_info is the same for both
+            else:
+                result_diff[key] = {}
+                for subkey in result_corrected[key].keys():
+                    if isinstance(result_corrected[key][subkey], (int, float)):
+                        result_diff[key][subkey] = (
+                            result_corrected[key][subkey]
+                            - result_uncorrected[key][subkey]
+                        )
+                    else:
+                        result_diff[key][subkey] = result_corrected[key][
+                            subkey
+                        ]  # Can't subtract non-numeric types
+        myio.output.save_to_pickle(
+            out_dataset_dir / "number_density_evolution_params_diff.pkl", result_diff
+        )
+
+        # Compute flocculation balances for corrected version
+        floc_balance_corrected: dict = family_tree.compute_floculation_balances(
+            params=result_corrected
+        )
+        myio.lwidmer.save_floculation_balance(
+            out_dataset_dir, floc_balance_corrected, corrected=True
+        )
+
+        # Compute flocculation balances for uncorrected version
+        floc_balance_uncorrected: dict = family_tree.compute_floculation_balances(
+            params=result_uncorrected
+        )
+        myio.lwidmer.save_floculation_balance(
+            out_dataset_dir, floc_balance_uncorrected, corrected=False
+        )
+
+        # Compute and save difference in flocculation balances
+        floc_balance_diff: dict[str, np.ndarray] = {}
+        for key in floc_balance_corrected.keys():
+            if key == "center_sizes_arr" or key == "edge_sizes_arr":
+                floc_balance_diff[key] = floc_balance_corrected[
+                    key
+                ]  # Size arrays are the same
+            else:
+                floc_balance_diff[key] = (
+                    floc_balance_corrected[key] - floc_balance_uncorrected[key]
+                )
+        myio.lwidmer.save_floculation_balance(
+            out_dataset_dir, floc_balance_diff, is_difference=True
+        )
 
 
 if __name__ == "__name__":

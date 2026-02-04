@@ -1,11 +1,10 @@
 # -- src/plotting/series.py
 
 from pathlib import Path
-from typing import Literal, Callable
+from typing import Literal
 import h5py
 from scipy import stats
 from scipy.optimize import curve_fit
-from scipy.interpolate import RectBivariateSpline
 
 import numpy as np
 import pickle
@@ -13,7 +12,7 @@ import pickle
 from matplotlib.colors import Colormap, LogNorm, TwoSlopeNorm
 from matplotlib import pyplot as plt
 from src.theory import law_of_the_wall as low
-from src.myio import output, utils, lwidmer
+from src.myio import lwidmer
 from src.plotting.tools import (
     PlotSeries,
     _gaussian_filter_2d,
@@ -1724,6 +1723,57 @@ def fragment_size_distribution(
 
     return s_pcolormesh, s_contour
 
+def fragment_size_distribution_normalised(
+    pickle_dir: Path,
+    label: str | None,
+    cmap: Colormap,
+    ylim: tuple[float, float] | None,
+    corrected: bool,
+    x_axis_value: Literal["np", "D", "DD", "DD+D"],
+) -> PlotSeries:
+
+    pickle_file = (
+        "daughter_aggregate_size_distribution_corrected.pkl"
+        if corrected
+        else "daughter_aggregate_size_distribution_uncorrected.pkl"
+    )
+    with open(pickle_dir / pickle_file, "rb") as file:
+        results: dict[str, dict] = pickle.load(file)
+
+    p: dict[tuple[int, int], float] = results["p_2d"]
+    sizes: np.ndarray = results["bin_info"]["center_sizes"]
+    sizes_idx_list: list[int] = results["bin_info"]["center_idxs"]
+    sizes_parents: np.ndarray = results["parent_bin_info"]["center_sizes"]
+    sizes_parents_idx_list: list[int] = results["parent_bin_info"]["center_idxs"]
+
+    X, Y = np.meshgrid(sizes, sizes_parents)
+    C: np.ndarray = np.zeros_like(X, dtype=float)
+    for i in sizes_idx_list:
+        for j in sizes_parents_idx_list:
+            C[j, i] = p[(i, j)]
+
+    pcolormesh_kwargs = {
+        "label": label,
+        "cmap": cmap,
+        "edgecolors": None,
+    }
+
+    s_pcolormesh: PlotSeries = PlotSeries(
+        data={
+            "X": X,
+            "Y": Y,
+            "C": C,
+            "xlim": (0.01, 1.01),
+            "ylim": ylim,
+        },
+        x_key="x",
+        y_key="y",
+        plot_method="pcolormesh",
+        kwargs=pcolormesh_kwargs,
+    )
+
+    return s_pcolormesh
+
 
 def breakage_agglomeration_rate(
     linestyle: str,
@@ -1733,6 +1783,7 @@ def breakage_agglomeration_rate(
     x_axis_value: Literal["np", "D", "DD", "DD+D"],
     x_arr: np.ndarray,
     y_arr: np.ndarray,
+    only_base_legend: bool,
 ) -> tuple[PlotSeries, PlotSeries | None]:
 
     plot_method: str
@@ -1784,7 +1835,7 @@ def breakage_agglomeration_rate(
             y_key="y",
             plot_method=plot_method,
             kwargs={
-                "label": f"${b:.3g}\\cdot x^{{{a:.3g}}}$",
+                "label": f"${b:.3g}\\cdot x^{{{a:.3g}}}$" if not only_base_legend else "",
                 "color": colour,
                 "linestyle": "--",
                 "marker": "None",
@@ -1802,6 +1853,7 @@ def breakage_rate(
     label: str | None,
     corrected: bool,
     x_axis_value: Literal["np", "D"],
+    only_base_legend: bool,
 ) -> tuple[PlotSeries, PlotSeries | None]:
 
     pickle_file = (
@@ -1833,12 +1885,13 @@ def breakage_rate(
         x_axis_value=x_axis_value,
         x_arr=x_arr,
         y_arr=F_arr,
+        only_base_legend=only_base_legend,
     )
 
     return s, s_fit
 
 
-def coalescence_kernel_colletti(
+def coalescence_kernel_coletti(
     pickle_dir: Path,
     size_filter: tuple[float | None, float | None],
     linestyle: str,
@@ -1847,6 +1900,7 @@ def coalescence_kernel_colletti(
     label: str | None,
     corrected: bool,
     x_axis_value: Literal["np", "D", "DD", "DD+D"],
+    only_base_legend: bool,
 ) -> tuple[PlotSeries, PlotSeries | None]:
 
     pickle_file = (
@@ -1900,6 +1954,7 @@ def coalescence_kernel_colletti(
         x_axis_value=x_axis_value,
         x_arr=np.asarray(xx_list),
         y_arr=np.asarray(y_list),
+        only_base_legend=only_base_legend,
     )
 
     return s, s_fit

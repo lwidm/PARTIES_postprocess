@@ -507,7 +507,7 @@ def compute_event(
 
 def main() -> None:
     corrected: bool = False
-    seeds: np.ndarray = np.asarray([1, 2, 3, 4, 5]) * 2 + 1
+    seeds: np.ndarray = np.asarray([1, 2, 3, 4, 5]) * 19 + 1
     nonbinary_types: list[
         Literal["breakup", "agglomeration", "simultaneous", "mass_conservation"]
     ] = ["breakup", "agglomeration", "simultaneous", "mass_conservation"]
