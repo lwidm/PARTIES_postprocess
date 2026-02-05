@@ -24,6 +24,7 @@ def fuild_velocity_profile(
     labels: list[str],
     colours: list[str | tuple[float, float, float, float]],
     use_markers: bool,
+    font_scale: float,
 ):
     data_dirs: list[Path] = [data_dir / data_name for data_name in data_names]
     Num_data: int = len(data_names)
@@ -55,6 +56,7 @@ def fuild_velocity_profile(
         use_label_log_fit_texas,
         use_label_visc_fit_texas,
         linestyles,
+        font_scale,
     )
     parties_wall_series: list[list[PlotSeries]] = []
     for i in range(Num_data):
@@ -69,6 +71,7 @@ def fuild_velocity_profile(
                 use_label_log_fit=use_label_log_fit,
                 use_label_visc_fit=use_label_visc_fit,
                 linestyles=linestyles,
+                font_scale=font_scale,
             )
         )
 
@@ -86,7 +89,7 @@ def fuild_velocity_profile(
         )
         all_wall_series += proxy_series
 
-    plt_templ.velocity_profile_wall(plot_dir, all_wall_series)
+    plt_templ.velocity_profile_wall(plot_dir, all_wall_series, font_scale=font_scale)
 
 
 def fluid_wall_normal(
@@ -1512,19 +1515,19 @@ def main() -> None:
     #     data_dir, plot_dir, data_dir, data_names, labels, colours, use_markers=False
     # )
     # fuild_velocity_profile(
-    #     data_dir, plot_dir, data_dir, data_names, labels, colours, use_markers=True
+    #     data_dir, plot_dir, data_dir, data_names, labels, colours, use_markers=True, font_scale=1.25
     # )
     # phi_eulerian(plot_dir, data_dir, data_names, labels, colours, False)
-    # lagrangian_data(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names,
-    #     labels,
-    #     colours,
-    #     markers,
-    #     show_errs=False,
-    #     separate_plots=False,
-    # )
+    lagrangian_data(
+        plot_dir,
+        data_dir,
+        data_names,
+        labels,
+        colours,
+        markers,
+        show_errs=False,
+        separate_plots=False,
+    )
     # fam_tree(
     #     plot_dir,
     #     data_dir,
@@ -1536,14 +1539,14 @@ def main() -> None:
     #     separate_plots=True,
     #     unfiltered=3,
     # )
-    # floc_timescale(
-    #     plot_dir=plot_dir,
-    #     data_dir=data_dir,
-    #     data_names=data_names,
-    #     labels=labels,
-    #     cmap_breakup=red_cmap,
-    #     cmap_formation=blue_cmap,
-    # )
+    floc_timescale(
+        plot_dir=plot_dir,
+        data_dir=data_dir,
+        data_names=data_names,
+        labels=labels,
+        cmap_breakup=red_cmap,
+        cmap_formation=blue_cmap,
+    )
     # noncohesive_floc_lifetime(plot_dir, data_dir)
     # number_density_evo_sink_source(
     #     plot_dir=plot_dir,

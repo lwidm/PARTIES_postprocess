@@ -50,13 +50,13 @@ class PlotSeries:
 SeriesLike = PlotSeries | Sequence[PlotSeries]
 
 default_kwargs: dict[str, dict] = {
-    "kLineWidth": {"linewidth": 0.9},  # default linewidth for generic plots
-    "kBarLineWidth": {"linewidth": 1.0},  # default linewidth for bar plots
-    "kELineWidth": {"linewidth": 0.6},  # default elinwidth (linewidth for errorbars)
-    "kECapSize": {"capsize": 2.0},  # default capsize (cap size for errorbars)
-    "kECapThick": {"capthick": 0.8},  # default capthick (cap thinkness for errorbars)
+    "kLineWidth": {"linewidth": 0.9 * kFontScale},  # default linewidth for generic plots
+    "kBarLineWidth": {"linewidth": 1.0 * kFontScale},  # default linewidth for bar plots
+    "kELineWidth": {"linewidth": 0.6 * kFontScale},  # default elinwidth (linewidth for errorbars)
+    "kECapSize": {"capsize": 2.0 * kFontScale},  # default capsize (cap size for errorbars)
+    "kECapThick": {"capthick": 0.8 * kFontScale},  # default capthick (cap thinkness for errorbars)
     "kBarsAbove": {"barsabove": True},  # default barsabove
-    "kMarkerSize": {"markersize": 5.0},  # default markersize
+    "kMarkerSize": {"markersize": 5.0 * kFontScale},  # default markersize
 }
 
 
@@ -443,4 +443,5 @@ def generic_plot(
 def my_save_fig(output_path: Path, fig: Figure, dpi: float = 300):
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(str(output_path) + ".png", dpi=dpi)
-    fig.savefig(str(output_path) + ".eps", dpi=dpi)
+    # fig.savefig(str(output_path) + ".eps", dpi=dpi)
+    fig.savefig(str(output_path) + ".pdf", dpi=dpi)

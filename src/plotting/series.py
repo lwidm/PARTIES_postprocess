@@ -391,6 +391,7 @@ def u_plus_mean_parties(
     use_label_log_fit: bool,
     use_label_visc_fit: bool,
     linestyles: tuple[str, str, str],
+    font_scale: float,
 ) -> list[PlotSeries]:
     yc_plus, U = lwidmer.read_csv_columns(
         csv_dir / "flow_mean_data_inner.csv", (0, 1), remove_nan=1
@@ -409,6 +410,7 @@ def u_plus_mean_parties(
         use_label_log_fit,
         use_label_visc_fit,
         linestyles,
+        font_scale,
     )
 
 
@@ -422,6 +424,7 @@ def u_plus_mean_utexas(
     use_label_log_fit: bool,
     use_label_visc_fit: bool,
     linestyles: tuple[str, str, str],
+    font_scale: float,
 ) -> list[PlotSeries]:
     yc_plus, U = lwidmer.read_csv_columns(
         csv_dir / "LM_Channel_0180_mean_prof.dat", (1, 2), remove_nan=1
@@ -437,6 +440,7 @@ def u_plus_mean_utexas(
         use_label_log_fit,
         use_label_visc_fit,
         linestyles,
+        font_scale
     )
 
 
@@ -451,6 +455,7 @@ def u_plus_mean(
     use_label_log_fit: bool,
     use_label_visc_fit: bool,
     linestyles: tuple[str, str, str],
+    font_scale: float,
 ) -> list[PlotSeries]:
 
     label_local: str
@@ -495,7 +500,7 @@ def u_plus_mean(
             plot_method="semilogx",
             kwargs={
                 "linestyle": linestyles[1],
-                "linewidth": 0.9,
+                "linewidth": 0.9 * font_scale,
                 "label": label_local,
                 "color": colour,
             },
@@ -518,7 +523,7 @@ def u_plus_mean(
             plot_method="semilogx",
             kwargs={
                 "linestyle": linestyles[2],
-                "linewidth": 0.9,
+                "linewidth": 0.9 * font_scale,
                 "label": label_local,
                 "color": colour,
             },

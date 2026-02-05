@@ -26,6 +26,7 @@ def velocity_profile_wall(
     legend_loc: str = "lower right",
     legend_bbox: tuple[float, float] = (1.0, 0.20),
     dpi: int = 300,
+    font_scale: float = 1.0,
 ) -> None:
     if not series_list:
         raise ValueError("series_list must contain at least one PlotSeries")
@@ -62,7 +63,7 @@ def velocity_profile_wall(
         ax.axvline(
             x=boundary_position,
             color="0.25",
-            linewidth=0.8,
+            linewidth=0.8 * font_scale,
             linestyle=":",
             alpha=0.7,
             zorder=0,
@@ -79,7 +80,7 @@ def velocity_profile_wall(
     label_style = {
         "ha": "center",
         "va": "top",
-        "fontsize": 12,
+        "fontsize": 12 * font_scale,
         "bbox": {"facecolor": "white", "edgecolor": "none", "alpha": 0.0},
     }
 
@@ -89,10 +90,12 @@ def velocity_profile_wall(
     ax.text(buffer_center, label_y_position, "Buffer layer\n$5<y^+<30$", **label_style)
     ax.text(log_center, label_y_position, "Log-law region\n$30<y^+$", **label_style)
 
-    ax.set_xlabel(xlabel, fontsize=14)
-    ax.set_ylabel(ylabel, fontsize=14)
-    ax.legend(loc=legend_loc, bbox_to_anchor=legend_bbox)
+    ax.set_xlabel(xlabel, fontsize=14 * font_scale)
+    ax.set_ylabel(ylabel, fontsize=14 * font_scale)
+    # ax.legend(loc=legend_loc, bbox_to_anchor=legend_bbox, fontsize=14 * font_scale)
+    ax.legend(loc="best", fontsize=12 * font_scale)
     ax = format_plot_axes(ax)
+    ax.tick_params(axis="both", which="both", labelsize=12 * font_scale)
 
     Re_val: float | None = None
     Re_tau_val: float | None = None
@@ -115,7 +118,7 @@ def velocity_profile_wall(
     else:
         plot_filename = output_dir / "y+_u+"
 
-    fig.savefig(str(plot_filename), dpi=dpi)
+    my_save_fig(plot_filename, fig)
 
 
 def normal_stress_wall(
@@ -154,8 +157,9 @@ def normal_stress_wall(
         xlabel=r"$y^+$",
         ylabel=r"$\left\{\langle u^\prime u^\prime \rangle, \langle v^\prime v^\prime \rangle, \langle w^\prime w^\prime \rangle\right\}/u_\tau^2$",
         figsize=(6.5, 5.5),
-        legend_loc="lower right",
-        legend_bbox=(1.0, 0.50),
+        # legend_loc="lower right",
+        # legend_bbox=(1.0, 0.50),
+        legend_loc="best",
         xlim=xlim,
         ylim=ylim,
     )
