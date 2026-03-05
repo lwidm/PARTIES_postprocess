@@ -77,3 +77,50 @@ size_lim: tuple[float | None, float | None] = (1, None)
 
 
 
+# ========== PBE balances ==========
+
+----- Affected plots -----
+number_density_evo_sink_source
+cumulative_floculation_balance
+
+----- run family tree options -----
+bin_width: float | None = 1
+num_bins_list: list[int | None] = [None for i in globals.balance_equation_bins]
+log_bins: bool | None = None
+filter_bounce: bool = False
+filter_sparse_bins: int = 1
+nonbinary_treatement: Literal["discount", "as_binary", "corrected"] = "discount"
+size_lim: tuple[float | None, float | None] = (1, None)
+
+----- number_density_evo_sink_source() settings -----
+corrected can be False or True
+
+    number_density_evo_sink_source(
+        plot_dir=plot_dir,
+        data_dir=data_dir,
+        data_names=data_names,
+        labels=labels,
+        linestyles=linestyles,
+        markers=markers,
+        colours=colours,
+        mass_weighted=True,
+        separate_plots=True,
+        corrected=False,
+    )
+
+----- cumulative_floculation_balance() settings -----
+corrected can be False or True
+
+    cumulative_floculation_balance(
+        plot_dir=plot_dir,
+        data_dir=data_dir,
+        data_names=data_names,
+        labels=labels,
+        linestyles=linestyles,
+        markers=markers,
+        colours=colours,
+        mass_weighted=True,
+        corrected=True,
+        separate_plots=False,
+        plot_dn_dt=True,
+    )

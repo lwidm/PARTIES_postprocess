@@ -102,12 +102,14 @@ def main():
     output_dir: Path = globals.output_dir
 
     bin_width: float | None = None
-    num_bins_list: list[int] = globals.balance_equation_bins
-    log_bins: bool = True
+    num_bins_list: list[int | None] = globals.balance_equation_bins
+    # num_bins_list: list[int | None] = [None for i in globals.balance_equation_bins]
+    log_bins: bool | None = True
     filter_bounce: bool = False
     filter_sparse_bins: int = 30
     nonbinary_treatement: Literal["discount", "as_binary", "corrected"] = "discount"
     size_lim: tuple[float | None, float | None] = (1, None)
+    file_interval: int = 10
 
     for i, data_name in enumerate(data_names):
         dataset_dir: Path = data_dir / data_name
@@ -132,6 +134,7 @@ def main():
                 filter_bounce=filter_bounce,
                 filter_sparse_bins=filter_sparse_bins,
                 nonbinary_treatement=nonbinary_treatement,
+                file_interval=file_interval,
             )
         )
         myio.output.save_to_pickle(
@@ -157,6 +160,7 @@ def main():
                 filter_bounce=filter_bounce,
                 filter_sparse_bins=filter_sparse_bins,
                 nonbinary_treatement=nonbinary_treatement,
+                file_interval=file_interval,
             )
         )
         myio.output.save_to_pickle(

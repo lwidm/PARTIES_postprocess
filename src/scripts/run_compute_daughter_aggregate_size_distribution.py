@@ -19,6 +19,7 @@ def main():
     filter_bounce: bool = True
     filter_sparse_bins: int = 40
     size_lim: tuple[float | None, float | None] = (20, None)
+    file_interval: int = 1
 
     for i, data_name in enumerate(data_names):
         dataset_dir: Path = data_dir / data_name
@@ -37,7 +38,8 @@ def main():
                 filter_bounce=filter_bounce,
                 filter_sparse_bins=filter_sparse_bins,
                 size_lim=size_lim,
-                parent_num_bins=num_bins
+                parent_num_bins=num_bins,
+                file_interval=file_interval,
             )
         )
         myio.output.save_to_pickle(
@@ -58,7 +60,8 @@ def main():
                 filter_bounce=filter_bounce,
                 filter_sparse_bins=filter_sparse_bins,
                 size_lim=size_lim,
-                parent_num_bins=num_bins
+                parent_num_bins=num_bins,
+                file_interval=file_interval,
             )
         )
         myio.output.save_to_pickle(

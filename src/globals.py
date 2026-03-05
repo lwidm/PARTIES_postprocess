@@ -44,7 +44,7 @@ coagulation_kernel_sigmas: list[float] = [
     d["coagulation_kernel_sigma"] for d in _datasets.values()
 ]
 has_trn_data: list[bool] = [d["trn"] for d in _datasets.values()]
-balance_equation_bins: list[int] = [
+balance_equation_bins: list[int | None] = [
     d["balance_equation_bins"] for d in _datasets.values()
 ]
 

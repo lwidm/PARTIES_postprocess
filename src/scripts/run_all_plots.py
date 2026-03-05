@@ -1518,16 +1518,16 @@ def main() -> None:
     #     data_dir, plot_dir, data_dir, data_names, labels, colours, use_markers=True, font_scale=1.25
     # )
     # phi_eulerian(plot_dir, data_dir, data_names, labels, colours, False)
-    lagrangian_data(
-        plot_dir,
-        data_dir,
-        data_names,
-        labels,
-        colours,
-        markers,
-        show_errs=False,
-        separate_plots=False,
-    )
+    # lagrangian_data(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     colours,
+    #     markers,
+    #     show_errs=False,
+    #     separate_plots=False,
+    # )
     # fam_tree(
     #     plot_dir,
     #     data_dir,
@@ -1539,14 +1539,14 @@ def main() -> None:
     #     separate_plots=True,
     #     unfiltered=3,
     # )
-    floc_timescale(
-        plot_dir=plot_dir,
-        data_dir=data_dir,
-        data_names=data_names,
-        labels=labels,
-        cmap_breakup=red_cmap,
-        cmap_formation=blue_cmap,
-    )
+    # floc_timescale(
+    #     plot_dir=plot_dir,
+    #     data_dir=data_dir,
+    #     data_names=data_names,
+    #     labels=labels,
+    #     cmap_breakup=red_cmap,
+    #     cmap_formation=blue_cmap,
+    # )
     # noncohesive_floc_lifetime(plot_dir, data_dir)
     # number_density_evo_sink_source(
     #     plot_dir=plot_dir,
@@ -1559,19 +1559,6 @@ def main() -> None:
     #     mass_weighted=True,
     #     separate_plots=True,
     #     corrected=True,
-    # )
-    # cumulative_floculation_balance(
-    #     plot_dir=plot_dir,
-    #     data_dir=data_dir,
-    #     data_names=data_names,
-    #     labels=labels,
-    #     linestyles=linestyles,
-    #     markers=markers,
-    #     colours=colours,
-    #     mass_weighted=True,
-    #     corrected=True,
-    #     separate_plots=False,
-    #     plot_dn_dt=True,
     # )
     # coagulation_kernel(
     #     plot_dir,
@@ -1650,31 +1637,31 @@ def main() -> None:
     #     corrected=False,
     #     x_axis_value="D",
     # )
-    # number_density_evo_sink_source(
-    #     plot_dir=plot_dir,
-    #     data_dir=data_dir,
-    #     data_names=data_names,
-    #     labels=labels,
-    #     linestyles=linestyles,
-    #     markers=markers,
-    #     colours=colours,
-    #     mass_weighted=True,
-    #     separate_plots=True,
-    #     corrected=False,
-    # )
-    # cumulative_floculation_balance(
-    #     plot_dir=plot_dir,
-    #     data_dir=data_dir,
-    #     data_names=data_names,
-    #     labels=labels,
-    #     linestyles=linestyles,
-    #     markers=markers,
-    #     colours=colours,
-    #     mass_weighted=True,
-    #     corrected=False,
-    #     separate_plots=False,
-    #     plot_dn_dt=True,
-    # )
+    number_density_evo_sink_source(
+        plot_dir=plot_dir,
+        data_dir=data_dir,
+        data_names=data_names,
+        labels=labels,
+        linestyles=linestyles,
+        markers=markers,
+        colours=colours,
+        mass_weighted=True,
+        separate_plots=False,
+        corrected=False,
+    )
+    cumulative_floculation_balance(
+        plot_dir=plot_dir,
+        data_dir=data_dir,
+        data_names=data_names,
+        labels=labels,
+        linestyles=linestyles,
+        markers=markers,
+        colours=colours,
+        mass_weighted=True,
+        corrected=False,
+        separate_plots=False,
+        plot_dn_dt=True,
+    )
     # coagulation_kernel_diff(
     #     plot_dir,
     #     data_dir,

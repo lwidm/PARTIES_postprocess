@@ -604,6 +604,7 @@ def compute_number_density_evolutions_params(
     filter_bounce: bool,
     filter_sparse_bins: int,
     nonbinary_treatement: Literal["discount", "as_binary", "corrected"],
+    file_interval: int,
 ) -> dict[str, dict]:
 
     if _num_bins is not None and bin_width is not None:
@@ -659,6 +660,10 @@ def compute_number_density_evolutions_params(
     if corrected:
         print(f"In number density evolution analysis: Using corrected family tree")
         pickle_file = "family_tree_corrected.pkl"
+    if file_interval != 1:
+        pickle_file: str = f"family_tree_int{file_interval}.pkl"
+        if corrected:
+            pickle_file = f"family_tree_int{file_interval}_corrected.pkl"
 
     with open(pickle_dir / pickle_file, "rb") as file:
         fam_tree: FamilyTreeType = pickle.load(file)
@@ -938,6 +943,7 @@ def compute_daughter_aggregate_size_distribution(
     filter_sparse_bins: int,
     size_lim: tuple[float | None, float | None],
     parent_num_bins: int,
+    file_interval: int,
 ) -> dict[str, dict]:
 
     metadata_dict: dict[str, dict[str, int | float | str]] = metadata.read_metadata(
@@ -975,6 +981,10 @@ def compute_daughter_aggregate_size_distribution(
     if corrected:
         print(f"In number density evolution analysis: Using corrected family tree")
         pickle_file = "family_tree_corrected.pkl"
+    if file_interval != 1:
+        pickle_file: str = f"family_tree_int{file_interval}.pkl"
+        if corrected:
+            pickle_file = f"family_tree_int{file_interval}_corrected.pkl"
 
     with open(pickle_dir / pickle_file, "rb") as file:
         fam_tree: FamilyTreeType = pickle.load(file)
