@@ -204,7 +204,7 @@ def floc_pdf(
             std_probab_list.append(f[key]["unweighted"]["probabs_err"][:])  # type: ignore
             probabs_list.append(f[key]["unweighted"]["probabs_mean"][:])  # type: ignore
 
-        for i in range(len(postfixes)):
+        for key in ["n_p", "D_f", "D_g"]:
             # means_list.append(f[key]["centers"][:])  # type: ignore
             means_list.append(f[key]["mass_weighted"]["bin_means"][:])  # type: ignore
             std_probab_list.append(f[key]["mass_weighted"]["probabs_err"][:])  # type: ignore

@@ -252,8 +252,8 @@ def D_f_pdf(output_dir: Path, series_list: list[PlotSeries]) -> None:
         r"$D_f / D_p$",
         r"$PDF(D_f)$",
         0.0,
-        20,
-        1e-6,
+        40,
+        1e-7,
         1.1e0,
     )
 
@@ -267,7 +267,7 @@ def D_g_pdf(output_dir: Path, series_list: list[PlotSeries]) -> None:
         r"$PDF(D_g)$",
         0.0,
         20,
-        1e-6,
+        1e-7,
         1.1e0,
     )
 
@@ -281,7 +281,7 @@ def n_p_mass_pdf(output_dir: Path, series_list: list[PlotSeries]) -> None:
         r"Mass-weighted $PDF(n_p)$",
         0.9,
         20,
-        1e-3,
+        1e-5,
         1.1e0,
     )
 
@@ -294,7 +294,7 @@ def D_f_mass_pdf(output_dir: Path, series_list: list[PlotSeries]) -> None:
         r"$D_f / D_p$",
         r"Mass-weighted $PDF(D_f)$",
         0.0,
-        20,
+        40,
         1e-6,
         1.1e0,
     )

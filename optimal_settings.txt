@@ -1,5 +1,14 @@
 Order: 1p5, 3p0, 5p0
 
+
+# ========== Thesis plot options =========
+
+----- floc_evolution -----
+global font_scale=1.5
+
+----- fluid_wall_normal -----
+global font_scale=1.2
+
 # ========== p(x|y) pcolormesh and coletti plot =========
 ----- Affected plots -----
 fragment_size_distribution non normalised
