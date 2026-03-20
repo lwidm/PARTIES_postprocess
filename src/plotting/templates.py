@@ -238,8 +238,8 @@ def n_p_pdf(output_dir: Path, series_list: list[PlotSeries]) -> None:
         r"\#Particles in floc, $n_p$",
         r"$PDF(n_p)$",
         0.9,
-        20,
-        1e-3,
+        100,
+        1e-6,
         1.1e0,
     )
 
@@ -280,8 +280,8 @@ def n_p_mass_pdf(output_dir: Path, series_list: list[PlotSeries]) -> None:
         r"\#Particles in floc, $n_p$",
         r"Mass-weighted $PDF(n_p)$",
         0.9,
-        20,
-        1e-5,
+        100,
+        1e-6,
         1.1e0,
     )
 
