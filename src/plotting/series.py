@@ -456,7 +456,7 @@ def u_plus_mean_utexas(
         use_label_log_fit,
         use_label_visc_fit,
         linestyles,
-        font_scale
+        font_scale,
     )
 
 
@@ -927,7 +927,16 @@ def lagrangian_acceleration_pdf(
     markers: list[str],
     show_legend: bool,
 ) -> tuple[
-    PlotSeries, PlotSeries, PlotSeries, PlotSeries, PlotSeries, PlotSeries, PlotSeries
+    PlotSeries,
+    PlotSeries,
+    PlotSeries,
+    PlotSeries,
+    PlotSeries,
+    PlotSeries,
+    PlotSeries,
+    PlotSeries,
+    PlotSeries,
+    PlotSeries,
 ]:
 
     a: list[np.ndarray] = [np.array([]), np.array([]), np.array([])]
@@ -955,7 +964,7 @@ def lagrangian_acceleration_pdf(
 
     dir_labels: list[str] = ["x", "y", "z"]
 
-    def create_series(i: int) -> tuple[PlotSeries, PlotSeries]:
+    def create_series(i: int) -> tuple[PlotSeries, PlotSeries, PlotSeries]:
         local_label: str
         if show_legend:
             if labels[i] is None:
@@ -977,10 +986,26 @@ def lagrangian_acceleration_pdf(
                 "label": local_label,
                 "linestyle": "None",
                 "marker": markers[i],
-                # "markerfacecolor": colours[i],
                 "markeredgecolor": colours[i],
                 "color": colours[i],
                 "fillstyle": "none",
+            },
+        )
+
+        s_dot: PlotSeries = PlotSeries(
+            data={
+                "x": a[i],
+                "y": PDF[i],
+            },
+            x_key="x",
+            y_key="y",
+            plot_method="semilogy",
+            kwargs={
+                "label": "_nolegend_",
+                "linestyle": "None",
+                "marker": ".",
+                "color": colours[i],
+                "markersize": 1.5 * kFontScale,
             },
         )
 
@@ -1001,7 +1026,7 @@ def lagrangian_acceleration_pdf(
             },
         )
 
-        return s, s_err
+        return s, s_dot, s_err
 
     s_fit: PlotSeries = PlotSeries(
         data={
@@ -1015,19 +1040,22 @@ def lagrangian_acceleration_pdf(
             "label": "gaussian",
             "marker": None,
             "color": "red",
-            "linewidth": 0.5 * kFontScale,
+            "linewidth": 0.9 * kFontScale,
             "linestyle": "--",
         },
     )
 
-    s_ax, s_ax_err = create_series(0)
-    s_ay, s_ay_err = create_series(1)
-    s_az, s_az_err = create_series(2)
+    s_ax, s_ax_dot, s_ax_err = create_series(0)
+    s_ay, s_ay_dot, s_ay_err = create_series(1)
+    s_az, s_az_dot, s_az_err = create_series(2)
 
     return (
         s_ax,
         s_ay,
         s_az,
+        s_ax_dot,
+        s_ay_dot,
+        s_az_dot,
         s_ax_err,
         s_ay_err,
         s_az_err,
@@ -1042,7 +1070,7 @@ def lagrangian_u_p_pdf(
     colour: str | tuple[float, float, float, float],
     marker: str,
     show_legend: bool,
-) -> tuple[PlotSeries, PlotSeries]:
+) -> tuple[PlotSeries, PlotSeries, PlotSeries]:
 
     csv_file: Path
     if yp is not None:
@@ -1080,10 +1108,26 @@ def lagrangian_u_p_pdf(
             "label": local_label,
             "linestyle": "None",
             "marker": marker,
-            # "markerfacecolor": colours[i],
             "markeredgecolor": colour,
             "color": colour,
             "fillstyle": "none",
+        },
+    )
+
+    s_dot: PlotSeries = PlotSeries(
+        data={
+            "x": up,
+            "y": PDF,
+        },
+        x_key="x",
+        y_key="y",
+        plot_method="plot",
+        kwargs={
+            "label": "_nolegend_",
+            "linestyle": "None",
+            "marker": ".",
+            "color": colour,
+            "markersize": 1.5 * kFontScale,
         },
     )
 
@@ -1106,6 +1150,7 @@ def lagrangian_u_p_pdf(
 
     return (
         s_up,
+        s_dot,
         s_err,
     )
 
@@ -1137,7 +1182,7 @@ def lagrangian_acceleration_pdf_proxies(
                 fillstyle="none",
                 linestyle="None",
                 marker=quantities[i][1],
-                markeredgewidth=0.5,
+                markeredgewidth=0.7 * kFontScale,
                 label=quantities[i][0],
             )
         )
@@ -1183,7 +1228,7 @@ def lagrangian_up_pdf_proxies(
                 fillstyle="none",
                 linestyle="None",
                 marker=quantities[i][1],
-                markeredgewidth=0.5,
+                markeredgewidth=0.7 * kFontScale,
                 label=quantities[i][0],
             )
         )
@@ -1739,6 +1784,7 @@ def fragment_size_distribution(
 
     return s_pcolormesh, s_contour
 
+
 def fragment_size_distribution_normalised(
     pickle_dir: Path,
     label: str | None,
@@ -1847,7 +1893,7 @@ def breakage_agglomeration_rate(
         fit_label: str = ""
         if not only_base_legend:
             # fit_label =  f"${b:.3g}\\cdot x^{{{a:.3g}}}$"
-            fit_label =  f"$\\sim x^{{{a:.3g}}}$"
+            fit_label = f"$\\sim x^{{{a:.3g}}}$"
 
         s_fit = PlotSeries(
             data={"x": x_fit, "y": y_fit},

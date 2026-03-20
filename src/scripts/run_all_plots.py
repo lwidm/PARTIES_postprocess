@@ -423,13 +423,16 @@ def lagrangian_data(
     csv_dirs: list[Path] = [data_dir / data_name for data_name in data_names]
 
     s_a_list: list[list[PlotSeries]] = []
+    s_a_dot_list: list[list[PlotSeries]] = []
     s_a_fit_list: list[PlotSeries] = []
     s_a_err_list: list[list[PlotSeries]] = []
 
     s_up_list: list[list[PlotSeries]] = []
+    s_up_dot_list: list[list[PlotSeries]] = []
     s_up_err_list: list[list[PlotSeries]] = []
 
     s_up_all_list: list[PlotSeries] = []
+    s_up_all_dot_list: list[PlotSeries] = []
     s_up_err_all_list: list[PlotSeries] = []
 
     yp_list: list[float] = [5.0, 30.0, 180.0]
@@ -447,7 +450,7 @@ def lagrangian_data(
             labels_local = [None for _ in range(max(3, len(csv_dirs)))]
             markers_local = markers
 
-        s_ax, s_ay, s_az, s_ax_err, s_ay_err, s_az_err, s_a_fit = (
+        s_ax, s_ay, s_az, s_ax_dot, s_ay_dot, s_az_dot, s_ax_err, s_ay_err, s_az_err, s_a_fit = (
             plt_series.lagrangian_acceleration_pdf(
                 csv_dir=csv_dir,
                 labels=labels_local,
@@ -457,13 +460,15 @@ def lagrangian_data(
             )
         )
         s_a_list.append([s_ax, s_ay, s_az])
+        s_a_dot_list.append([s_ax_dot, s_ay_dot, s_az_dot])
         s_a_fit_list.append(s_a_fit)
         s_a_err_list.append([s_ax_err, s_ay_err, s_az_err])
 
         s_up_list.append([])
+        s_up_dot_list.append([])
         s_up_err_list.append([])
         for j, yp in enumerate(yp_list):
-            s_up, s_up_err = plt_series.lagrangian_u_p_pdf(
+            s_up, s_up_dot, s_up_err = plt_series.lagrangian_u_p_pdf(
                 csv_dir=csv_dir,
                 yp=yp,
                 label=labels_local[j],
@@ -472,11 +477,12 @@ def lagrangian_data(
                 show_legend=separate_plots,
             )
             s_up_list[i].append(s_up)
+            s_up_dot_list[i].append(s_up_dot)
             s_up_err_list[i].append(s_up_err)
 
         if separate_plots:
             labels_local = [labels[i] for _ in range(max(3, len(csv_dirs)))]
-        s_up_all, s_up_err_all = plt_series.lagrangian_u_p_pdf(
+        s_up_all, s_up_all_dot, s_up_err_all = plt_series.lagrangian_u_p_pdf(
             csv_dir=csv_dir,
             yp=None,
             label=labels_local[i],
@@ -485,6 +491,7 @@ def lagrangian_data(
             show_legend=True,
         )
         s_up_all_list.append(s_up_all)
+        s_up_all_dot_list.append(s_up_all_dot)
         s_up_err_all_list.append(s_up_err_all)
 
     s_a_proxies: list[PlotSeries] = plt_series.lagrangian_acceleration_pdf_proxies(
@@ -510,18 +517,22 @@ def lagrangian_data(
     if separate_plots:
         for i, csv_dir in enumerate(csv_dirs):
             plt_templ.lagrangian_acceleration_pdf(
-                plot_dir, [s_a_fit_list[i]] + s_a_list[i], labels[i]
+                plot_dir, [s_a_fit_list[i]] + s_a_list[i] + s_a_dot_list[i], labels[i]
             )
-            plt_templ.lagrangian_up_pdf(plot_dir, s_up_list[i], labels[i])
+            plt_templ.lagrangian_up_pdf(plot_dir, s_up_list[i] + s_up_dot_list[i], labels[i])
     else:
         s_a_plot: list[PlotSeries] = [s_a_fit_list[0]]
+        s_a_dot_plot: list[PlotSeries] = []
         s_up_plot: list[PlotSeries] = []
+        s_up_dot_plot: list[PlotSeries] = []
         for i, csv_dir in enumerate(csv_dirs):
             s_a_plot += s_a_list[i]
+            s_a_dot_plot += s_a_dot_list[i]
             s_up_plot += s_up_list[i]
-        plt_templ.lagrangian_acceleration_pdf(plot_dir, s_a_plot + s_a_proxies, None)
-        plt_templ.lagrangian_up_pdf(plot_dir, s_up_plot + s_up_proxies, None)
-    plt_templ.lagrangian_up_pdf(plot_dir, s_up_all_list, "all")
+            s_up_dot_plot += s_up_dot_list[i]
+        plt_templ.lagrangian_acceleration_pdf(plot_dir, s_a_plot + s_a_dot_plot + s_a_proxies, None)
+        plt_templ.lagrangian_up_pdf(plot_dir, s_up_plot + s_up_dot_plot + s_up_proxies, None)
+    plt_templ.lagrangian_up_pdf(plot_dir, s_up_all_list + s_up_all_dot_list, "all")
 
 
 def fam_tree(
@@ -1524,16 +1535,7 @@ def main() -> None:
     #     colours,
     #     markers,
     # )
-    floc_avg_diameters(
-        plot_dir,
-        data_dir,
-        data_names,
-        labels,
-        colours,
-        markers,
-        show_errs=False,
-    )
-    # lagrangian_data(
+    # floc_avg_diameters(
     #     plot_dir,
     #     data_dir,
     #     data_names,
@@ -1541,8 +1543,17 @@ def main() -> None:
     #     colours,
     #     markers,
     #     show_errs=False,
-    #     separate_plots=False,
     # )
+    lagrangian_data(
+        plot_dir,
+        data_dir,
+        data_names,
+        labels,
+        colours,
+        markers,
+        show_errs=False,
+        separate_plots=False,
+    )
 
     # ========== Used for thesis ==========
 

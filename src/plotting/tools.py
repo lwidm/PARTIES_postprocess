@@ -13,7 +13,7 @@ import colorsys
 NumericArray = np.ndarray | float | int
 
 # ---- global font size defaults ----
-kFontScale: float = 1.7
+kFontScale: float = 1.4
 kTickLabelSize: float = 12.0 * kFontScale
 kAxisLabelSize: float = 14.0 * kFontScale
 kTitleSize: float = 14.0 * kFontScale
@@ -405,6 +405,9 @@ def generic_plot(
     legend_loc: str | None = None,
     legend_bbox: tuple[float, float] | None = None,
     additional_objects: Sequence[Callable[[Axes], Any]] | None = None,
+    legend_handles: list[Any] | None = None,
+    legend_labels: list[str] | None = None,
+    legend_handler_map: dict | None = None,
 ) -> tuple[Axes, Figure, list[Any]]:
     other: Any = [None for _ in range(len(series_list))]
     update_plot_params()
@@ -434,7 +437,12 @@ def generic_plot(
             legend_kwargs["loc"] = legend_loc
         if legend_bbox is not None:
             legend_kwargs["bbox_to_anchor"] = legend_bbox
-        ax.legend(**legend_kwargs)
+        if legend_handler_map is not None:
+            legend_kwargs["handler_map"] = legend_handler_map
+        if legend_handles is not None:
+            ax.legend(legend_handles, legend_labels or [], **legend_kwargs)
+        else:
+            ax.legend(**legend_kwargs)
 
     ax = format_plot_axes(ax)
     fig.tight_layout()
