@@ -303,10 +303,14 @@ def floc_avg_diameters(
     s_avg_Dg_list: list[PlotSeries] = []
     s_mass_avg_Df_list: list[PlotSeries] = []
     s_mass_avg_Dg_list: list[PlotSeries] = []
+    s_avg_np_list: list[PlotSeries] = []
+    s_mass_avg_np_list: list[PlotSeries] = []
     s_avg_Df_err_list: list[PlotSeries] = []
     s_avg_Dg_err_list: list[PlotSeries] = []
     s_mass_avg_Df_err_list: list[PlotSeries] = []
     s_mass_avg_Dg_err_list: list[PlotSeries] = []
+    s_avg_np_err_list: list[PlotSeries] = []
+    s_mass_avg_np_err_list: list[PlotSeries] = []
 
     for i in range(len(data_dirs)):
         (
@@ -314,10 +318,14 @@ def floc_avg_diameters(
             s_avg_Dg,
             s_mass_avg_Df,
             s_mass_avg_Dg,
+            s_avg_np,
+            s_mass_avg_np,
             s_err_Df,
             s_err_Dg,
             s_mass_err_Df,
             s_mass_err_Dg,
+            s_np_err,
+            s_mass_np_err,
         ) = plt_series.floc_avg_dir(
             floc_dir=data_dirs[i],
             labels=[labels[i] for _ in range(4)],
@@ -328,21 +336,29 @@ def floc_avg_diameters(
         s_avg_Dg_list.append(s_avg_Dg)
         s_mass_avg_Df_list.append(s_mass_avg_Df)
         s_mass_avg_Dg_list.append(s_mass_avg_Dg)
+        s_avg_np_list.append(s_avg_np)
+        s_mass_avg_np_list.append(s_mass_avg_np)
         s_avg_Df_err_list.append(s_err_Df)
         s_avg_Dg_err_list.append(s_err_Dg)
         s_mass_avg_Df_err_list.append(s_mass_err_Df)
         s_mass_avg_Dg_err_list.append(s_mass_err_Dg)
+        s_avg_np_err_list.append(s_np_err)
+        s_mass_avg_np_err_list.append(s_mass_np_err)
 
     if show_errs:
         s_avg_Df_list = s_avg_Df_err_list + s_avg_Df_list
         s_avg_Dg_list = s_avg_Dg_err_list + s_avg_Dg_list
         s_mass_avg_Df_list = s_mass_avg_Df_err_list + s_mass_avg_Df_list
         s_mass_avg_Dg_list = s_mass_avg_Dg_err_list + s_mass_avg_Dg_list
+        s_avg_np_list = s_avg_np_err_list + s_avg_np_list
+        s_mass_avg_np_list = s_mass_avg_np_err_list + s_mass_avg_np_list
 
     plt_templ.avg_D_f(plot_dir, s_avg_Df_list, inner_units=False)
     plt_templ.avg_D_g(plot_dir, s_avg_Dg_list, inner_units=False)
     plt_templ.mass_avg_D_f(plot_dir, s_mass_avg_Df_list, inner_units=False)
     plt_templ.mass_avg_D_g(plot_dir, s_mass_avg_Dg_list, inner_units=False)
+    plt_templ.avg_n_p(plot_dir, s_avg_np_list, inner_units=False)
+    plt_templ.mass_avg_n_p(plot_dir, s_mass_avg_np_list, inner_units=False)
 
 
 def phi_eulerian(
@@ -1508,22 +1524,15 @@ def main() -> None:
     #     colours,
     #     markers,
     # )
-    # floc_avg_diameters(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names,
-    #     labels,
-    #     colours,
-    #     markers,
-    #     show_errs=False,
-    # )
-
-    # ========== Used for thesis ==========
-
-    # phi_eulerian(plot_dir, data_dir, data_names, labels, colours, False)
-
-    # ========== Probably unused for thesis ==========
-
+    floc_avg_diameters(
+        plot_dir,
+        data_dir,
+        data_names,
+        labels,
+        colours,
+        markers,
+        show_errs=False,
+    )
     # lagrangian_data(
     #     plot_dir,
     #     data_dir,
@@ -1534,6 +1543,13 @@ def main() -> None:
     #     show_errs=False,
     #     separate_plots=False,
     # )
+
+    # ========== Used for thesis ==========
+
+    # phi_eulerian(plot_dir, data_dir, data_names, labels, colours, False)
+
+    # ========== Probably unused for thesis ==========
+
     # fam_tree(
     #     plot_dir,
     #     data_dir,

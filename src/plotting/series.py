@@ -16,6 +16,7 @@ from src.myio import lwidmer
 from src.plotting.tools import (
     PlotSeries,
     _gaussian_filter_2d,
+    kFontScale,
 )
 from src.flocs.family_tree import CoagulationFragmentationCalculator
 
@@ -289,6 +290,10 @@ def floc_avg_dir(
     PlotSeries,
     PlotSeries,
     PlotSeries,
+    PlotSeries,
+    PlotSeries,
+    PlotSeries,
+    PlotSeries,
 ]:
 
     x_data: np.ndarray
@@ -296,22 +301,28 @@ def floc_avg_dir(
     D_g_d_particle_avg: np.ndarray
     D_f_d_particle_mass_avg: np.ndarray
     D_g_d_particle_mass_avg: np.ndarray
+    n_p_avg: np.ndarray
+    n_p_mass_avg: np.ndarray
     std_D_f_d_particle_avg: np.ndarray
     std_D_g_d_particle_avg: np.ndarray
     std_D_f_d_particle_mass_avg: np.ndarray
     std_D_g_d_particle_mass_avg: np.ndarray
+    std_n_p_avg: np.ndarray
+    std_n_p_mass_avg: np.ndarray
     with h5py.File(str(floc_dir / "avg_diam_stats.h5"), "r") as f:
         x_data = f["y_mean"][:]  # type: ignore
         D_f_d_particle_avg = f["D_f_avg"][:]  # type: ignore
         D_g_d_particle_avg = f["D_g_avg"][:]  # type: ignore
         D_f_d_particle_mass_avg = f["D_f_mass_avg"][:]  # type: ignore
         D_g_d_particle_mass_avg = f["D_g_mass_avg"][:]  # type: ignore
+        n_p_avg = f["n_p_avg"][:]  # type: ignore
+        n_p_mass_avg = f["n_p_mass_avg"][:]  # type: ignore
         std_D_f_d_particle_avg = f["std_D_f_avg"][:]  # type: ignore
         std_D_g_d_particle_avg = f["std_D_g_avg"][:]  # type: ignore
         std_D_f_d_particle_mass_avg = f["std_D_f_mass_avg"][:]  # type: ignore
         std_D_g_d_particle_mass_avg = f["std_D_g_mass_avg"][:]  # type: ignore
-
-    markeredgewidth: float = 0.7
+        std_n_p_avg = f["std_n_p_avg"][:]  # type: ignore
+        std_n_p_mass_avg = f["std_n_p_mass_avg"][:]  # type: ignore
 
     def create_series(
         y_data: np.ndarray, std_data: np.ndarray, idx: int
@@ -329,7 +340,6 @@ def floc_avg_dir(
                 "marker": markers[idx],
                 "markerfacecolor": colours[idx],
                 "markeredgecolor": "k",
-                "markeredgewidth": markeredgewidth,
                 "color": "k",
                 "fillstyle": "full",
             },
@@ -365,16 +375,22 @@ def floc_avg_dir(
     s_D_g_d_particle_mass_avg, s_D_g_d_particle_mass_err = create_series(
         D_g_d_particle_mass_avg, std_D_g_d_particle_mass_avg, 3
     )
+    s_n_p_avg, s_n_p_err = create_series(n_p_avg, std_n_p_avg, 0)
+    s_n_p_mass_avg, s_n_p_mass_err = create_series(n_p_mass_avg, std_n_p_mass_avg, 0)
 
     return (
         s_D_f_d_particle_avg,
         s_D_g_d_particle_avg,
         s_D_f_d_particle_mass_avg,
         s_D_g_d_particle_mass_avg,
+        s_n_p_avg,
+        s_n_p_mass_avg,
         s_D_f_d_particle_err,
         s_D_g_d_particle_err,
         s_D_f_d_particle_mass_err,
         s_D_g_d_particle_mass_err,
+        s_n_p_err,
+        s_n_p_mass_err,
     )
 
 
@@ -937,7 +953,6 @@ def lagrangian_acceleration_pdf(
 
     PDF_fit: np.ndarray = standard_normal_gaussian(a_fit)
 
-    markeredgewidth: float = 0.7
     dir_labels: list[str] = ["x", "y", "z"]
 
     def create_series(i: int) -> tuple[PlotSeries, PlotSeries]:
@@ -964,7 +979,6 @@ def lagrangian_acceleration_pdf(
                 "marker": markers[i],
                 # "markerfacecolor": colours[i],
                 "markeredgecolor": colours[i],
-                "markeredgewidth": markeredgewidth,
                 "color": colours[i],
                 "fillstyle": "none",
             },
@@ -999,10 +1013,9 @@ def lagrangian_acceleration_pdf(
         plot_method="semilogy",
         kwargs={
             "label": "gaussian",
-            "linestyle": "None",
             "marker": None,
             "color": "red",
-            "linewidth": 0.5,
+            "linewidth": 0.5 * kFontScale,
             "linestyle": "--",
         },
     )
@@ -1038,7 +1051,6 @@ def lagrangian_u_p_pdf(
         csv_file = csv_dir / f"particle_u_plus_pdf.csv"
     up, PDF, err = lwidmer.read_csv_columns(csv_file, (0, 1, 2), remove_nan=2)
 
-    markeredgewidth: float = 0.7
     dir_labels: list[str] = ["x", "y", "z"]
 
     local_label: str
@@ -1070,7 +1082,6 @@ def lagrangian_u_p_pdf(
             "marker": marker,
             # "markerfacecolor": colours[i],
             "markeredgecolor": colour,
-            "markeredgewidth": markeredgewidth,
             "color": colour,
             "fillstyle": "none",
         },

@@ -13,7 +13,7 @@ import colorsys
 NumericArray = np.ndarray | float | int
 
 # ---- global font size defaults ----
-kFontScale: float = 1.5
+kFontScale: float = 1.7
 kTickLabelSize: float = 12.0 * kFontScale
 kAxisLabelSize: float = 14.0 * kFontScale
 kTitleSize: float = 14.0 * kFontScale
@@ -57,6 +57,7 @@ default_kwargs: dict[str, dict] = {
     "kECapThick": {"capthick": 0.8 * kFontScale},  # default capthick (cap thinkness for errorbars)
     "kBarsAbove": {"barsabove": True},  # default barsabove
     "kMarkerSize": {"markersize": 5.0 * kFontScale},  # default markersize
+    "kMarkerEdgeWidth": {"markeredgewidth": 0.7 * kFontScale},  # default marker edge width
 }
 
 
@@ -238,7 +239,7 @@ def _plot_one(ax: Axes, series: PlotSeries) -> Any:
             ax_values_tuple = (x, y)
 
         plot_kwargs = series.kwargs
-        _add_default_kwargs(["kLineWidth", "kMarkerSize"], plot_kwargs)
+        _add_default_kwargs(["kLineWidth", "kMarkerSize", "kMarkerEdgeWidth"], plot_kwargs)
 
         if method == "plot":
             other = ax.plot(*(ax_values_tuple), **plot_kwargs)

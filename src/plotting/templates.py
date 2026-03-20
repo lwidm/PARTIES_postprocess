@@ -373,6 +373,26 @@ def mass_avg_D_g(output_dir: Path, series_list: list[PlotSeries], inner_units: b
     )
 
 
+def avg_n_p(output_dir: Path, series_list: list[PlotSeries], inner_units: bool):
+    _avg_floc_dir(
+        output_dir,
+        series_list,
+        r"avg_n_p",
+        r"$\langle n_p \rangle$",
+        inner_units,
+    )
+
+
+def mass_avg_n_p(output_dir: Path, series_list: list[PlotSeries], inner_units: bool):
+    _avg_floc_dir(
+        output_dir,
+        series_list,
+        r"mass_avg_n_p",
+        r"$\langle n_p \rangle_\text{mass}$",
+        inner_units,
+    )
+
+
 # -------------------- Fluid volume fraction --------------------
 
 
