@@ -15,8 +15,11 @@ global font_scale=1.7
 ----- floc_avg_diameters -----
 global font_scale=1.7
 
------ lagrangian_data -----
-global font_scale=1.5
+----- lagrangian_acceleration -----
+global font_scale=1.4
+
+----- lagrangian_velocity -----
+global font_scale=1.6
 
 # ========== p(x|y) pcolormesh and coletti plot =========
 ----- Affected plots -----

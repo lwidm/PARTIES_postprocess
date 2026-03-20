@@ -410,7 +410,7 @@ def phi_eulerian(
     plt_templ.phi_eulerian(output_dir=plot_dir, series_list=s_plot, normalised=True)
 
 
-def lagrangian_data(
+def lagrangian_acceleration(
     plot_dir: Path,
     data_dir: Path,
     data_names: list[str],
@@ -427,6 +427,67 @@ def lagrangian_data(
     s_a_fit_list: list[PlotSeries] = []
     s_a_err_list: list[list[PlotSeries]] = []
 
+    for i, csv_dir in enumerate(csv_dirs):
+        colours_local: list[str | tuple[float, float, float, float]]
+        labels_local: list[str | None]
+        if not separate_plots:
+            colours_local = [colours[i] for _ in range(max(3, len(csv_dirs)))]
+            labels_local = [labels[i] for _ in range(max(3, len(csv_dirs)))]
+        else:
+            colours_local = colours
+            labels_local = [None for _ in range(max(3, len(csv_dirs)))]
+
+        s_ax, s_ay, s_az, s_ax_dot, s_ay_dot, s_az_dot, s_ax_err, s_ay_err, s_az_err, s_a_fit = (
+            plt_series.lagrangian_acceleration_pdf(
+                csv_dir=csv_dir,
+                labels=labels_local,
+                colours=colours_local,
+                markers=markers,
+                show_legend=separate_plots,
+            )
+        )
+        s_a_list.append([s_ax, s_ay, s_az])
+        s_a_dot_list.append([s_ax_dot, s_ay_dot, s_az_dot])
+        s_a_fit_list.append(s_a_fit)
+        s_a_err_list.append([s_ax_err, s_ay_err, s_az_err])
+
+    s_a_proxies: list[PlotSeries] = plt_series.lagrangian_acceleration_pdf_proxies(
+        markers=markers,
+        labels=labels,
+        colours=colours,
+        marker_cases=["s" for _ in range(len(labels))],
+    )
+
+    if show_errs:
+        for i in range(len(csv_dirs)):
+            s_a_list[i] = s_a_err_list[i] + s_a_list[i]
+
+    if separate_plots:
+        for i, csv_dir in enumerate(csv_dirs):
+            plt_templ.lagrangian_acceleration_pdf(
+                plot_dir, [s_a_fit_list[i]] + s_a_list[i] + s_a_dot_list[i], labels[i]
+            )
+    else:
+        s_a_plot: list[PlotSeries] = [s_a_fit_list[0]]
+        s_a_dot_plot: list[PlotSeries] = []
+        for i in range(len(csv_dirs)):
+            s_a_plot += s_a_list[i]
+            s_a_dot_plot += s_a_dot_list[i]
+        plt_templ.lagrangian_acceleration_pdf(plot_dir, s_a_plot + s_a_dot_plot + s_a_proxies, None)
+
+
+def lagrangian_velocity(
+    plot_dir: Path,
+    data_dir: Path,
+    data_names: list[str],
+    labels: list[str],
+    colours: list[str | tuple[float, float, float, float]],
+    markers: list[str],
+    show_errs: bool,
+    separate_plots: bool,
+) -> None:
+    csv_dirs: list[Path] = [data_dir / data_name for data_name in data_names]
+
     s_up_list: list[list[PlotSeries]] = []
     s_up_dot_list: list[list[PlotSeries]] = []
     s_up_err_list: list[list[PlotSeries]] = []
@@ -438,31 +499,14 @@ def lagrangian_data(
     yp_list: list[float] = [5.0, 30.0, 180.0]
 
     for i, csv_dir in enumerate(csv_dirs):
-
         colours_local: list[str | tuple[float, float, float, float]]
         labels_local: list[str | None]
         if not separate_plots:
             colours_local = [colours[i] for _ in range(max(3, len(csv_dirs)))]
             labels_local = [labels[i] for _ in range(max(3, len(csv_dirs)))]
-            markers_local = markers
         else:
             colours_local = colours
             labels_local = [None for _ in range(max(3, len(csv_dirs)))]
-            markers_local = markers
-
-        s_ax, s_ay, s_az, s_ax_dot, s_ay_dot, s_az_dot, s_ax_err, s_ay_err, s_az_err, s_a_fit = (
-            plt_series.lagrangian_acceleration_pdf(
-                csv_dir=csv_dir,
-                labels=labels_local,
-                colours=colours_local,
-                markers=markers_local,
-                show_legend=separate_plots,
-            )
-        )
-        s_a_list.append([s_ax, s_ay, s_az])
-        s_a_dot_list.append([s_ax_dot, s_ay_dot, s_az_dot])
-        s_a_fit_list.append(s_a_fit)
-        s_a_err_list.append([s_ax_err, s_ay_err, s_az_err])
 
         s_up_list.append([])
         s_up_dot_list.append([])
@@ -473,7 +517,7 @@ def lagrangian_data(
                 yp=yp,
                 label=labels_local[j],
                 colour=colours_local[j],
-                marker=markers_local[j],
+                marker=markers[j],
                 show_legend=separate_plots,
             )
             s_up_list[i].append(s_up)
@@ -494,12 +538,6 @@ def lagrangian_data(
         s_up_all_dot_list.append(s_up_all_dot)
         s_up_err_all_list.append(s_up_err_all)
 
-    s_a_proxies: list[PlotSeries] = plt_series.lagrangian_acceleration_pdf_proxies(
-        markers=markers,
-        labels=labels,
-        colours=colours,
-        marker_cases=["s" for _ in range(len(labels))],
-    )
     s_up_proxies: list[PlotSeries] = plt_series.lagrangian_up_pdf_proxies(
         markers=markers,
         labels=labels,
@@ -509,28 +547,19 @@ def lagrangian_data(
     )
 
     if show_errs:
-        for i, csv_dir in enumerate(csv_dirs):
-            s_a_list[i] = s_a_err_list[i] + s_a_list[i]
+        for i in range(len(csv_dirs)):
             s_up_list[i] = s_up_err_list[i] + s_up_list[i]
         s_up_all_list = s_up_err_all_list + s_up_all_list
 
     if separate_plots:
         for i, csv_dir in enumerate(csv_dirs):
-            plt_templ.lagrangian_acceleration_pdf(
-                plot_dir, [s_a_fit_list[i]] + s_a_list[i] + s_a_dot_list[i], labels[i]
-            )
             plt_templ.lagrangian_up_pdf(plot_dir, s_up_list[i] + s_up_dot_list[i], labels[i])
     else:
-        s_a_plot: list[PlotSeries] = [s_a_fit_list[0]]
-        s_a_dot_plot: list[PlotSeries] = []
         s_up_plot: list[PlotSeries] = []
         s_up_dot_plot: list[PlotSeries] = []
-        for i, csv_dir in enumerate(csv_dirs):
-            s_a_plot += s_a_list[i]
-            s_a_dot_plot += s_a_dot_list[i]
+        for i in range(len(csv_dirs)):
             s_up_plot += s_up_list[i]
             s_up_dot_plot += s_up_dot_list[i]
-        plt_templ.lagrangian_acceleration_pdf(plot_dir, s_a_plot + s_a_dot_plot + s_a_proxies, None)
         plt_templ.lagrangian_up_pdf(plot_dir, s_up_plot + s_up_dot_plot + s_up_proxies, None)
     plt_templ.lagrangian_up_pdf(plot_dir, s_up_all_list + s_up_all_dot_list, "all")
 
@@ -1544,7 +1573,17 @@ def main() -> None:
     #     markers,
     #     show_errs=False,
     # )
-    lagrangian_data(
+    # lagrangian_acceleration(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     colours,
+    #     markers,
+    #     show_errs=False,
+    #     separate_plots=False,
+    # )
+    lagrangian_velocity(
         plot_dir,
         data_dir,
         data_names,
