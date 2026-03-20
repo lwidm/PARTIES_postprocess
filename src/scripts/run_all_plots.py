@@ -294,6 +294,7 @@ def floc_avg_diameters(
     labels: list[str],
     colours: list[str | tuple[float, float, float, float]],
     markers: list[str],
+    show_errs: bool,
 ) -> None:
     data_dirs: list[Path] = [data_dir / data_name for data_name in data_names]
     plot_dir.mkdir(parents=True, exist_ok=True)
@@ -332,10 +333,11 @@ def floc_avg_diameters(
         s_mass_avg_Df_err_list.append(s_mass_err_Df)
         s_mass_avg_Dg_err_list.append(s_mass_err_Dg)
 
-    s_avg_Df_list = s_avg_Df_err_list + s_avg_Df_list
-    s_avg_Dg_list = s_avg_Dg_err_list + s_avg_Dg_list
-    s_mass_avg_Df_list = s_mass_avg_Df_err_list + s_mass_avg_Df_list
-    s_mass_avg_Dg_list = s_mass_avg_Dg_err_list + s_mass_avg_Dg_list
+    if show_errs:
+        s_avg_Df_list = s_avg_Df_err_list + s_avg_Df_list
+        s_avg_Dg_list = s_avg_Dg_err_list + s_avg_Dg_list
+        s_mass_avg_Df_list = s_mass_avg_Df_err_list + s_mass_avg_Df_list
+        s_mass_avg_Dg_list = s_mass_avg_Dg_err_list + s_mass_avg_Dg_list
 
     plt_templ.avg_D_f(plot_dir, s_avg_Df_list, inner_units=False)
     plt_templ.avg_D_g(plot_dir, s_avg_Dg_list, inner_units=False)
@@ -1498,22 +1500,7 @@ def main() -> None:
     # fuild_velocity_profile(
     #     data_dir, plot_dir, data_dir, data_names, labels, colours, use_markers=False, font_scale=1.25
     # )
-
-    # ========== Used for thesis ==========
-
-    # phi_eulerian(plot_dir, data_dir, data_names, labels, colours, False)
-
-    # ========== Probably unused for thesis ==========
-
-    floc_pdf(
-        plot_dir,
-        data_dir,
-        data_names,
-        labels,
-        colours,
-        markers,
-    )
-    # floc_avg_diameters(
+    # floc_pdf(
     #     plot_dir,
     #     data_dir,
     #     data_names,
@@ -1521,6 +1508,22 @@ def main() -> None:
     #     colours,
     #     markers,
     # )
+    # floc_avg_diameters(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     colours,
+    #     markers,
+    #     show_errs=False,
+    # )
+
+    # ========== Used for thesis ==========
+
+    # phi_eulerian(plot_dir, data_dir, data_names, labels, colours, False)
+
+    # ========== Probably unused for thesis ==========
+
     # lagrangian_data(
     #     plot_dir,
     #     data_dir,

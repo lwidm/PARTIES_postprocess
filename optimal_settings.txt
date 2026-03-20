@@ -9,6 +9,12 @@ global font_scale=1.5
 ----- fluid_wall_normal -----
 global font_scale=1.2
 
+----- floc_pdf -----
+global font_scale=1.5
+
+----- floc_avg_diameters -----
+global font_scale=1.5
+
 # ========== p(x|y) pcolormesh and coletti plot =========
 ----- Affected plots -----
 fragment_size_distribution non normalised

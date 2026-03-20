@@ -436,12 +436,13 @@ def generic_plot(
         ax.legend(**legend_kwargs)
 
     ax = format_plot_axes(ax)
+    fig.tight_layout()
 
     return ax, fig, other
 
 
 def my_save_fig(output_path: Path, fig: Figure, dpi: float = 300):
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(str(output_path) + ".png", dpi=dpi)
-    # fig.savefig(str(output_path) + ".eps", dpi=dpi)
-    fig.savefig(str(output_path) + ".pdf", dpi=dpi)
+    fig.savefig(str(output_path) + ".png", dpi=dpi, bbox_inches="tight")
+    # fig.savefig(str(output_path) + ".eps", dpi=dpi, bbox_inches="tight")
+    fig.savefig(str(output_path) + ".pdf", dpi=dpi, bbox_inches="tight")
