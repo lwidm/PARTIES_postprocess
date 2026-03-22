@@ -1249,6 +1249,87 @@ def lagrangian_up_pdf_proxies(
 # -------------------- familiy tree --------------------
 
 
+def breakup_formation_pdf_proxies_separate(
+    colours: list[str | tuple[float, float, float, float]],
+    show_filter_proxies: bool,
+) -> list[PlotSeries]:
+    type_proxies: list[PlotSeries] = []
+    for type_label, colour in zip(["formation", "breakup"], colours):
+        type_proxies.append(
+            create_proxy_series(
+                colour=colour,
+                colour_face=colour,
+                fillstyle="full",
+                linestyle="None",
+                marker="s",
+                markeredgewidth=0.0,
+                label=type_label,
+            )
+        )
+
+    filter_proxies: list[PlotSeries] = []
+    if show_filter_proxies:
+        filter_proxies = [
+            PlotSeries(
+                data={
+                    "counts": np.array([-1.0]),
+                    "edges": np.array([-2.0, -1.0]),
+                },
+                x_key="x",
+                y_key="y",
+                plot_method="bar",
+                kwargs={"label": "filtered", "color": "k"},
+            ),
+            create_proxy_series(
+                colour="k",
+                colour_face="k",
+                fillstyle="none",
+                linestyle="-",
+                marker="None",
+                markeredgewidth=0.0,
+                label="unfiltered",
+            ),
+        ]
+
+    return type_proxies + filter_proxies
+
+
+def breakup_formation_pdf_proxies(
+    linestyles: list[str],
+    labels: list[str],
+    colours: list[str | tuple[float, float, float, float]],
+) -> list[PlotSeries]:
+    type_proxies: list[PlotSeries] = []
+    for type_label, linestyle in zip(["formation", "breakup"], linestyles):
+        type_proxies.append(
+            create_proxy_series(
+                colour="k",
+                colour_face="k",
+                fillstyle="none",
+                linestyle=linestyle,
+                marker="None",
+                markeredgewidth=0.0,
+                label=type_label,
+            )
+        )
+
+    case_proxies: list[PlotSeries] = []
+    for label, colour in zip(labels, colours):
+        case_proxies.append(
+            create_proxy_series(
+                colour=colour,
+                colour_face=colour,
+                fillstyle="full",
+                linestyle="-",
+                marker="None",
+                markeredgewidth=0.0,
+                label=label,
+            )
+        )
+
+    return type_proxies + case_proxies
+
+
 def family_tree_breakup_formation_pdf(
     csv_dir: Path,
     label: str | None,

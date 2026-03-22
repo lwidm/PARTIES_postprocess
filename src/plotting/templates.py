@@ -485,7 +485,7 @@ def family_tree_breakup_formation_pdf(
         name=name,
         xlabel=r"$y / L $",
         ylabel=r"PDF",
-        xmin=None,
+        xmin=0,
         xmax=1,
         ymin=0,
         ymax=None,

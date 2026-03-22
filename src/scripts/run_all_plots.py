@@ -590,65 +590,62 @@ def breakup_formation_pdf(
 
     for i, csv_dir in enumerate(csv_dirs):
 
-        labels_local: list[str | None]
         if not separate_plots:
-            labels_local = [labels[i] for _ in range(2)]
+            colours_local = [colours[i] for _ in range(2)]
             markers_local = markers
             linestyles_local = linestyles
-            colours_local = [colours[i] for _ in range(2)]
         else:
-            labels_local = [None for _ in range(2)]
-            markers_local = markers
             colours_local = colours
+            markers_local = markers
             linestyles_local = linestyles
 
         s_formation_filtered, _ = plt_series.family_tree_breakup_formation_pdf(
             csv_dir=csv_dir,
-            label=labels_local[0],
+            label=None,
             colour=colours_local[0],
             marker=markers_local[0],
             linestyle=linestyles_local[0],
             type="formation",
             filtered_t_min=True,
             name=None,
-            show_label=True,
-            show_filter_in_label=(unfiltered == 2),
+            show_label=False,
+            show_filter_in_label=False,
         )
         s_breakup_filtered, _ = plt_series.family_tree_breakup_formation_pdf(
             csv_dir=csv_dir,
-            label=labels_local[1],
+            label=None,
             colour=colours_local[1],
             marker=markers_local[1],
             linestyle=linestyles_local[1],
             type="breakup",
             filtered_t_min=True,
             name=None,
-            show_label=True,
-            show_filter_in_label=(unfiltered == 2),
+            show_label=False,
+            show_filter_in_label=False,
         )
         s_formation_unfiltered = plt_series.family_tree_breakup_formation_pdf(
             csv_dir=csv_dir,
-            label=labels_local[0],
+            label=None,
             colour=colours_local[0],
             marker=markers_local[0],
             linestyle=linestyles_local[0],
             type="formation",
             filtered_t_min=False,
             name=None,
-            show_label=True,
-            show_filter_in_label=(unfiltered == 2),
+            show_label=False,
+            show_filter_in_label=False,
         )
         s_breakup_unfiltered = plt_series.family_tree_breakup_formation_pdf(
             csv_dir=csv_dir,
-            label=labels_local[1],
+            label=None,
             colour=colours_local[1],
             marker=markers_local[1],
             linestyle=linestyles_local[1],
             type="breakup",
             filtered_t_min=False,
             name=None,
-            show_label=True,
-            show_filter_in_label=(unfiltered == 2),
+            show_label=False,
+            show_filter_in_label=False,
         )
         s_list_filtered.append([s_breakup_filtered, s_formation_filtered])
         if unfiltered == 2:
@@ -661,21 +658,28 @@ def breakup_formation_pdf(
             )
 
     if separate_plots:
+        s_proxies_sep = plt_series.breakup_formation_pdf_proxies_separate(
+            colours=colours,
+            show_filter_proxies=(unfiltered == 2),
+        )
         for i, csv_dir in enumerate(csv_dirs):
             if unfiltered == 1:
                 plt_templ.family_tree_breakup_formation_pdf(
-                    plot_dir, s_list_filtered[i], labels[i], 1
+                    plot_dir, s_list_filtered[i] + s_proxies_sep, labels[i], 1
                 )
             elif unfiltered == 2:
                 plt_templ.family_tree_breakup_formation_pdf(
-                    plot_dir, s_list_filtered[i] + s_list_unfiltered[i], labels[i], 2
+                    plot_dir,
+                    s_list_filtered[i] + s_list_unfiltered[i] + s_proxies_sep,
+                    labels[i],
+                    2,
                 )
             elif unfiltered == 3:
                 plt_templ.family_tree_breakup_formation_pdf(
-                    plot_dir, s_list_filtered[i], labels[i], 1
+                    plot_dir, s_list_filtered[i] + s_proxies_sep, labels[i], 1
                 )
                 plt_templ.family_tree_breakup_formation_pdf(
-                    plot_dir, s_list_unfiltered[i], labels[i], 3
+                    plot_dir, s_list_unfiltered[i] + s_proxies_sep, labels[i], 3
                 )
     else:
         s_list_all: list[PlotSeries] = []
@@ -696,14 +700,25 @@ def breakup_formation_pdf(
             elif unfiltered == 3:
                 s_list_all += [s_list_filtered[i][1]]
                 s_list_all_unfiltered += [s_list_unfiltered[i][1]]
+        s_proxies = plt_series.breakup_formation_pdf_proxies(
+            linestyles=linestyles,
+            labels=labels,
+            colours=colours,
+        )
         if unfiltered == 1:
-            plt_templ.family_tree_breakup_formation_pdf(plot_dir, s_list_all, None, 1)
-        elif unfiltered == 2:
-            plt_templ.family_tree_breakup_formation_pdf(plot_dir, s_list_all, None, 2)
-        elif unfiltered == 3:
-            plt_templ.family_tree_breakup_formation_pdf(plot_dir, s_list_all, None, 1)
             plt_templ.family_tree_breakup_formation_pdf(
-                plot_dir, s_list_all_unfiltered, None, 3
+                plot_dir, s_list_all + s_proxies, None, 1
+            )
+        elif unfiltered == 2:
+            plt_templ.family_tree_breakup_formation_pdf(
+                plot_dir, s_list_all + s_proxies, None, 2
+            )
+        elif unfiltered == 3:
+            plt_templ.family_tree_breakup_formation_pdf(
+                plot_dir, s_list_all + s_proxies, None, 1
+            )
+            plt_templ.family_tree_breakup_formation_pdf(
+                plot_dir, s_list_all_unfiltered + s_proxies, None, 3
             )
 
 
@@ -830,7 +845,7 @@ def create_colorbar_functions(
         fig = ax.get_figure()
         width = 0.3 * fraction  # 0.3 is base width at top
         left = 0.85 - width  # Center in right half
-        cax = fig.add_axes([left, 0.7, width, 0.03])  # type: ignore
+        cax = fig.add_axes([left, 0.6, width, 0.03])  # type: ignore
         effective_max = max_t / (1 - min_val)
         norm = Normalize(vmin=-min_val * effective_max, vmax=effective_max)
         sm = ScalarMappable(norm=norm, cmap=cmap_formation)
@@ -844,7 +859,7 @@ def create_colorbar_functions(
         fig = ax.get_figure()
         width = 0.3 * fraction
         left = 0.85 - width
-        cax = fig.add_axes([left, 0.62, width, 0.03])  # Below formation # type: ignore
+        cax = fig.add_axes([left, 0.52, width, 0.03])  # Below formation # type: ignore
         effective_max = max_t / (1 - min_val)
         norm = Normalize(vmin=-min_val * effective_max, vmax=effective_max)
         sm = ScalarMappable(norm=norm, cmap=cmap_breakup)
@@ -1597,7 +1612,7 @@ def main() -> None:
     #     cmap_breakup=red_cmap,
     #     cmap_formation=blue_cmap,
     # )
-    noncohesive_floc_lifetime(plot_dir, data_dir)
+    # noncohesive_floc_lifetime(plot_dir, data_dir)
 
     # ========== Used for thesis ==========
 
