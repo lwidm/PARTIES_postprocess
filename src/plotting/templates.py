@@ -520,18 +520,22 @@ def noncohesive_floc_lifetime(
     additional_objects: Sequence[Callable[[Axes], Any]] | None = None,
 ) -> None:
     name = f"noncohesive_floc_lifetime_{label}"
-    _pdf(
-        output_dir=output_dir,
-        series_list=series_list,
-        name=name,
-        xlabel=r"$y / L $",
+    out_path = output_dir / name
+    from src.plotting.tools import kLegendSize
+    ax, fig, other = generic_plot(
+        list(series_list),
+        legend=False,
+        xlabel=r"$y / L$",
         ylabel=r"$t_{floc} \cdot L / U$",
-        xmin=0.0,
-        xmax=1.0,
-        ymin=None,
-        ymax=None,
+        xlim=(0.0, 1.0),
+        ylim=(None, None),
+        figsize=(7.5, 5.5),
         additional_objects=additional_objects,
     )
+    handles = [other[0][0], other[1][0], other[2][0], other[3], other[4][0], other[5][0]]
+    labels = [h.get_label() for h in handles]
+    ax.legend(handles, labels, frameon=False, fontsize=kLegendSize, loc="best")
+    my_save_fig(out_path, fig, dpi=150)
 
 
 def coagulation_kernel(

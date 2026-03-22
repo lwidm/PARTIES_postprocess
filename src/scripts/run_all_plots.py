@@ -4,7 +4,7 @@ from pathlib import Path
 import seaborn as sns # type: ignore
 import re
 
-from src.plotting.tools import PlotSeries
+from src.plotting.tools import PlotSeries, kTickLabelSize, kAxisLabelSize
 from src.plotting import series as plt_series
 from src.plotting import templates as plt_templ
 from src import globals
@@ -762,6 +762,7 @@ def floc_timescale(
                 filtered_t_min=True,
                 name=f"formation_t_min={t_min}.csv",
                 show_label=False,
+                show_filter_in_label=False,
             )
             _, s_breakup = plt_series.family_tree_breakup_formation_pdf(
                 csv_dir=csv_dir / "floc_timescale",
@@ -773,61 +774,41 @@ def floc_timescale(
                 filtered_t_min=True,
                 name=f"breakup_t_min={t_min}.csv",
                 show_label=False,
+                show_filter_in_label=False,
             )
             s_list[i].append(s_breakup)
             s_list[i].append(s_formation)
 
         _, s_formation_estimate = plt_series.family_tree_breakup_formation_pdf(
             csv_dir=csv_dir / "floc_timescale",
-            label=f"$t_{{floc,min}} = $ poisseulle estimate",
+            label=None,
             colour="k",
             marker="None",
             linestyle="-",
             type="formation",
             filtered_t_min=True,
             name=f"formation_t_min=poisseulle.csv",
-            show_label=True,
+            show_label=False,
+            show_filter_in_label=False,
         )
         _, s_breakup_estimate = plt_series.family_tree_breakup_formation_pdf(
             csv_dir=csv_dir / "floc_timescale",
-            label=f"$t_{{floc,min}} = $ poisseulle estimate",
+            label=None,
             colour="k",
             marker="None",
             linestyle="--",
             type="breakup",
             filtered_t_min=True,
             name=f"breakup_t_min=poisseulle.csv",
-            show_label=True,
+            show_label=False,
+            show_filter_in_label=False,
         )
+        _poi_label = rf"$4 \cdot t_{{min,poisseuille}}$"
+        s_formation_estimate.kwargs["label"] = _poi_label
+        s_breakup_estimate.kwargs["label"] = _poi_label
 
         s_list[i].append(s_breakup_estimate)
         s_list[i].append(s_formation_estimate)
-
-        _, s_formation_advanced_estimate = plt_series.family_tree_breakup_formation_pdf(
-            csv_dir=csv_dir,
-            label=f"advanced filter",
-            colour="k",
-            marker="None",
-            linestyle=":",
-            type="formation",
-            filtered_t_min=True,
-            name=f"floc_formation_advanced_filtered_pdf.csv",
-            show_label=True,
-        )
-        _, s_breakup_advanced_estimate = plt_series.family_tree_breakup_formation_pdf(
-            csv_dir=csv_dir,
-            label=f"advanced filter",
-            colour="k",
-            marker="None",
-            linestyle="-.",
-            type="breakup",
-            filtered_t_min=True,
-            name=f"floc_breakup_advanced_filtered_pdf.csv",
-            show_label=True,
-        )
-
-        s_list[i].append(s_breakup_advanced_estimate)
-        s_list[i].append(s_formation_advanced_estimate)
 
     for i, csv_dir in enumerate(csv_dirs):
         plt_templ.floc_timescale(
@@ -856,7 +837,7 @@ def create_colorbar_functions(
         sm.set_array([])
         sm.set_clim(0, max_t)
         cbar = plt.colorbar(sm, cax=cax, ax=ax, orientation="horizontal")
-        cbar.set_label("Formation", fontsize=10)
+        cbar.set_label("Formation", fontsize=0.7 * kAxisLabelSize)
         cbar.ax.xaxis.set_ticks([])
 
     def add_breakup_colorbar(ax: Axes) -> None:
@@ -870,11 +851,11 @@ def create_colorbar_functions(
         sm.set_array([])
         sm.set_clim(0, max_t)
         cbar = plt.colorbar(sm, cax=cax, ax=ax, orientation="horizontal")
-        cbar.set_label("Breakup", fontsize=10)
+        cbar.set_label("Breakup", fontsize=0.7 * kAxisLabelSize)
         tick_positions = [0, max_t]
         tick_labels = ["0", f"{max_t:.2f}"]
         cbar.set_ticks(tick_positions)
-        cbar.set_ticklabels(tick_labels, fontsize=8)
+        cbar.set_ticklabels(tick_labels, fontsize=0.7 * kTickLabelSize)
 
     return [add_formation_colorbar, add_breakup_colorbar]
 
@@ -1597,24 +1578,17 @@ def main() -> None:
     #     show_errs=False,
     #     separate_plots=False,
     # )
-    breakup_formation_pdf(
-        plot_dir,
-        data_dir,
-        data_names,
-        labels,
-        colours_fam_tree,
-        markers,
-        linestyles,
-        separate_plots=True,
-        unfiltered=2,
-    )
-
-    # ========== Used for thesis ==========
-
-    # phi_eulerian(plot_dir, data_dir, data_names, labels, colours, False)
-
-    # ========== Probably unused for thesis ==========
-
+    # breakup_formation_pdf(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     colours_fam_tree,
+    #     markers,
+    #     linestyles,
+    #     separate_plots=True,
+    #     unfiltered=2,
+    # )
     # floc_timescale(
     #     plot_dir=plot_dir,
     #     data_dir=data_dir,
@@ -1623,7 +1597,14 @@ def main() -> None:
     #     cmap_breakup=red_cmap,
     #     cmap_formation=blue_cmap,
     # )
-    # noncohesive_floc_lifetime(plot_dir, data_dir)
+    noncohesive_floc_lifetime(plot_dir, data_dir)
+
+    # ========== Used for thesis ==========
+
+    # phi_eulerian(plot_dir, data_dir, data_names, labels, colours, False)
+
+    # ========== Probably unused for thesis ==========
+
     # number_density_evo_sink_source(
     #     plot_dir=plot_dir,
     #     data_dir=data_dir,

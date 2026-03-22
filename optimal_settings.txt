@@ -22,6 +22,12 @@ global font_scale=1.4
 global font_scale=1.6
 
 ----- breakup_formation_pdf -----
+global font_scale=1.5
+
+----- floc_timescale -----
+global font_scale=1.5
+
+----- noncohesive_floc_lifetime -----
 global font_scale=1.4
 
 # ========== p(x|y) pcolormesh and coletti plot =========

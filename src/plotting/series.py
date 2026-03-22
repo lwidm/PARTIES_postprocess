@@ -1079,8 +1079,6 @@ def lagrangian_u_p_pdf(
         csv_file = csv_dir / f"particle_u_plus_pdf.csv"
     up, PDF, err = lwidmer.read_csv_columns(csv_file, (0, 1, 2), remove_nan=2)
 
-    dir_labels: list[str] = ["x", "y", "z"]
-
     local_label: str
     if show_legend:
         if yp is None:
@@ -1364,7 +1362,7 @@ def noncohesive_floc_lifetime(
         y_key="y",
         plot_method="err_plot",
         kwargs={
-            "label": "standard devation",
+            "label": r"standard deviation, $\sigma$",
             "linestyle": "None",
             "color": "k",
         },
@@ -1400,6 +1398,7 @@ def noncohesive_floc_lifetime(
     )
     linregressresult = stats.linregress(y[y <= 1], max_vals[y <= 1])
     max_vals_fit = linregressresult.slope * y[y <= 1] + linregressresult.intercept
+    print(f"[noncohesive_floc_lifetime] fit y_max: t_floc = {linregressresult.slope:.4f}*y + {linregressresult.intercept:.4f}  (R^2={linregressresult.rvalue**2:.4f})")
     s_max_fit: PlotSeries = PlotSeries(
         data={
             "x": y[y <= 1],
@@ -1409,7 +1408,7 @@ def noncohesive_floc_lifetime(
         y_key="y",
         plot_method="plot",
         kwargs={
-            "label": f"fit: $y_{{max}} \\Longrightarrow t_{{floc}} = {linregressresult.slope:.3f}y + {linregressresult.intercept:.3f} (R^2={linregressresult.rvalue**2:.3f})$",
+            "label": r"fit: $y_{max}$",
             "linestyle": "--",
             "color": "red",
         },
@@ -1421,6 +1420,7 @@ def noncohesive_floc_lifetime(
         y[y <= 1], mean_vals[y <= 1] + std_vals[y <= 1] * num_stds
     )
     std_vals_fit = linregressresult.slope * y[y <= 1] + linregressresult.intercept
+    print(f"[noncohesive_floc_lifetime] fit y_mean + {num_stds}*sigma_t: t_floc = {linregressresult.slope:.4f}*y + {linregressresult.intercept:.4f}  (R^2={linregressresult.rvalue**2:.4f})")
     s_model_fit: PlotSeries = PlotSeries(
         data={
             "x": y[y <= 1],
@@ -1430,13 +1430,13 @@ def noncohesive_floc_lifetime(
         y_key="y",
         plot_method="plot",
         kwargs={
-            "label": f"fit: $y_{{mean}} + {num_stds} \\cdot \\sigma_t \\Longrightarrow t_{{floc}} = {linregressresult.slope:.3f} y + {linregressresult.intercept:.3f}$",
+            "label": rf"fit: $\langle t_{{floc}} \rangle + {num_stds}\sigma$",
             "linestyle": ":",
             "color": "red",
         },
     )
 
-    return s_max, s_std, s_mean, s_median, s_max_fit, s_model_fit
+    return s_max, s_mean, s_median, s_std, s_max_fit, s_model_fit
 
 
 def coagulation_kernel(
