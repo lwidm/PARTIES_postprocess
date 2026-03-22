@@ -1261,6 +1261,7 @@ def family_tree_breakup_formation_pdf(
     filtered_t_min: bool,
     name: str | None,
     show_label: bool,
+    show_filter_in_label: bool,
 ) -> tuple[PlotSeries, PlotSeries]:
 
     y: np.ndarray
@@ -1275,14 +1276,14 @@ def family_tree_breakup_formation_pdf(
     print(f"len(y)={len(y)}, len(edges)={len(edges)}, len(PDF)={len(PDF)}")
 
     markeredgewidth: float = 0.5
-    dir_labels: list[str] = ["x", "y", "z"]
 
     local_label: str
     if show_label:
+        filter_str = " (filtered)" if filtered_t_min else " (unfiltered)"
         if label is None:
-            local_label = f"{type}"
+            local_label = f"{type}{filter_str if show_filter_in_label else ''}"
         else:
-            local_label = f"{type} ({label})"
+            local_label = f"{type} ({label}){filter_str if show_filter_in_label else ''}"
     else:
         local_label = ""
 

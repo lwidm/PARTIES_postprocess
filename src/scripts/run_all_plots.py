@@ -564,7 +564,7 @@ def lagrangian_velocity(
     plt_templ.lagrangian_up_pdf(plot_dir, s_up_all_list + s_up_all_dot_list, "all")
 
 
-def fam_tree(
+def breakup_formation_pdf(
     plot_dir: Path,
     data_dir: Path,
     data_names: list[str],
@@ -612,6 +612,7 @@ def fam_tree(
             filtered_t_min=True,
             name=None,
             show_label=True,
+            show_filter_in_label=(unfiltered == 2),
         )
         s_breakup_filtered, _ = plt_series.family_tree_breakup_formation_pdf(
             csv_dir=csv_dir,
@@ -623,6 +624,7 @@ def fam_tree(
             filtered_t_min=True,
             name=None,
             show_label=True,
+            show_filter_in_label=(unfiltered == 2),
         )
         s_formation_unfiltered = plt_series.family_tree_breakup_formation_pdf(
             csv_dir=csv_dir,
@@ -634,6 +636,7 @@ def fam_tree(
             filtered_t_min=False,
             name=None,
             show_label=True,
+            show_filter_in_label=(unfiltered == 2),
         )
         s_breakup_unfiltered = plt_series.family_tree_breakup_formation_pdf(
             csv_dir=csv_dir,
@@ -645,6 +648,7 @@ def fam_tree(
             filtered_t_min=False,
             name=None,
             show_label=True,
+            show_filter_in_label=(unfiltered == 2),
         )
         s_list_filtered.append([s_breakup_filtered, s_formation_filtered])
         if unfiltered == 2:
@@ -1583,15 +1587,26 @@ def main() -> None:
     #     show_errs=False,
     #     separate_plots=False,
     # )
-    lagrangian_velocity(
+    # lagrangian_velocity(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     colours,
+    #     markers,
+    #     show_errs=False,
+    #     separate_plots=False,
+    # )
+    breakup_formation_pdf(
         plot_dir,
         data_dir,
         data_names,
         labels,
-        colours,
+        colours_fam_tree,
         markers,
-        show_errs=False,
-        separate_plots=False,
+        linestyles,
+        separate_plots=True,
+        unfiltered=2,
     )
 
     # ========== Used for thesis ==========
@@ -1600,17 +1615,6 @@ def main() -> None:
 
     # ========== Probably unused for thesis ==========
 
-    # fam_tree(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names,
-    #     labels,
-    #     colours_fam_tree,
-    #     markers,
-    #     linestyles,
-    #     separate_plots=True,
-    #     unfiltered=3,
-    # )
     # floc_timescale(
     #     plot_dir=plot_dir,
     #     data_dir=data_dir,

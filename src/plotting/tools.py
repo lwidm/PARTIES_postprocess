@@ -13,7 +13,7 @@ import colorsys
 NumericArray = np.ndarray | float | int
 
 # ---- global font size defaults ----
-kFontScale: float = 1.6
+kFontScale: float = 1.4
 kTickLabelSize: float = 12.0 * kFontScale
 kAxisLabelSize: float = 14.0 * kFontScale
 kTitleSize: float = 14.0 * kFontScale

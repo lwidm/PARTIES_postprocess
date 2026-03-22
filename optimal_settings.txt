@@ -21,6 +21,9 @@ global font_scale=1.4
 ----- lagrangian_velocity -----
 global font_scale=1.6
 
+----- breakup_formation_pdf -----
+global font_scale=1.4
+
 # ========== p(x|y) pcolormesh and coletti plot =========
 ----- Affected plots -----
 fragment_size_distribution non normalised
