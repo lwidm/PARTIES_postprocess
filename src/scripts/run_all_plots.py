@@ -1,7 +1,7 @@
 import numpy as np
 from typing import Literal, Callable
 from pathlib import Path
-import seaborn as sns # type: ignore
+import seaborn as sns  # type: ignore
 import re
 
 from src.plotting.tools import PlotSeries, kTickLabelSize, kAxisLabelSize
@@ -437,14 +437,23 @@ def lagrangian_acceleration(
             colours_local = colours
             labels_local = [None for _ in range(max(3, len(csv_dirs)))]
 
-        s_ax, s_ay, s_az, s_ax_dot, s_ay_dot, s_az_dot, s_ax_err, s_ay_err, s_az_err, s_a_fit = (
-            plt_series.lagrangian_acceleration_pdf(
-                csv_dir=csv_dir,
-                labels=labels_local,
-                colours=colours_local,
-                markers=markers,
-                show_legend=separate_plots,
-            )
+        (
+            s_ax,
+            s_ay,
+            s_az,
+            s_ax_dot,
+            s_ay_dot,
+            s_az_dot,
+            s_ax_err,
+            s_ay_err,
+            s_az_err,
+            s_a_fit,
+        ) = plt_series.lagrangian_acceleration_pdf(
+            csv_dir=csv_dir,
+            labels=labels_local,
+            colours=colours_local,
+            markers=markers,
+            show_legend=separate_plots,
         )
         s_a_list.append([s_ax, s_ay, s_az])
         s_a_dot_list.append([s_ax_dot, s_ay_dot, s_az_dot])
@@ -473,7 +482,9 @@ def lagrangian_acceleration(
         for i in range(len(csv_dirs)):
             s_a_plot += s_a_list[i]
             s_a_dot_plot += s_a_dot_list[i]
-        plt_templ.lagrangian_acceleration_pdf(plot_dir, s_a_plot + s_a_dot_plot + s_a_proxies, None)
+        plt_templ.lagrangian_acceleration_pdf(
+            plot_dir, s_a_plot + s_a_dot_plot + s_a_proxies, None
+        )
 
 
 def lagrangian_velocity(
@@ -553,14 +564,18 @@ def lagrangian_velocity(
 
     if separate_plots:
         for i, csv_dir in enumerate(csv_dirs):
-            plt_templ.lagrangian_up_pdf(plot_dir, s_up_list[i] + s_up_dot_list[i], labels[i])
+            plt_templ.lagrangian_up_pdf(
+                plot_dir, s_up_list[i] + s_up_dot_list[i], labels[i]
+            )
     else:
         s_up_plot: list[PlotSeries] = []
         s_up_dot_plot: list[PlotSeries] = []
         for i in range(len(csv_dirs)):
             s_up_plot += s_up_list[i]
             s_up_dot_plot += s_up_dot_list[i]
-        plt_templ.lagrangian_up_pdf(plot_dir, s_up_plot + s_up_dot_plot + s_up_proxies, None)
+        plt_templ.lagrangian_up_pdf(
+            plot_dir, s_up_plot + s_up_dot_plot + s_up_proxies, None
+        )
     plt_templ.lagrangian_up_pdf(plot_dir, s_up_all_list + s_up_all_dot_list, "all")
 
 
@@ -899,7 +914,7 @@ def coagulation_kernel(
     x_axis_value: Literal["np", "D", "DD"],
 ):
 
-    data_name_ylim_map: dict[str, float]= {
+    data_name_ylim_map: dict[str, float] = {
         "phi1p5": 3.5,
         "phi3p0": 5,
         "phi5p0_new": 8,
@@ -950,17 +965,17 @@ def fragment_size_distribution(
 
     data_name_ylim_map: dict[str, int]
     if normalised:
-        data_name_ylim_map= {
-        "phi1p5": 23,
-        "phi3p0": 65,
-        "phi5p0_new": 162,
-    }
+        data_name_ylim_map = {
+            "phi1p5": 23,
+            "phi3p0": 65,
+            "phi5p0_new": 162,
+        }
     else:
-        data_name_ylim_map= {
-        "phi1p5": 33,
-        "phi3p0": 110,
-        "phi5p0_new": 400,
-    }
+        data_name_ylim_map = {
+            "phi1p5": 33,
+            "phi3p0": 110,
+            "phi5p0_new": 400,
+        }
 
     cmap: Colormap = plt.get_cmap("Blues")
     s_pcolormesh_list: list[PlotSeries] = []
@@ -986,8 +1001,13 @@ def fragment_size_distribution(
     suffix = "_corrected" if corrected else "_uncorrected"
     for i in range(len(data_names)):
         plt_templ.fragment_size_distribution(
-            plot_dir, s_pcolormesh_list[i], None, data_names[i] + suffix, normalised=normalised
+            plot_dir,
+            s_pcolormesh_list[i],
+            None,
+            data_names[i] + suffix,
+            normalised=normalised,
         )
+
 
 def fragment_size_distribution_normalised(
     plot_dir: Path,
@@ -1013,8 +1033,8 @@ def fragment_size_distribution_normalised(
             labels[i],
             cmap,
             ylim=(0.1, data_name_ylim_map[data_name]),
-            corrected = corrected,
-            x_axis_value = x_axis_value,
+            corrected=corrected,
+            x_axis_value=x_axis_value,
         )
         s_pcolormesh_list.append(s_pcolormesh)
         # s_contour_list.append(s_contour)
@@ -1022,7 +1042,11 @@ def fragment_size_distribution_normalised(
     suffix = "_corrected" if corrected else "_uncorrected"
     for i in range(len(data_names)):
         plt_templ.fragment_size_distribution(
-            plot_dir, s_pcolormesh_list[i], None, data_names[i] + suffix, normalised=True
+            plot_dir,
+            s_pcolormesh_list[i],
+            None,
+            data_names[i] + suffix,
+            normalised=True,
         )
 
 
@@ -1036,7 +1060,7 @@ def breakage_rate(
     corrected: bool,
     x_axis_value: Literal["np", "D"],
     only_base_legend: bool,
-    show_fit: bool
+    show_fit: bool,
 ) -> None:
     s_list: list[PlotSeries] = []
     s_fit_list: list[PlotSeries | None] = []
@@ -1613,6 +1637,18 @@ def main() -> None:
     #     cmap_formation=blue_cmap,
     # )
     # noncohesive_floc_lifetime(plot_dir, data_dir)
+    # breakage_rate(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     markers,
+    #     colours,
+    #     corrected=False,
+    #     x_axis_value="D",
+    #     only_base_legend=False,
+    #     show_fit=True,
+    # )
 
     # ========== Used for thesis ==========
 
@@ -1640,18 +1676,6 @@ def main() -> None:
     #     contour_sigmas=coagulation_kernel_sigmas,
     #     corrected=False,
     #     x_axis_value="D",
-    # )
-    # breakage_rate(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names,
-    #     labels,
-    #     markers,
-    #     colours,
-    #     corrected=False,
-    #     x_axis_value="D",
-    #     only_base_legend=False,
-    #     show_fit=False
     # )
     # coalescence_kernel_coletti(
     #     plot_dir,
@@ -1698,16 +1722,6 @@ def main() -> None:
     #     markers,
     #     colours,
     #     corrected=False,
-    # )
-    # breakage_rate(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names,
-    #     labels,
-    #     markers,
-    #     colours,
-    #     corrected=False,
-    #     x_axis_value="D",
     # )
     # number_density_evo_sink_source(
     #     plot_dir=plot_dir,

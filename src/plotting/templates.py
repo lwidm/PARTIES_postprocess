@@ -236,7 +236,7 @@ def n_p_pdf(output_dir: Path, series_list: list[PlotSeries]) -> None:
         series_list,
         r"PDF_n_p",
         r"\#Particles in floc, $n_p$",
-        r"$PDF(n_p)$",
+        r"$f(n_p)$",
         0.9,
         100,
         1e-6,
@@ -249,8 +249,8 @@ def D_f_pdf(output_dir: Path, series_list: list[PlotSeries]) -> None:
         output_dir,
         series_list,
         r"PDF_D_f",
-        r"$D_f / D_p$",
-        r"$PDF(D_f)$",
+        r"$D_f / d_p$",
+        r"$f(D_f/d_p)$",
         0.0,
         40,
         1e-7,
@@ -263,8 +263,8 @@ def D_g_pdf(output_dir: Path, series_list: list[PlotSeries]) -> None:
         output_dir,
         series_list,
         r"PDF_D_g",
-        r"$D_g / D_p$",
-        r"$PDF(D_g)$",
+        r"$D_g / d_p$",
+        r"$f(D_g/d_p)$",
         0.0,
         20,
         1e-7,
@@ -278,7 +278,7 @@ def n_p_mass_pdf(output_dir: Path, series_list: list[PlotSeries]) -> None:
         series_list,
         r"PDF_n_p_mass",
         r"\#Particles in floc, $n_p$",
-        r"Mass-weighted $PDF(n_p)$",
+        r"$f(n_p) \cdot n_p$",
         0.9,
         100,
         1e-6,
@@ -291,8 +291,8 @@ def D_f_mass_pdf(output_dir: Path, series_list: list[PlotSeries]) -> None:
         output_dir,
         series_list,
         r"PDF_D_f_mass",
-        r"$D_f / D_p$",
-        r"Mass-weighted $PDF(D_f)$",
+        r"$D_f / d_p$",
+        r"$f(D_f/d_p) \cdot D_f/d_p$",
         0.0,
         40,
         1e-6,
@@ -305,8 +305,8 @@ def D_g_mass_pdf(output_dir: Path, series_list: list[PlotSeries]) -> None:
         output_dir,
         series_list,
         r"PDF_D_g_mass",
-        r"$D_g / D_p$",
-        r"Mass-weighted $PDF(D_g)$",
+        r"$D_g / d_p$",
+        r"$f(D_g/d_p) \cdot D_g/d_p$",
         0.0,
         20,
         1e-6,
@@ -559,14 +559,14 @@ def coagulation_kernel(
     ylabel: str
     xlabel: str
     if x_axis_value == "np":
-        xlabel = "$x, \\quad n_p$"
-        ylabel = "$y, \\quad n_p$"
+        xlabel = r"$n_p$"
+        ylabel = r"$\hat{n}_p$"
     elif x_axis_value == "D":
-        xlabel = "$x, \\quad D/d_p \\sim \\sqrt[3]{n_p}$"
-        ylabel = "$y, \\quad D/d_p \\sim \\sqrt[3]{n_p}$"
+        xlabel = r"$D/d_p$"
+        ylabel = r"$\hat{D}/d_p$"
     else:
-        xlabel = "$x^2, \\quad D^2/d_p^2 \\sim (\\sqrt[3]{n_p})^2$"
-        ylabel = "$y^2, \\quad D^2/d_p^2 \\sim (\\sqrt[3]{n_p})^2$"
+        xlabel = r"$(D/d_p)^2$"
+        ylabel = r"$(\hat{D}/d_p)^2$"
 
     ax, fig, _ = generic_plot(
         s_list,
@@ -603,15 +603,15 @@ def fragment_size_distribution(
 
     xlabel: str
     if normalised:
-        xlabel = "$x/y \\quad (n_p)$"
+        xlabel = r"$n_{p,d} / \hat{n}_p$"
     else:
-        xlabel = "$x \\quad (n_p)$"
+        xlabel = r"$n_{p,d}$"
 
     ax, fig, _ = generic_plot(
         s_list,
         legend=True,
-        xlabel= xlabel ,
-        ylabel="$y \\quad (n_p)$",
+        xlabel=xlabel,
+        ylabel=r"$\hat{n}_p$",
         xlim=xlim,
         ylim=ylim,
         figsize=(6.5, 5.5),
@@ -638,25 +638,29 @@ def breakage_rate(
         F_list.append(s.data["y"])
         x_list.append(s.data["x"])
 
-    ymax: float = max([np.nanmax(F[x < n_p_max]) for x, F in zip(x_list, F_list)])
+    ymax: float = max([1.5*np.nanmax(F[x < n_p_max]) for x, F in zip(x_list, F_list)])
+    ymin: float = min([0.5*np.nanmin(F[x < n_p_max]) for x, F in zip(x_list, F_list)])
 
     xlabel: str
     xlim: tuple[float | None, float | None]
+    ylabel: str
     if x_axis_value == "np":
         xlim = (2, n_p_max)
-        xlabel = r"floc size: $x \quad (n_p)$"
+        xlabel = r"$n_p$"
+        ylabel = r"$F(n_p)$"
     else:
         xlim = (0.9, D_dp_max)
         xlim = (None, None)
-        xlabel = r"floc size: $x \quad (D/d_p \sim \sqrt[3]{n_p})$"
+        xlabel = r"$D/d_p$"
+        ylabel = r"$F(D/d_p)$"
 
     ax, fig, _ = generic_plot(
         list(series_list),
         legend=True,
         xlabel=xlabel,
-        ylabel="breakage rate: $F(x)$",
+        ylabel=ylabel,
         xlim=xlim,
-        ylim=(0, ymax),
+        ylim=(ymin, ymax),
         figsize=(6.5, 5.5),
         legend_loc="best",
     )
@@ -691,20 +695,25 @@ def coalescence_kernel_coletti(
     ymax: None = None
 
     xlabel: str
+    ylabel: str
     xlim: tuple[float | None, float | None]
     if x_axis_value == "np":
         xlim = (2, n_p_max)
-        xlabel = r"floc size: $x_1 + x_2, \quad x=n_p$"
+        xlabel = r"$n_p + \hat{n}_p$"
+        ylabel = r"$K(n_p, \hat{n}_p)$"
     elif x_axis_value == "D":
         xlim = (0.9, D_dp_max)
         xlim = (None, None)
-        xlabel = r"floc size: $x_1 + x_2, \quad x = D/d_p \sim \sqrt[3]{n_p})$"
+        xlabel = r"$(D + \hat{D})/d_p$"
+        ylabel = r"$K(D/d_p,\, \hat{D}/d_p)$"
     elif x_axis_value == "DD":
         xlim = (None, None)
-        xlabel = r"floc size: $x_1^2 + x_2^2, \quad  x=D/d_p \sim \sqrt[3]{n_p})$"
+        xlabel = r"$(D^2 + \hat{D}^2)/d_p^2$"
+        ylabel = r"$K(D/d_p,\, \hat{D}/d_p)$"
     elif x_axis_value == "DD+D":
         xlim = (None, None)
-        xlabel = r"floc size: $(x_1^2 + x_2^2)(x_1 + x_2), \quad x=D/d_p \sim \sqrt[3]{n_p})$"
+        xlabel = r"$(D^2 + \hat{D}^2)(D + \hat{D})/d_p^3$"
+        ylabel = r"$K(D/d_p,\, \hat{D}/d_p)$"
     else:
         raise NotImplementedError
 
@@ -712,7 +721,7 @@ def coalescence_kernel_coletti(
         list(series_list),
         legend=True,
         xlabel=xlabel,
-        ylabel="Coalescence kernel: $K(x_1, x_2)$",
+        ylabel=ylabel,
         xlim=xlim,
         ylim=(0, ymax),
         figsize=(6.5, 5.5),
@@ -773,12 +782,12 @@ def number_density_evo_sink_source(
         name = "number_density_evo"
     out_path = output_dir / name
 
-    xlabel: str = r"floc size: $n_p$"
+    xlabel: str = r"$n_p$"
     ylabel: str
     if mass_weighted:
-        ylabel = r"$\frac{\partial n(n_p)}{\partial t} \cdot n_p$"
+        ylabel = r"$\frac{\partial f(n_p)}{\partial t} \cdot n_p$"
     else:
-        ylabel = r"$\frac{\partial n(n_p)}{\partial t}$"
+        ylabel = r"$\frac{\partial f(n_p)}{\partial t}$"
     ax, fig, _ = generic_plot(
         list(series_list),
         legend=True,
@@ -810,12 +819,12 @@ def cumulative_floculation_balance(
         name = "cumulative_floculation_balance"
     out_path = output_dir / name
 
-    xlabel: str = r"floc size: $n_p$"
+    xlabel: str = r"$n_p$"
     ylabel: str
     if mass_weighted:
-        ylabel = r"$\sum_{i=1}^{n_p} \left( \frac{\partial n_p}{\partial t} \cdot n_p \right)$"
+        ylabel = r"$\sum_{i=1}^{n_p} \left( \frac{\partial f(n_p)}{\partial t} \cdot n_p \right)$"
     else:
-        ylabel = r"$\sum_{i=1}^{n_p} \frac{\partial n_p}{\partial t}$"
+        ylabel = r"$\sum_{i=1}^{n_p} \frac{\partial f(n_p)}{\partial t}$"
     ax, fig, _ = generic_plot(
         list(series_list),
         legend=True,

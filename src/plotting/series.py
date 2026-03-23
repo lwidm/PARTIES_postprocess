@@ -1953,8 +1953,8 @@ def breakage_agglomeration_rate(
     if x_axis_value == "np":
         s_fit = None
     else:
-        x_fit_min: float = 2.0
-        x_fit_max: float = x_arr[-1]
+        x_fit_min: float = 1.5
+        x_fit_max: float = 4.5
 
         mask: np.ndarray = (
             (x_arr >= x_fit_min)
