@@ -109,7 +109,7 @@ def main():
     filter_sparse_bins: int = 30
     nonbinary_treatement: Literal["discount", "as_binary", "corrected"] = "discount"
     size_lim: tuple[float | None, float | None] = (1, None)
-    file_interval: int = 10
+    file_interval: int = 1
 
     for i, data_name in enumerate(data_names):
         dataset_dir: Path = data_dir / data_name

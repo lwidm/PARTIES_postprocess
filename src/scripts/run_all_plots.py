@@ -924,6 +924,7 @@ def coagulation_kernel(
     s_pcolormesh_list: list[PlotSeries] = []
     s_contour_list: list[PlotSeries] = []
     for i, data_name in enumerate(data_names):
+        contour_levels: int = 8
         s_pcolormesh, s_contour = plt_series.coagulation_kernel(
             data_dir / data_name,
             labels[i],
@@ -934,7 +935,7 @@ def coagulation_kernel(
             pcolormesh_log_scale=True,
             contour_log_scale=False,
             contour_sigma=contour_sigmas[i],
-            contour_levels=8,
+            contour_levels=contour_levels,
             corrected=corrected,
             x_axis_value=x_axis_value,
         )
@@ -1649,6 +1650,15 @@ def main() -> None:
     #     only_base_legend=False,
     #     show_fit=True,
     # )
+    # coagulation_kernel(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     contour_sigmas=coagulation_kernel_sigmas,
+    #     corrected=False,
+    #     x_axis_value="D",
+    # )
 
     # ========== Used for thesis ==========
 
@@ -1667,15 +1677,6 @@ def main() -> None:
     #     mass_weighted=True,
     #     separate_plots=True,
     #     corrected=True,
-    # )
-    # coagulation_kernel(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names,
-    #     labels,
-    #     contour_sigmas=coagulation_kernel_sigmas,
-    #     corrected=False,
-    #     x_axis_value="D",
     # )
     # coalescence_kernel_coletti(
     #     plot_dir,

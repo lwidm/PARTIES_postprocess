@@ -84,7 +84,7 @@ breakage_rate
 coalescence_kernel_coletti
 
 ----- balance_equation_bins ------
-10
+9
 12
 15
 ----- coagulation_kernel_sigma -----
@@ -98,15 +98,17 @@ filter_bounce = False
 filter_sparse_bins = 30
 nonbinary_treatement = False
 size_lim: tuple[float | None, float | None] = (1, None)
+file_interval = 1
 
 ----- coagulation_kernel() plot settings -----
     data_name_ylim_map: dict[str, float]= {
         "phi1p5": 3.5,
         "phi3p0": 5,
-        "phi5p0_new": 8,
+        "phi5p0_new": 7,
     }
 
             size_filter=(2, None),
+            contour_levels = 8
 
 
 
