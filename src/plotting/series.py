@@ -1934,6 +1934,8 @@ def breakage_agglomeration_rate(
     x_arr: np.ndarray,
     y_arr: np.ndarray,
     only_base_legend: bool,
+    x_fit_min: float | None,
+    x_fit_max: float | None,
 ) -> tuple[PlotSeries, PlotSeries | None]:
 
     plot_method: str
@@ -1959,15 +1961,14 @@ def breakage_agglomeration_rate(
     if x_axis_value == "np":
         s_fit = None
     else:
-        x_fit_min: float = 1.5
-        x_fit_max: float = 6
+        finite_mask = np.isfinite(x_arr) & np.isfinite(y_arr) & (y_arr != 0)
+        fit_min = x_fit_min if x_fit_min is not None else float(np.min(x_arr[finite_mask]))
+        fit_max = x_fit_max if x_fit_max is not None else float(np.max(x_arr[finite_mask]))
 
         mask: np.ndarray = (
-            (x_arr >= x_fit_min)
-            & (x_arr <= x_fit_max)
-            & np.isfinite(x_arr)
-            & np.isfinite(y_arr)
-            & (y_arr != 0)
+            (x_arr >= fit_min)
+            & (x_arr <= fit_max)
+            & finite_mask
         )
 
         log_x = np.log(x_arr[mask])
@@ -1976,7 +1977,7 @@ def breakage_agglomeration_rate(
         a = coeffs[0]
         b = np.exp(coeffs[1])
 
-        x_fit: np.ndarray = np.geomspace(x_fit_min, x_fit_max, 100)
+        x_fit: np.ndarray = np.geomspace(fit_min, fit_max, 100)
         y_fit: np.ndarray = b * x_fit**a
         fit_label: str = ""
         if not only_base_legend:
@@ -2040,6 +2041,8 @@ def breakage_rate(
         x_arr=x_arr,
         y_arr=F_arr,
         only_base_legend=only_base_legend,
+        x_fit_min=2,
+        x_fit_max=6,
     )
 
     return s, s_fit
@@ -2109,6 +2112,8 @@ def coalescence_kernel_coletti(
         x_arr=np.asarray(xx_list),
         y_arr=np.asarray(y_list),
         only_base_legend=only_base_legend,
+        x_fit_min=None,
+        x_fit_max=None,
     )
 
     return s, s_fit

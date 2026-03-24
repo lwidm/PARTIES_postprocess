@@ -104,11 +104,11 @@ def main():
     bin_width: float | None = None
     num_bins_list: list[int | None] = globals.balance_equation_bins
     # num_bins_list: list[int | None] = [None for i in globals.balance_equation_bins]
-    log_bins: bool | None = True
+    log_bins: bool | None = False
     filter_bounce: bool = False
     filter_sparse_bins: int = 30
     nonbinary_treatement: Literal["discount", "as_binary", "corrected"] = "discount"
-    size_lim: tuple[float | None, float | None] = (1, None)
+    size_lim: tuple[float | None, float | None] = (2, None)
     file_interval: int = 1
 
     for i, data_name in enumerate(data_names):

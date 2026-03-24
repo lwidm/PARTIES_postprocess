@@ -33,6 +33,16 @@ global font_scale=1.4
 ----- breakage_rate -----
 global font_scale=1.5
 
+----- coagulation_kernel -----
+global font_scale=1.7
+
+----- coalescence_kernel_coletti -----
+global font_scale=1.4
+
+----- fragment_size_distribution -----
+global font_scale=1.7
+
+
 # ========== p(x|y) pcolormesh and coletti plot =========
 ----- Affected plots -----
 fragment_size_distribution non normalised

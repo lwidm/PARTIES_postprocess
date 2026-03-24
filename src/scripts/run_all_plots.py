@@ -1098,6 +1098,7 @@ def coalescence_kernel_coletti(
     corrected: bool,
     x_axis_value: Literal["np", "D", "DD", "DD+D"],
     only_base_legend: bool,
+    show_fit: bool,
 ) -> None:
     s_list: list[PlotSeries] = []
     s_fit_list: list[PlotSeries | None] = []
@@ -1114,12 +1115,12 @@ def coalescence_kernel_coletti(
             only_base_legend=only_base_legend,
         )
         s_list.append(s)
-        # s_fit_list.append(s_fit)
+        s_fit_list.append(s_fit)
 
-    # if x_axis_value != "np":
-    #     for i, data_name in enumerate(data_names):
-    #         if s_fit_list[i] is not None:
-    #             s_list.append(s_fit_list[i])
+    if show_fit:
+        for i, data_name in enumerate(data_names):
+            if s_fit_list[i] is not None:
+                s_list.append(s_fit_list[i])
 
     plt_templ.coalescence_kernel_coletti(
         plot_dir, s_list, n_p_max=20, D_dp_max=9.1, x_axis_value=x_axis_value
@@ -1668,8 +1669,35 @@ def main() -> None:
     #     colours,
     #     corrected=False,
     #     x_axis_value="DD",
-    #     only_base_legend=True,
+    #     only_base_legend=False,
+    #     show_fit=True,
     # )
+    # fragment_size_distribution(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     corrected=False,
+    #     contour_sigmas=coagulation_kernel_sigmas,
+    #     normalised=False,
+    # )
+    fragment_size_distribution_normalised(
+        plot_dir,
+        data_dir,
+        data_names,
+        labels,
+        corrected=False,
+        x_axis_value="np",
+    )
+    daughter_aggregate_size_distribution(
+        plot_dir,
+        data_dir,
+        data_names,
+        labels,
+        markers,
+        colours,
+        corrected=False,
+    )
 
     # ========== Used for thesis ==========
 
@@ -1688,41 +1716,6 @@ def main() -> None:
     #     mass_weighted=True,
     #     separate_plots=True,
     #     corrected=True,
-    # )
-    # fragment_size_distribution(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names,
-    #     labels,
-    #     corrected=False,
-    #     contour_sigmas=coagulation_kernel_sigmas,
-    #     normalised=True,
-    # )
-    # fragment_size_distribution(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names,
-    #     labels,
-    #     corrected=False,
-    #     contour_sigmas=coagulation_kernel_sigmas,
-    #     normalised=False,
-    # )
-    # fragment_size_distribution_normalised(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names,
-    #     labels,
-    #     corrected=False,
-    #     x_axis_value="np",
-    # )
-    # daughter_aggregate_size_distribution(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names,
-    #     labels,
-    #     markers,
-    #     colours,
-    #     corrected=False,
     # )
     # number_density_evo_sink_source(
     #     plot_dir=plot_dir,
