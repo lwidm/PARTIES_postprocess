@@ -808,8 +808,11 @@ def number_density_evo_sink_source(
         xlim=(1, xmax),
         ylim=(None, None),
         figsize=(6.5, 5.5),
-        legend_loc="best",
+        legend_loc="lower right",
     )
+    leg = ax.get_legend()
+    if leg is not None:
+        leg.set_ncols(2)
     current_ticks = list(ax.get_xticks())
     if 1 not in current_ticks:
         current_ticks.append(1)

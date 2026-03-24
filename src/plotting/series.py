@@ -2223,11 +2223,11 @@ def number_density_evo_sink_source(
     s_list_dn_dt: list[PlotSeries] = []
 
     quantities: list[str] = [
-        "gain by coagulation",
-        "loss by coagulation",
-        "gain by fragmentation",
-        "loss by fragmentation",
-        r"$\frac{\partial n(n_p)}{\partial t}$",
+        r"$S_a$",   # gain by coagulation
+        r"$S_b$",   # loss by coagulation
+        r"$T_a$",   # gain by fragmentation
+        r"$T_b$",   # loss by fragmentation
+        r"$\frac{\partial f(n_p)}{\partial t}$",
     ]
 
     pickle_file = (
@@ -2323,9 +2323,7 @@ def number_density_evo_sink_source(
                 colours[data_idx] for _ in range(len(quantities))
             ]
             if separate_plots:
-                labels_local = [
-                    f"{quantity} ({labels[data_idx]})" for quantity in quantities
-                ]
+                labels_local = list(quantities)
                 colours_local = colours
             return PlotSeries(
                 data={"x": x_arr, "y": y_data},
@@ -2437,9 +2435,9 @@ def cumulative_floculation_balance(
         labels_local_frag: str = ""
         labels_local_dn_dt: str = ""
         if separate_plots:
-            labels_local_coag = f"$T_{{coag}}$ ({labels[data_idx]})"
-            labels_local_frag = f"$T_{{frag}}$ ({labels[data_idx]})"
-            labels_local_dn_dt = f"$dn/dt$ ({labels[data_idx]})"
+            labels_local_coag = r"$S$"  # coagulation
+            labels_local_frag = r"$T$"  # fragmentation
+            labels_local_dn_dt = r"$\partial f/\partial t$"
 
         s_coag = PlotSeries(
             data={"x": n_p, "y": T_coag_cumsum},
@@ -2779,11 +2777,11 @@ def number_density_evo_sink_source_diff(
     s_list_dn_dt: list[PlotSeries] = []
 
     quantities: list[str] = [
-        "gain by coagulation (diff)",
-        "loss by coagulation (diff)",
-        "gain by fragmentation (diff)",
-        "loss by fragmentation (diff)",
-        r"$\frac{\partial n(n_p)}{\partial t}$ (diff)",
+        r"$S_a$ (diff)",   # gain by coagulation
+        r"$S_b$ (diff)",   # loss by coagulation
+        r"$T_a$ (diff)",   # gain by fragmentation
+        r"$T_b$ (diff)",   # loss by fragmentation
+        r"$\frac{\partial f(n_p)}{\partial t}$ (diff)",
     ]
 
     for data_idx, data_name in enumerate(data_names):
@@ -2944,9 +2942,7 @@ def number_density_evo_sink_source_diff(
                 colours[data_idx] for _ in range(len(quantities))
             ]
             if separate_plots:
-                labels_local = [
-                    f"{quantity} ({labels[data_idx]})" for quantity in quantities
-                ]
+                labels_local = list(quantities)
                 colours_local = colours
 
             return PlotSeries(
@@ -3076,9 +3072,9 @@ def cumulative_floculation_balance_diff(
         labels_local_frag: str = ""
         labels_local_dn_dt: str = ""
         if separate_plots:
-            labels_local_coag = f"$T_{{coag}}$ diff ({labels[data_idx]})"
-            labels_local_frag = f"$T_{{frag}}$ diff ({labels[data_idx]})"
-            labels_local_dn_dt = f"$dn/dt$ diff ({labels[data_idx]})"
+            labels_local_coag = r"$S$ diff"  # coagulation
+            labels_local_frag = r"$T$ diff"  # fragmentation
+            labels_local_dn_dt = r"$\partial f/\partial t$ diff"
 
         s_coag = PlotSeries(
             data={"x": n_p_corr, "y": T_coag_cumsum_diff},

@@ -48,6 +48,8 @@ global font_scale=1.7
 ----- daughter_aggregate_size_distribution -----
 global font_scale=1.4
 
+----- number_density_evo_sink_source -----
+global font_scale=1.5
 
 
 # ========== p(x|y) pcolormesh and coletti plot =========
