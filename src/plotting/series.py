@@ -1913,7 +1913,7 @@ def fragment_size_distribution_normalised(
             "X": X,
             "Y": Y,
             "C": C,
-            "xlim": (0.01, 1.01),
+            "xlim": (0.0, 1.01),
             "ylim": ylim,
         },
         x_key="x",

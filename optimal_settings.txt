@@ -42,6 +42,13 @@ global font_scale=1.4
 ----- fragment_size_distribution -----
 global font_scale=1.7
 
+----- fragment_size_distribution_normalised -----
+global font_scale=1.7
+
+----- daughter_aggregate_size_distribution -----
+global font_scale=1.4
+
+
 
 # ========== p(x|y) pcolormesh and coletti plot =========
 ----- Affected plots -----

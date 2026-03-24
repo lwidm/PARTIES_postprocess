@@ -18,12 +18,17 @@ def main():
     cluster_param: float = 1e-4
     filter_bounce: bool = True
     filter_sparse_bins: int = 40
-    size_lim: tuple[float | None, float | None] = (20, None)
+    size_lim_map: dict[str, tuple[float | None, float | None]] = {
+        "phi1p5": (10, None),
+        "phi3p0": (20, None),
+        "phi5p0_new": (20, None),
+    }
     file_interval: int = 1
 
     for i, data_name in enumerate(data_names):
         dataset_dir: Path = data_dir / data_name
         out_dataset_dir: Path = output_dir / data_name
+        size_lim = size_lim_map[data_name]
 
         result_corrected: dict[str, dict] = (
             family_tree.compute_daughter_aggregate_size_distribution(

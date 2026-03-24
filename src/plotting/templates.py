@@ -611,15 +611,16 @@ def fragment_size_distribution(
 
     xlabel: str
     if normalised:
-        xlabel = r"$n_{p,d} / \hat{n}_p$"
+        xlabel = r"$n_{p,d} / n_{p,m}$"
     else:
-        xlabel = r"$n_{p,d}$"
+        xlabel = r"$n_p$"
 
+    ylabel = r"$n_{p,m}$" if normalised else r"$\hat{n}_p$"
     ax, fig, _ = generic_plot(
         s_list,
         legend=True,
         xlabel=xlabel,
-        ylabel=r"$\hat{n}_p$",
+        ylabel=ylabel,
         xlim=xlim,
         ylim=ylim,
         figsize=(6.5, 5.5),
@@ -772,7 +773,7 @@ def daughter_aggregate_size_distribution(
         list(series_list),
         legend=True,
         xlabel=r"$n_{p,d} / n_{p,m}$",
-        ylabel="Daughter aggregate size distribution: $p$",
+        ylabel=r"$p(n_{p,d} \,|\, n_{p,m})$",
         figsize=(6.5, 5.5),
         legend_loc="best",
         ylim=(0, ymax),

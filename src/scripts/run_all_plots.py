@@ -1019,10 +1019,10 @@ def fragment_size_distribution_normalised(
     x_axis_value: Literal["np", "D", "DD"],
 ):
 
-    data_name_ylim_map: dict[str, int] = {
-        "phi1p5": 23,
-        "phi3p0": 100,
-        "phi5p0_new": 400,
+    data_name_ylim_map: dict[str, tuple[int, int]] = {
+        "phi1p5": (8, 19),
+        "phi3p0": (15, 100),
+        "phi5p0_new": (15, 400),
     }
 
     cmap: Colormap = plt.get_cmap("Blues")
@@ -1033,7 +1033,7 @@ def fragment_size_distribution_normalised(
             data_dir / data_name,
             labels[i],
             cmap,
-            ylim=(0.1, data_name_ylim_map[data_name]),
+            ylim=data_name_ylim_map[data_name],
             corrected=corrected,
             x_axis_value=x_axis_value,
         )
@@ -1672,32 +1672,32 @@ def main() -> None:
     #     only_base_legend=False,
     #     show_fit=True,
     # )
-    # fragment_size_distribution(
+    fragment_size_distribution(
+        plot_dir,
+        data_dir,
+        data_names,
+        labels,
+        corrected=False,
+        contour_sigmas=coagulation_kernel_sigmas,
+        normalised=False,
+    )
+    # fragment_size_distribution_normalised(
     #     plot_dir,
     #     data_dir,
     #     data_names,
     #     labels,
     #     corrected=False,
-    #     contour_sigmas=coagulation_kernel_sigmas,
-    #     normalised=False,
+    #     x_axis_value="np",
     # )
-    fragment_size_distribution_normalised(
-        plot_dir,
-        data_dir,
-        data_names,
-        labels,
-        corrected=False,
-        x_axis_value="np",
-    )
-    daughter_aggregate_size_distribution(
-        plot_dir,
-        data_dir,
-        data_names,
-        labels,
-        markers,
-        colours,
-        corrected=False,
-    )
+    # daughter_aggregate_size_distribution(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     markers,
+    #     colours,
+    #     corrected=False,
+    # )
 
     # ========== Used for thesis ==========
 
