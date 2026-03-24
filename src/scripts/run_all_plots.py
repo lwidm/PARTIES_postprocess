@@ -1659,6 +1659,17 @@ def main() -> None:
     #     corrected=False,
     #     x_axis_value="D",
     # )
+    # coalescence_kernel_coletti(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     markers,
+    #     colours,
+    #     corrected=False,
+    #     x_axis_value="DD",
+    #     only_base_legend=True,
+    # )
 
     # ========== Used for thesis ==========
 
@@ -1677,17 +1688,6 @@ def main() -> None:
     #     mass_weighted=True,
     #     separate_plots=True,
     #     corrected=True,
-    # )
-    # coalescence_kernel_coletti(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names,
-    #     labels,
-    #     markers,
-    #     colours,
-    #     corrected=False,
-    #     x_axis_value="DD",
-    #     only_base_legend=True,
     # )
     # fragment_size_distribution(
     #     plot_dir,

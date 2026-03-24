@@ -1362,7 +1362,9 @@ def family_tree_breakup_formation_pdf(
         if label is None:
             local_label = f"{type}{filter_str if show_filter_in_label else ''}"
         else:
-            local_label = f"{type} ({label}){filter_str if show_filter_in_label else ''}"
+            local_label = (
+                f"{type} ({label}){filter_str if show_filter_in_label else ''}"
+            )
     else:
         local_label = ""
 
@@ -1479,7 +1481,9 @@ def noncohesive_floc_lifetime(
     )
     linregressresult = stats.linregress(y[y <= 1], max_vals[y <= 1])
     max_vals_fit = linregressresult.slope * y[y <= 1] + linregressresult.intercept
-    print(f"[noncohesive_floc_lifetime] fit y_max: t_floc = {linregressresult.slope:.4f}*y + {linregressresult.intercept:.4f}  (R^2={linregressresult.rvalue**2:.4f})")
+    print(
+        f"[noncohesive_floc_lifetime] fit y_max: t_floc = {linregressresult.slope:.4f}*y + {linregressresult.intercept:.4f}  (R^2={linregressresult.rvalue**2:.4f})"
+    )
     s_max_fit: PlotSeries = PlotSeries(
         data={
             "x": y[y <= 1],
@@ -1501,7 +1505,9 @@ def noncohesive_floc_lifetime(
         y[y <= 1], mean_vals[y <= 1] + std_vals[y <= 1] * num_stds
     )
     std_vals_fit = linregressresult.slope * y[y <= 1] + linregressresult.intercept
-    print(f"[noncohesive_floc_lifetime] fit y_mean + {num_stds}*sigma_t: t_floc = {linregressresult.slope:.4f}*y + {linregressresult.intercept:.4f}  (R^2={linregressresult.rvalue**2:.4f})")
+    print(
+        f"[noncohesive_floc_lifetime] fit y_mean + {num_stds}*sigma_t: t_floc = {linregressresult.slope:.4f}*y + {linregressresult.intercept:.4f}  (R^2={linregressresult.rvalue**2:.4f})"
+    )
     s_model_fit: PlotSeries = PlotSeries(
         data={
             "x": y[y <= 1],
@@ -1954,7 +1960,7 @@ def breakage_agglomeration_rate(
         s_fit = None
     else:
         x_fit_min: float = 1.5
-        x_fit_max: float = 4.5
+        x_fit_max: float = 6
 
         mask: np.ndarray = (
             (x_arr >= x_fit_min)

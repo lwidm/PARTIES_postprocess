@@ -181,7 +181,7 @@ def floc_count_evolution(
         xlabel=r"Dimensionless time, $\tau = L/U$ [-]",
         ylabel=ylabel,
         figsize=(6.5, 5.5),
-        legend_loc="best"
+        legend_loc="best",
         # legend_loc="lower right",
         # legend_bbox=(1.0, 0.80),
     )
@@ -522,6 +522,7 @@ def noncohesive_floc_lifetime(
     name = f"noncohesive_floc_lifetime_{label}"
     out_path = output_dir / name
     from src.plotting.tools import kLegendSize
+
     ax, fig, other = generic_plot(
         list(series_list),
         legend=False,
@@ -532,7 +533,14 @@ def noncohesive_floc_lifetime(
         figsize=(7.5, 5.5),
         additional_objects=additional_objects,
     )
-    handles = [other[0][0], other[1][0], other[2][0], other[3], other[4][0], other[5][0]]
+    handles = [
+        other[0][0],
+        other[1][0],
+        other[2][0],
+        other[3],
+        other[4][0],
+        other[5][0],
+    ]
     labels = [h.get_label() for h in handles]
     ax.legend(handles, labels, frameon=False, fontsize=kLegendSize, loc="best")
     my_save_fig(out_path, fig, dpi=150)
@@ -589,7 +597,7 @@ def fragment_size_distribution(
     series_pcolormesh: PlotSeries,
     series_contour: PlotSeries | None,
     name: str,
-    normalised: bool
+    normalised: bool,
 ) -> None:
     out_path: Path = output_dir / f"fragment_size_distribution_{name}"
     xlim: tuple[float, float] = series_pcolormesh.data["xlim"]
@@ -638,8 +646,8 @@ def breakage_rate(
         F_list.append(s.data["y"])
         x_list.append(s.data["x"])
 
-    ymax: float = max([1.5*np.nanmax(F[x < n_p_max]) for x, F in zip(x_list, F_list)])
-    ymin: float = min([0.5*np.nanmin(F[x < n_p_max]) for x, F in zip(x_list, F_list)])
+    ymax: float = max([1.1 * np.nanmax(F[x < n_p_max]) for x, F in zip(x_list, F_list)])
+    ymin: float = min([0.9 * np.nanmin(F[x < n_p_max]) for x, F in zip(x_list, F_list)])
 
     xlabel: str
     xlim: tuple[float | None, float | None]
@@ -661,9 +669,12 @@ def breakage_rate(
         ylabel=ylabel,
         xlim=xlim,
         ylim=(ymin, ymax),
-        figsize=(6.5, 5.5),
-        legend_loc="best",
+        figsize=(7.5, 5.5),
+        legend_loc="lower right",
     )
+    leg = ax.get_legend()
+    if leg is not None:
+        leg.set_frame_on(True)
     current_ticks = list(ax.get_xticks())
     if x_axis_value == "np":
         if 1 not in current_ticks:
@@ -734,8 +745,8 @@ def coalescence_kernel_coletti(
             current_ticks.sort()
             ax.set_xticks(current_ticks)
     else:
-        xmax: float = max([max(s.data[s.x_key]) for s in series_list]) # type: ignore
-        xmin: float = min([min(s.data[s.x_key]) for s in series_list]) # type: ignore
+        xmax: float = max([max(s.data[s.x_key]) for s in series_list])  # type: ignore
+        xmin: float = min([min(s.data[s.x_key]) for s in series_list])  # type: ignore
         xlim_ticks: list[float] = [0, 0]
         if xlim[0] is not None:
             xlim_ticks[0] = xlim[0]
@@ -746,7 +757,7 @@ def coalescence_kernel_coletti(
         else:
             xlim_ticks[1] = xmax
         if xmax <= 20:
-            set_integer_log_xticks(ax, tuple(xlim_ticks)) # type: ignore
+            set_integer_log_xticks(ax, tuple(xlim_ticks))  # type: ignore
     my_save_fig(out_path, fig, dpi=150)
 
 

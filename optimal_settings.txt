@@ -31,7 +31,7 @@ global font_scale=2.0
 global font_scale=1.4
 
 ----- breakage_rate -----
-global font_scale=1.7
+global font_scale=1.5
 
 # ========== p(x|y) pcolormesh and coletti plot =========
 ----- Affected plots -----
@@ -109,6 +109,10 @@ file_interval = 1
 
             size_filter=(2, None),
             contour_levels = 8
+----- breakage_rate() fit range -----
+x_fit_min = 2       # for unfiltered results
+x_fit_min = 1.5     # for filtered results
+x_fit_max = 6
 
 
 

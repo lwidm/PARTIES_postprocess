@@ -72,7 +72,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # scripts.run_get_start_steady.main()
-    # scripts.run_fam_tree.main()
+    scripts.run_fam_tree.main()
     # scripts.run_compute_daughter_aggregate_size_distribution.main()
     # scripts.run_floc_timescales.main()
     # scripts.run_floc_noncohesive_time.main()
