@@ -14,6 +14,7 @@ from src.plotting.tools import (
     update_plot_params,
     format_plot_axes,
     my_save_fig,
+    particle_event_plot,
     kLegendSize,
 )
 
@@ -905,3 +906,30 @@ def total_frequency_plot(
     plt.tight_layout()
 
     my_save_fig(out_path, fig, dpi=150)
+
+
+def event_tree_frame(
+    output_dir: Path,
+    h_vals: np.ndarray,
+    v_vals: np.ndarray,
+    radii: np.ndarray,
+    floc_ids: np.ndarray,
+    floc_color_map: dict[int, tuple[float, float, float]],
+    xlim: tuple[float, float],
+    ylim: tuple[float, float],
+    name: str,
+    title: str | None,
+) -> None:
+    out_path: Path = output_dir / name
+    _, fig = particle_event_plot(
+        h_vals=h_vals,
+        v_vals=v_vals,
+        radii=radii,
+        floc_ids=floc_ids,
+        floc_color_map=floc_color_map,
+        xlim=xlim,
+        ylim=ylim,
+        title=title,
+        figsize=(6.5, 5.5),
+    )
+    my_save_fig(out_path, fig, dpi=300)

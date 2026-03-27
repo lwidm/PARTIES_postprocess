@@ -8,6 +8,7 @@ from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib import colors as mcolors
+from matplotlib.patches import Circle
 import colorsys
 
 NumericArray = np.ndarray | float | int
@@ -49,6 +50,7 @@ class PlotSeries:
 
 SeriesLike = PlotSeries | Sequence[PlotSeries]
 
+# fmt: off
 default_kwargs: dict[str, dict] = {
     "kLineWidth": {"linewidth": 0.9 * kFontScale},  # default linewidth for generic plots
     "kBarLineWidth": {"linewidth": 1.0 * kFontScale},  # default linewidth for bar plots
@@ -59,6 +61,7 @@ default_kwargs: dict[str, dict] = {
     "kMarkerSize": {"markersize": 5.0 * kFontScale},  # default markersize
     "kMarkerEdgeWidth": {"markeredgewidth": 0.7 * kFontScale},  # default marker edge width
 }
+# fmt: on
 
 
 def _add_default_kwargs(defaults: list[str], plot_kwargs: dict) -> None:
@@ -239,7 +242,9 @@ def _plot_one(ax: Axes, series: PlotSeries) -> Any:
             ax_values_tuple = (x, y)
 
         plot_kwargs = series.kwargs
-        _add_default_kwargs(["kLineWidth", "kMarkerSize", "kMarkerEdgeWidth"], plot_kwargs)
+        _add_default_kwargs(
+            ["kLineWidth", "kMarkerSize", "kMarkerEdgeWidth"], plot_kwargs
+        )
 
         if method == "plot":
             other = ax.plot(*(ax_values_tuple), **plot_kwargs)
@@ -448,6 +453,107 @@ def generic_plot(
     fig.tight_layout()
 
     return ax, fig, other
+
+
+def _draw_particle(
+    ax: Axes,
+    x: float,
+    y: float,
+    radius: float,
+    color: tuple[float, float, float],
+    lw: float,
+    zorder: float,
+) -> None:
+    n: int = 64
+    lin: np.ndarray = np.linspace(-1, 1, n)
+    xx: np.ndarray
+    yy: np.ndarray
+    xx, yy = np.meshgrid(lin, lin)
+
+    r_sq: np.ndarray = xx**2 + yy**2
+    inside: np.ndarray = r_sq <= 1.0
+
+    edge_factor: np.ndarray = np.sqrt(np.clip(1.0 - r_sq, 0, 1))
+    hl_dist: np.ndarray = np.sqrt((xx + 0.35) ** 2 + (yy - 0.35) ** 2)
+    highlight: np.ndarray = np.exp(-(hl_dist**2) * 1.5)
+
+    brightness: np.ndarray = 0.35 * edge_factor + 0.45 * highlight * edge_factor
+    brightness: np.ndarray = np.clip(brightness, 0.12, 0.92)
+
+    rgba: np.ndarray = np.zeros((n, n, 4))
+    rgba[:, :, 0] = np.clip(color[0] * brightness * 2.0, 0, 1)
+    rgba[:, :, 1] = np.clip(color[1] * brightness * 2.0, 0, 1)
+    rgba[:, :, 2] = np.clip(color[2] * brightness * 2.0, 0, 1)
+    rgba[:, :, 3] = inside.astype(float)
+
+    xlim_cur: tuple[float, float]
+    ylim_cur: tuple[float, float]
+    xlim_cur, ylim_cur = ax.get_xlim(), ax.get_ylim()
+    ax.imshow(
+        rgba,
+        extent=(x - radius, x + radius, y - radius, y + radius),
+        origin="lower",
+        interpolation="bilinear",
+        aspect="equal",
+        zorder=zorder,
+    )
+    ax.set_xlim(xlim_cur)
+    ax.set_ylim(ylim_cur)
+
+    edge = Circle(
+        (x, y),
+        radius,
+        fill=False,
+        edgecolor="#404040",
+        lw=lw,
+        zorder=zorder + 1,
+    )
+    ax.add_patch(edge)
+
+
+def particle_event_plot(
+    h_vals: np.ndarray,
+    v_vals: np.ndarray,
+    radii: np.ndarray,
+    floc_ids: np.ndarray,
+    floc_color_map: dict[int, tuple[float, float, float]],
+    xlim: tuple[float, float],
+    ylim: tuple[float, float],
+    title: str | None,
+    figsize: tuple[float, float],
+) -> tuple[Axes, Figure]:
+    update_plot_params()
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.set_xlim(*xlim)
+    ax.set_ylim(*ylim)
+    ax.set_aspect("equal", adjustable="box")
+
+    unique_fids: np.ndarray
+    counts: np.ndarray
+    unique_fids, counts = np.unique(floc_ids, return_counts=True)
+    floc_size: dict[int, int] = dict(zip(unique_fids.tolist(), counts.tolist()))
+    sort_idx: np.ndarray = np.argsort([-floc_size[int(f)] for f in floc_ids])
+
+    idx: int
+    i: int
+    for idx, i in enumerate(sort_idx):
+        _draw_particle(
+            ax,
+            float(h_vals[i]),
+            float(v_vals[i]),
+            float(radii[i]),
+            color=floc_color_map[int(floc_ids[i])],
+            lw=0.3 * kFontScale,
+            zorder=2 + idx,
+        )
+
+    ax.set_xticks([])
+    ax.set_yticks([])
+    if title is not None:
+        ax.set_title(title, fontsize=kTitleSize)
+    fig.tight_layout()
+
+    return ax, fig
 
 
 def my_save_fig(output_path: Path, fig: Figure, dpi: float = 300):

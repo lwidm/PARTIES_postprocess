@@ -5,17 +5,16 @@ import numpy as np
 import pickle
 import random
 
-from matplotlib import pyplot as plt
-from matplotlib.axes import Axes
-from matplotlib.patches import Circle
-from matplotlib.colors import Normalize
-from matplotlib.figure import Figure
+import shutil
+
 import seaborn as sns
+from matplotlib import pyplot as plt
 from tqdm import tqdm
 
 from src.flocs.family_tree import FlocRecord, FamilyTreeType
 from src.myio import metadata, utils
 from src import globals
+from src.plotting import templates as plt_templ
 
 
 class EventSnapshot(TypedDict):
@@ -48,81 +47,54 @@ def get_event_tree(
         floc_files[i] for i in range(file_id - n_before, file_id + n_after + 1)
     ]
 
+    # Step 1: Find all relevant particles by reading floc_id and id arrays once per file
+    target_floc_ids = np.array([floc_id] + child_ids + parent_ids, dtype=int)
     relevant_particles: set[int] = set()
 
-    def update_relevent_particles(
-        h5_file: h5py.File, file_floc_ids: np.ndarray, floc_id: int
-    ) -> None:
-        mask: np.ndarray = file_floc_ids == floc_id
-        local_relevant_particles: np.ndarray = h5_file["id"][mask]  # type: ignore
-        relevant_particles.update(set(local_relevant_particles))
+    for f in [prepre_event_file, pre_event_file, post_event_file]:
+        with h5py.File(str(f), "r") as h5_file:
+            file_floc_ids: np.ndarray = h5_file["floc_id"][:]  # type: ignore
+            file_ids: np.ndarray = h5_file["id"][:]  # type: ignore
+            mask = np.isin(file_floc_ids, target_floc_ids)
+            relevant_particles.update(file_ids[mask].tolist())
 
-    with h5py.File(str(prepre_event_file), "r") as h5_file:
-        file_floc_ids: np.ndarray = h5_file["floc_id"][:]  # type: ignore
-        update_relevent_particles(h5_file, file_floc_ids, floc_id)
-        for child_id in child_ids:
-            update_relevent_particles(h5_file, file_floc_ids, child_id)
-        for parent_id in parent_ids:
-            update_relevent_particles(h5_file, file_floc_ids, parent_id)
-
-    with h5py.File(str(pre_event_file), "r") as h5_file:
-        file_floc_ids: np.ndarray = h5_file["floc_id"][:]  # type: ignore
-        update_relevent_particles(h5_file, file_floc_ids, floc_id)
-        for child_id in child_ids:
-            update_relevent_particles(h5_file, file_floc_ids, child_id)
-        for parent_id in parent_ids:
-            update_relevent_particles(h5_file, file_floc_ids, parent_id)
-
-    with h5py.File(str(post_event_file), "r") as h5_file:
-        file_floc_ids: np.ndarray = h5_file["floc_id"][:]  # type: ignore
-        update_relevent_particles(h5_file, file_floc_ids, floc_id)
-        for child_id in child_ids:
-            update_relevent_particles(h5_file, file_floc_ids, child_id)
-        for parent_id in parent_ids:
-            update_relevent_particles(h5_file, file_floc_ids, parent_id)
-
+    # Step 2: Find all relevant flocs + extract event data in a single pass
+    relevant_particles_arr = np.array(list(relevant_particles), dtype=int)
     relevant_flocs: set[int] = set()
-
-    def update_relevent_flocs(
-        h5_file: h5py.File, file_particle_ids: np.ndarray, particle_id: int
-    ) -> None:
-        mask: np.ndarray = file_particle_ids == particle_id
-        local_relevant_flocs: np.ndarray = h5_file["floc_id"][mask]  # type: ignore
-        relevant_flocs.update(set(local_relevant_flocs))
+    cached_data: dict[str, dict] = {}
 
     for floc_file in selected:
         with h5py.File(str(floc_file), "r") as h5_file:
             file_particle_ids: np.ndarray = h5_file["id"][:]  # type: ignore
-            for particle_id in relevant_particles:
-                update_relevent_flocs(h5_file, file_particle_ids, particle_id)
+            file_floc_ids: np.ndarray = h5_file["floc_id"][:]  # type: ignore
+            particle_mask = np.isin(file_particle_ids, relevant_particles_arr)
+            relevant_flocs.update(file_floc_ids[particle_mask].tolist())
+            cached_data[str(floc_file)] = {
+                "time": float(h5_file["time"][0]),  # type: ignore
+                "file_id": int(floc_file.stem.split("_")[1]),
+                "floc_ids": file_floc_ids,
+                "x": h5_file["x"][:],  # type: ignore
+                "y": h5_file["y"][:],  # type: ignore
+                "z": h5_file["z"][:],  # type: ignore
+                "r": h5_file["r"][:],  # type: ignore
+            }
 
+    # Step 3: Filter cached data by relevant flocs
+    relevant_flocs_arr = np.array(list(relevant_flocs), dtype=int)
     events: list[EventSnapshot] = []
 
     for floc_file in selected:
-        with h5py.File(str(floc_file), "r") as h5_file:
-            time: float = float(h5_file["time"][0])  # type: ignore
-            local_file_id: int = int(floc_file.stem.split("_")[1])
-
-            file_floc_ids: np.ndarray = h5_file["floc_id"][:]  # type: ignore
-            mask: np.ndarray = np.zeros_like(file_floc_ids, dtype=bool)
-            for floc_id in relevant_flocs:
-                mask |= file_floc_ids == floc_id
-
-            x: np.ndarray = h5_file["x"][mask]  # type: ignore
-            y: np.ndarray = h5_file["y"][mask]  # type: ignore
-            z: np.ndarray = h5_file["z"][mask]  # type: ignore
-            r: np.ndarray = h5_file["r"][mask]  # type: ignore
-            fids: np.ndarray = file_floc_ids[mask]
-
+        d = cached_data[str(floc_file)]
+        mask = np.isin(d["floc_ids"], relevant_flocs_arr)
         events.append(
             {
-                "time": time,
-                "file_id": local_file_id,
-                "x": x,
-                "y": y,
-                "z": z,
-                "r": r,
-                "floc_ids": fids,
+                "time": d["time"],
+                "file_id": d["file_id"],
+                "x": d["x"][mask],
+                "y": d["y"][mask],
+                "z": d["z"][mask],
+                "r": d["r"][mask],
+                "floc_ids": d["floc_ids"][mask],
             }
         )
 
@@ -227,70 +199,6 @@ def find_nonbinary_events(
     }
 
 
-def draw_particle(
-    ax: Axes,
-    x: float,
-    y: float,
-    radius: float,
-    color: tuple[float, float, float] = (0.5, 0.5, 0.5),
-    label: str = "",
-    label_fontsize: float = 4,
-    lw: float = 0.3,
-    zorder: float = 2,
-) -> None:
-    n = 64
-    lin = np.linspace(-1, 1, n)
-    xx, yy = np.meshgrid(lin, lin)
-
-    r_sq = xx**2 + yy**2
-    inside = r_sq <= 1.0
-
-    edge_factor = np.sqrt(np.clip(1.0 - r_sq, 0, 1))
-    hl_dist = np.sqrt((xx + 0.35) ** 2 + (yy - 0.35) ** 2)
-    highlight = np.exp(-(hl_dist**2) * 1.5)
-
-    brightness = 0.35 * edge_factor + 0.45 * highlight * edge_factor
-    brightness = np.clip(brightness, 0.12, 0.92)
-
-    rgba = np.zeros((n, n, 4))
-    rgba[:, :, 0] = np.clip(color[0] * brightness * 2.0, 0, 1)
-    rgba[:, :, 1] = np.clip(color[1] * brightness * 2.0, 0, 1)
-    rgba[:, :, 2] = np.clip(color[2] * brightness * 2.0, 0, 1)
-    rgba[:, :, 3] = inside.astype(float)
-
-    xlim, ylim = ax.get_xlim(), ax.get_ylim()
-    ax.imshow(
-        rgba,
-        extent=(x - radius, x + radius, y - radius, y + radius),
-        origin="lower",
-        interpolation="bilinear",
-        aspect="auto",
-        zorder=zorder,
-    )
-    ax.set_xlim(xlim)
-    ax.set_ylim(ylim)
-
-    edge = Circle(
-        (x, y),
-        radius,
-        fill=False,
-        edgecolor="#404040",
-        lw=lw,
-        zorder=zorder + 1,
-    )
-    ax.add_patch(edge)
-
-    if label:
-        ax.text(
-            x,
-            y,
-            label,
-            ha="center",
-            va="center",
-            fontsize=label_fontsize,
-            color="black",
-            zorder=zorder + 2,
-        )
 
 
 def unwrap_periodic(
@@ -335,10 +243,9 @@ def plot_event(
     ],
     seed: int,
     output_dir: Path,
-    mode: Literal["save", "show"],
-    time_scale: float,
     floc_color_map: dict[int, tuple[float, float, float]],
-    x_periodic: tuple[float, float] | None = None,
+    x_periodic: tuple[float, float] | None,
+    show_seed: bool,
 ) -> None:
     axis_map: dict[str, tuple[str, str, str]] = {
         "xy": ("x", "y", "z"),
@@ -350,98 +257,54 @@ def plot_event(
     if x_periodic is not None:
         unwrap_periodic(events, "x", x_periodic[0], x_periodic[1])
 
-    all_h: np.ndarray = np.concatenate([e[h_key] for e in events])
-    all_v: np.ndarray = np.concatenate([e[v_key] for e in events])
-    all_r: np.ndarray = np.concatenate([e["r"] for e in events])
-
-    if len(all_h) == 0:
+    if all(len(e[h_key]) == 0 for e in events):
         return
 
-    r_max: float = float(np.max(all_r))
+    title = f"seed {seed}" if show_seed else None
 
-    h_min: float = float(np.min(all_h)) - r_max
-    h_max: float = float(np.max(all_h)) + r_max
-    v_min: float = float(np.min(all_v)) - r_max
-    v_max: float = float(np.max(all_v)) + r_max
-
-    h_pad: float = (h_max - h_min) * 0.05
-    v_pad: float = (v_max - v_min) * 0.05
-    h_min -= h_pad
-    h_max += h_pad
-    v_min -= v_pad
-    v_max += v_pad
-
-    def draw_frame(fig: Figure, ax: Axes, event: EventSnapshot) -> None:
-        ax.clear()
-        ax.set_xlim(h_min, h_max)
-        ax.set_ylim(v_min, v_max)
-        ax.set_aspect("equal", adjustable="box")
-
+    for frame_idx, event in enumerate(events):
         h_vals: np.ndarray = event[h_key]
         v_vals: np.ndarray = event[v_key]
         radii: np.ndarray = event["r"]
-        fids: np.ndarray = event["floc_ids"]
 
-        unique_fids, counts = np.unique(fids, return_counts=True)
-        floc_size: dict[int, int] = dict(zip(unique_fids.tolist(), counts.tolist()))
-        sort_idx = np.argsort([-floc_size[int(f)] for f in fids])
+        if len(h_vals) == 0:
+            continue
 
-        for idx, i in enumerate(sort_idx):
-            color_rgb: tuple[float, float, float] = floc_color_map[int(fids[i])]
-            draw_particle(
-                ax,
-                float(h_vals[i]),
-                float(v_vals[i]),
-                float(radii[i]),
-                color=color_rgb,
-                zorder=2 + idx,
-            )
+        r_max: float = float(np.max(radii))
+        h_min = float(np.min(h_vals)) - r_max
+        h_max = float(np.max(h_vals)) + r_max
+        v_min = float(np.min(v_vals)) - r_max
+        v_max = float(np.max(v_vals)) + r_max
 
-        present_fids: set[int] = set(fids.tolist())
-        for fid in sorted(present_fids):
-            ax.plot(
-                [],
-                [],
-                "o",
-                color=floc_color_map[fid],
-                label=f"floc {fid}",
-                markersize=5,
-            )
+        # Make the bounding box square so particles aren't distorted
+        h_span = h_max - h_min
+        v_span = v_max - v_min
+        max_span = max(h_span, v_span)
+        h_center = (h_min + h_max) / 2
+        v_center = (v_min + v_max) / 2
+        h_min = h_center - max_span / 2
+        h_max = h_center + max_span / 2
+        v_min = v_center - max_span / 2
+        v_max = v_center + max_span / 2
 
-        ax.set_xlabel(f"${h_key}$", fontsize=14)
-        ax.set_ylabel(f"${v_key}$", fontsize=14)
-        ax.set_title(f"$t = {event['time']:.4f}$, file {event['file_id']}", fontsize=12)
+        pad = max_span * 0.05
+        h_min -= pad
+        h_max += pad
+        v_min -= pad
+        v_max += pad
 
-    if mode == "save":
-        output_dir.mkdir(parents=True, exist_ok=True)
-        for frame_idx, event in enumerate(events):
-            fig, ax = plt.subplots(figsize=(6.5, 5.5))
-            ax.set_aspect("equal", adjustable="box")
-            draw_frame(fig, ax, event)
-            plt.tight_layout()
-            fig.savefig(
-                output_dir / f"{nonbinary_type}_seed{seed:04d}_{frame_idx:04d}.png",
-                dpi=300,
-            )
-            plt.close(fig)
-
-    elif mode == "show":
-        plt.ion()
-        fig, ax = plt.subplots(figsize=(6.5, 5.5))
-        ax.set_aspect("equal", adjustable="box")
-        for frame_idx, event in enumerate(events):
-            draw_frame(fig, ax, event)
-            ax.set_aspect("equal", adjustable="box")
-            fig.tight_layout()
-            fig.canvas.draw()
-            fig.canvas.flush_events()
-
-            if frame_idx < len(events) - 1:
-                dt = events[frame_idx + 1]["time"] - event["time"]
-                plt.pause(max(dt * time_scale, 0.01))
-
-        plt.ioff()
-        plt.show()
+        plt_templ.event_tree_frame(
+            output_dir=output_dir,
+            h_vals=h_vals,
+            v_vals=v_vals,
+            radii=radii,
+            floc_ids=event["floc_ids"],
+            floc_color_map=floc_color_map,
+            xlim=(h_min, h_max),
+            ylim=(v_min, v_max),
+            name=f"{nonbinary_type}_seed{seed:04d}_frame{frame_idx:04d}",
+            title=title,
+        )
 
 
 def compute_event(
@@ -512,15 +375,22 @@ def compute_event(
 
 def main() -> None:
     corrected: bool = False
-    seeds: np.ndarray = np.asarray([1, 2, 3, 4, 5]) * 19 + 1
+    # seeds: np.ndarray = np.asarray([1, 2, 3, 4, 5]) * 19 + 1
+    seeds: np.ndarray = np.asarray([128])
     nonbinary_types: list[
         Literal["breakup", "agglomeration", "simultaneous", "mass_conservation"]
-    ] = ["breakup", "agglomeration", "simultaneous", "mass_conservation"]
+    ] = ["breakup"]
+    # ] = ["breakup", "agglomeration", "simultaneous", "mass_conservation"]
 
     data_names: list[str] = globals.data_names
 
     plot_dir: Path = globals.plot_dir
     output_dir: Path = globals.output_dir
+
+    # Clear old event frame plots
+    event_frames_dir = plot_dir / "nonbinary_event_frames"
+    if event_frames_dir.exists():
+        shutil.rmtree(event_frames_dir)
 
     for nonbinary_type in tqdm(
         nonbinary_types,
@@ -571,11 +441,13 @@ def main() -> None:
                 nonbinary_type=nonbinary_type,
                 seed=int(seed),
                 output_dir=plot_dir / "nonbinary_event_frames" / data_name,
-                mode="save",
-                time_scale=10.0,
                 floc_color_map=floc_color_map,
                 x_periodic=x_periodic,
+                show_seed=True,
             )
+
+    if not globals.on_anvil:
+        plt.show()
 
 
 if __name__ == "__main__":
