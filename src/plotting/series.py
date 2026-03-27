@@ -2486,12 +2486,12 @@ def cumulative_floculation_balance(
     s_cases: list[PlotSeries] = []
     if not separate_plots:
         quantities: list[tuple[str, str]] = [
-            (r"$T_{coag}$", linestyles[0]),
-            (r"$T_{frag}$", linestyles[1]),
+            (r"$S$", linestyles[0]),       # coagulation
+            (r"$T$", linestyles[1]),       # fragmentation
         ]
         if plot_dn_dt:
             quantities.append(
-                (r"$dn/dt$", linestyles[2] if len(linestyles) > 2 else "-")
+                (r"$\partial f/\partial t$", linestyles[2] if len(linestyles) > 2 else "-")
             )
         for i in range(len(quantities)):
             s_quantities.append(

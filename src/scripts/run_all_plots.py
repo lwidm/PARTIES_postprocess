@@ -1722,13 +1722,6 @@ def main() -> None:
     #     separate_plots=True,
     #     corrected=True,
     # )
-
-    # ========== Used for thesis ==========
-
-    # phi_eulerian(plot_dir, data_dir, data_names, labels, colours, False)
-
-    # ========== Probably unused for thesis ==========
-
     # cumulative_floculation_balance(
     #     plot_dir=plot_dir,
     #     data_dir=data_dir,
@@ -1738,10 +1731,17 @@ def main() -> None:
     #     markers=markers,
     #     colours=colours,
     #     mass_weighted=True,
-    #     corrected=False,
+    #     corrected=True,
     #     separate_plots=False,
     #     plot_dn_dt=True,
-    # )
+    #     )
+
+    # ========== Used for thesis ==========
+
+    # phi_eulerian(plot_dir, data_dir, data_names, labels, colours, False)
+
+    # ========== Probably unused for thesis ==========
+
     # coagulation_kernel_diff(
     #     plot_dir,
     #     data_dir,

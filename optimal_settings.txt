@@ -51,6 +51,10 @@ global font_scale=1.4
 ----- number_density_evo_sink_source -----
 global font_scale=1.5
 
+----- cumulative_floculation_balance -----
+global font_scale=1.5
+
+
 
 # ========== p(x|y) pcolormesh and coletti plot =========
 ----- Affected plots -----

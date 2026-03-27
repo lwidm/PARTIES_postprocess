@@ -14,6 +14,7 @@ from src.plotting.tools import (
     update_plot_params,
     format_plot_axes,
     my_save_fig,
+    kLegendSize,
 )
 
 
@@ -521,7 +522,6 @@ def noncohesive_floc_lifetime(
 ) -> None:
     name = f"noncohesive_floc_lifetime_{label}"
     out_path = output_dir / name
-    from src.plotting.tools import kLegendSize
 
     ax, fig, other = generic_plot(
         list(series_list),
@@ -847,9 +847,26 @@ def cumulative_floculation_balance(
         ylabel=ylabel,
         xlim=(1, xmax),
         ylim=(None, None),
-        figsize=(6.5, 5.5),
-        legend_loc="best",
+        figsize=(8, 6),
+        legend_loc="upper right",
     )
+    leg = ax.get_legend()
+    if leg is not None:
+        handles, labels = ax.get_legend_handles_labels()
+        leg.remove()
+        ax.legend(
+            handles,
+            labels,
+            loc="upper right",
+            ncol=2,
+            frameon=True,
+            fontsize=kLegendSize,
+            columnspacing=0.6,
+        )
+    ymin_cur, ymax_cur = ax.get_ylim()
+    ax.set_ylim(ymin_cur, ymax_cur * 1.4)
+    xmin_cur, xmax_cur = ax.get_xlim()
+    ax.set_xlim(xmin_cur, xmax_cur * 3)
     current_ticks = list(ax.get_xticks())
     if 1 not in current_ticks:
         current_ticks.append(1)
