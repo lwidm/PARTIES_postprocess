@@ -11,6 +11,7 @@ from matplotlib.patches import Circle
 from matplotlib.colors import Normalize
 from matplotlib.figure import Figure
 import seaborn as sns
+from tqdm import tqdm
 
 from src.flocs.family_tree import FlocRecord, FamilyTreeType
 from src.myio import metadata, utils
@@ -44,7 +45,7 @@ def get_event_tree(
     post_event_file: Path = floc_files[file_id + 1]
 
     selected: list[Path] = [
-        floc_files[i] for i in range(file_id - n_before, file_id + n_after+1)
+        floc_files[i] for i in range(file_id - n_before, file_id + n_after + 1)
     ]
 
     relevant_particles: set[int] = set()
@@ -71,7 +72,6 @@ def get_event_tree(
             update_relevent_particles(h5_file, file_floc_ids, child_id)
         for parent_id in parent_ids:
             update_relevent_particles(h5_file, file_floc_ids, parent_id)
-
 
     with h5py.File(str(post_event_file), "r") as h5_file:
         file_floc_ids: np.ndarray = h5_file["floc_id"][:]  # type: ignore
@@ -135,7 +135,7 @@ def find_nonbinary_events(
         "breakup", "agglomeration", "simultaneous", "mass_conservation", "collision"
     ],
     t_min: float,
-    size_min: int
+    size_min: int,
 ) -> dict[str, int | list[int] | list[list[int]]]:
     nonbinary_flocs: list[int] = []
     start_file_ids: list[int] = []
@@ -324,10 +324,7 @@ def build_floc_color_map(
     colours: list[tuple[float, float, float]] = list(
         sns.color_palette("colorblind", n_colors=max(n_flocs, 5))
     )
-    return {
-        int(fid): colours[i % len(colours)]
-        for i, fid in enumerate(unique_flocs)
-    }
+    return {int(fid): colours[i % len(colours)] for i, fid in enumerate(unique_flocs)}
 
 
 def plot_event(
@@ -402,13 +399,18 @@ def plot_event(
 
         present_fids: set[int] = set(fids.tolist())
         for fid in sorted(present_fids):
-            ax.plot([], [], "o", color=floc_color_map[fid], label=f"floc {fid}", markersize=5)
+            ax.plot(
+                [],
+                [],
+                "o",
+                color=floc_color_map[fid],
+                label=f"floc {fid}",
+                markersize=5,
+            )
 
         ax.set_xlabel(f"${h_key}$", fontsize=14)
         ax.set_ylabel(f"${v_key}$", fontsize=14)
-        ax.set_title(
-            f"$t = {event['time']:.4f}$, file {event['file_id']}", fontsize=12
-        )
+        ax.set_title(f"$t = {event['time']:.4f}$, file {event['file_id']}", fontsize=12)
 
     if mode == "save":
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -417,7 +419,10 @@ def plot_event(
             ax.set_aspect("equal", adjustable="box")
             draw_frame(fig, ax, event)
             plt.tight_layout()
-            fig.savefig(output_dir / f"{nonbinary_type}_seed{seed:04d}_{frame_idx:04d}.png", dpi=300)
+            fig.savefig(
+                output_dir / f"{nonbinary_type}_seed{seed:04d}_{frame_idx:04d}.png",
+                dpi=300,
+            )
             plt.close(fig)
 
     elif mode == "show":
@@ -517,18 +522,33 @@ def main() -> None:
     plot_dir: Path = globals.plot_dir
     output_dir: Path = globals.output_dir
 
-    for nonbinary_type in nonbinary_types:
+    for nonbinary_type in tqdm(
+        nonbinary_types,
+        desc=f"creating plots for every nonbinary type",
+        total=len(nonbinary_types),
+        unit="types",
+    ):
         all_event_trees: list[
             tuple[str, int, list[EventSnapshot], tuple[float, float]]
         ] = []
-        for data_name in data_names:
+
+        for data_name in tqdm(
+            data_names,
+            desc=f"creating plots for every dataset",
+            total=len(data_names),
+            unit="datasets",
+        ):
             metadata_path: Path = output_dir / data_name / "metadata.ini"
             metadata_dict: dict = metadata.read_metadata(metadata_path)
             x_periodic: tuple[float, float] = (
                 metadata_dict["Domain"]["xmin"],
                 metadata_dict["Domain"]["xmax"],
             )
-            for seed in seeds:
+            for seed in tqdm(
+                seeds,
+                total=len(seeds),
+                unit="seeds",
+            ):
                 event_tree = compute_event(
                     data_name, output_dir, corrected, int(seed), nonbinary_type
                 )
@@ -556,6 +576,7 @@ def main() -> None:
                 floc_color_map=floc_color_map,
                 x_periodic=x_periodic,
             )
+
 
 if __name__ == "__main__":
     main()
