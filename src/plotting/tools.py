@@ -464,7 +464,7 @@ def _draw_particle(
     lw: float,
     zorder: float,
 ) -> None:
-    n: int = 64
+    n: int = 128
     lin: np.ndarray = np.linspace(-1, 1, n)
     xx: np.ndarray
     yy: np.ndarray

@@ -54,6 +54,9 @@ global font_scale=1.5
 ----- cumulative_floculation_balance -----
 global font_scale=1.5
 
+----- nonbinary_event_frames -----
+global font_scale=1.5
+
 
 
 # ========== p(x|y) pcolormesh and coletti plot =========
@@ -186,3 +189,32 @@ corrected can be False or True
         separate_plots=False,
         plot_dn_dt=True,
     )
+
+
+# ========== Nonbinary event frames ==========
+
+----- flags -----
+corrected = False
+show_title = False
+
+----- seeds per type and dataset -----
+    "breakup": {
+        "phi1p5": [],
+        "phi3p0": [96],
+        "phi5p0_new": [],
+    },
+    "agglomeration": {
+        "phi1p5": [],
+        "phi3p0": [39],
+        "phi5p0_new": [],
+    },
+    "simultaneous": {
+        "phi1p5": [],
+        "phi3p0": [20],
+        "phi5p0_new": [0],
+    },
+    "mass_conservation": {
+        "phi1p5": [],
+        "phi3p0": [20],
+        "phi5p0_new": [],
+    }
