@@ -110,7 +110,7 @@ breakage_rate
 coalescence_kernel_coletti
 
 ----- balance_equation_bins ------
-9
+10
 12
 15
 ----- coagulation_kernel_sigma -----

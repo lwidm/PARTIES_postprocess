@@ -25,6 +25,7 @@ def fuild_velocity_profile(
     colours: list[str | tuple[float, float, float, float]],
     use_markers: bool,
     font_scale: float,
+    show_wall_zoom: bool,
 ):
     data_dirs: list[Path] = [data_dir / data_name for data_name in data_names]
     Num_data: int = len(data_names)
@@ -89,7 +90,9 @@ def fuild_velocity_profile(
         )
         all_wall_series += proxy_series
 
-    plt_templ.velocity_profile_wall(plot_dir, all_wall_series, font_scale=font_scale)
+    plt_templ.velocity_profile_wall(
+        plot_dir, all_wall_series, font_scale=font_scale, show_wall_zoom=show_wall_zoom
+    )
 
 
 def fluid_wall_normal(
@@ -1579,9 +1582,17 @@ def main() -> None:
     # fluid_wall_normal(
     #     data_dir, plot_dir, data_dir, data_names, labels, colours, use_markers=False
     # )
-    # fuild_velocity_profile(
-    #     data_dir, plot_dir, data_dir, data_names, labels, colours, use_markers=False, font_scale=1.25
-    # )
+    fuild_velocity_profile(
+        data_dir,
+        plot_dir,
+        data_dir,
+        data_names,
+        labels,
+        colours,
+        use_markers=False,
+        font_scale=1.25,
+        show_wall_zoom=True,
+    )
     # floc_pdf(
     #     plot_dir,
     #     data_dir,
@@ -1731,10 +1742,10 @@ def main() -> None:
     #     markers=markers,
     #     colours=colours,
     #     mass_weighted=True,
-    #     corrected=True,
+    #     corrected=False,
     #     separate_plots=False,
     #     plot_dn_dt=True,
-    #     )
+    # )
 
     # ========== Used for thesis ==========
 

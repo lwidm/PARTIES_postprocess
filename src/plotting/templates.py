@@ -6,6 +6,8 @@ import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes, mark_inset
+
 from src.plotting.tools import (
     PlotSeries,
     set_integer_log_xticks,
@@ -29,6 +31,7 @@ def velocity_profile_wall(
     legend_bbox: tuple[float, float] = (1.0, 0.20),
     dpi: int = 300,
     font_scale: float = 1.0,
+    show_wall_zoom: bool = False,
 ) -> None:
     if not series_list:
         raise ValueError("series_list must contain at least one PlotSeries")
@@ -112,6 +115,30 @@ def velocity_profile_wall(
                 Re_tau_val = float(s.data["Re_tau"])
             except Exception:
                 pass
+
+    if show_wall_zoom:
+        ax_inset = inset_axes(
+            ax,
+            width="30%",
+            height="35%",
+            loc="upper left",
+            bbox_to_anchor=(0.08, -0.05, 1.0, 0.95),
+            bbox_transform=ax.transAxes,
+        )
+        for s in series_list:
+            _plot_one(ax_inset, s)
+        ax_inset.set_xlim(1.0, 1.5)
+        ax_inset.set_ylim(0.6, 1.6)
+        ax_inset.set_xscale("linear")
+        ax_inset.tick_params(
+            axis="both", which="both",
+            labelsize=9 * font_scale,
+            direction="in",
+        )
+        ax_inset.set_xlabel("")
+        ax_inset.set_ylabel("")
+        ax_inset.legend().set_visible(False) if ax_inset.get_legend() else None
+        mark_inset(ax, ax_inset, loc1=3, loc2=4, fc="none", ec="0.4", lw=0.8)
 
     output_dir.parent.mkdir(parents=True, exist_ok=True)
 
