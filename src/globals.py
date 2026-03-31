@@ -28,9 +28,9 @@ class DataSet(TypedDict):
 sigma: float = 0.0
 # fmt: off
 _all_datasets: dict[str, DataSet] = {
-    "phi1p5":      {"label": r"$\phi_{1.5\%}$",           "trn": False, "phi": 1.5, "coagulation_kernel_sigma": sigma, "balance_equation_bins": 10}, #10, 20
-    "phi3p0":      {"label": r"$\phi_{3\%}$",             "trn": True,  "phi": 3.0, "coagulation_kernel_sigma": sigma, "balance_equation_bins": 12}, #12, 30
-    "phi5p0_new":  {"label": r"$\phi_{5\%}$",             "trn": True,  "phi": 5.0, "coagulation_kernel_sigma": sigma, "balance_equation_bins": 15}, #15, 45
+    "phi1p5":      {"label": r"$\phi_{1.5\%}$",           "trn": False, "phi": 1.5, "coagulation_kernel_sigma": sigma, "balance_equation_bins": 20}, #10, 20
+    "phi3p0":      {"label": r"$\phi_{3\%}$",             "trn": True,  "phi": 3.0, "coagulation_kernel_sigma": sigma, "balance_equation_bins": 30}, #12, 30
+    "phi5p0_new":  {"label": r"$\phi_{5\%}$",             "trn": True,  "phi": 5.0, "coagulation_kernel_sigma": sigma, "balance_equation_bins": 45}, #15, 45
     "phi5p0_noCo": {"label": r"$\phi_{5\%}$ no cohesion", "trn": False, "phi": 5.0, "coagulation_kernel_sigma": sigma, "balance_equation_bins": 15},
     "phi5p0":      {"label": r"$\phi_{5\%}$",             "trn": True,  "phi": 5.0, "coagulation_kernel_sigma": sigma, "balance_equation_bins": 15},
     "test":        {"label": "test",                      "trn": True,  "phi": 3.0, "coagulation_kernel_sigma": sigma, "balance_equation_bins": 15},

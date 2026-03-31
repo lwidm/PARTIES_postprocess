@@ -1,5 +1,6 @@
 # -- src/plotting/series.py
 
+import re
 from pathlib import Path
 from typing import Literal
 import h5py
@@ -942,15 +943,21 @@ def lagrangian_acceleration_pdf(
     a: list[np.ndarray] = [np.array([]), np.array([]), np.array([])]
     PDF: list[np.ndarray] = [np.array([]), np.array([]), np.array([])]
     err: list[np.ndarray] = [np.array([]), np.array([]), np.array([])]
-    a[0], PDF[0], err[0] = lwidmer.read_csv_columns(
-        csv_dir / f"particle_acceleration_pdf_x.csv", (0, 1, 2), remove_nan=2
-    )
-    a[1], PDF[1], err[1] = lwidmer.read_csv_columns(
-        csv_dir / f"particle_acceleration_pdf_y.csv", (0, 1, 2), remove_nan=2
-    )
-    a[2], PDF[2], err[2] = lwidmer.read_csv_columns(
-        csv_dir / f"particle_acceleration_pdf_z.csv", (0, 1, 2), remove_nan=2
-    )
+    dirs = ["x", "y", "z"]
+    for idx, d in enumerate(dirs):
+        a[idx], PDF[idx], err[idx] = lwidmer.read_csv_columns(
+            csv_dir / f"particle_acceleration_pdf_{d}.csv", (0, 1, 2), remove_nan=2
+        )
+
+    # Parse and print sigma values from CSV headers
+    for d in dirs:
+        csv_path = csv_dir / f"particle_acceleration_pdf_{d}.csv"
+        with open(csv_path, "r") as f:
+            for line in f:
+                match = re.match(rf"^[%#]\s*sigma_{d}\s*=\s*(.+)", line)
+                if match:
+                    print(f"[{csv_dir.name}] sigma_{d} = {match.group(1).strip()}")
+                    break
 
     a_min: float = min([np.nanmin(a_arr) for a_arr in a])
     a_max: float = max([np.nanmax(a_arr) for a_arr in a])

@@ -1582,17 +1582,17 @@ def main() -> None:
     # fluid_wall_normal(
     #     data_dir, plot_dir, data_dir, data_names, labels, colours, use_markers=False
     # )
-    fuild_velocity_profile(
-        data_dir,
-        plot_dir,
-        data_dir,
-        data_names,
-        labels,
-        colours,
-        use_markers=False,
-        font_scale=1.25,
-        show_wall_zoom=True,
-    )
+    # fuild_velocity_profile(
+    #     data_dir,
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     colours,
+    #     use_markers=False,
+    #     font_scale=1.25,
+    #     show_wall_zoom=True,
+    # )
     # floc_pdf(
     #     plot_dir,
     #     data_dir,
@@ -1692,14 +1692,14 @@ def main() -> None:
     #     contour_sigmas=coagulation_kernel_sigmas,
     #     normalised=False,
     # )
-    # fragment_size_distribution_normalised(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names,
-    #     labels,
-    #     corrected=False,
-    #     x_axis_value="np",
-    # )
+    fragment_size_distribution_normalised(
+        plot_dir,
+        data_dir,
+        data_names,
+        labels,
+        corrected=False,
+        x_axis_value="np",
+    )
     # daughter_aggregate_size_distribution(
     #     plot_dir,
     #     data_dir,

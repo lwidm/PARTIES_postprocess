@@ -465,7 +465,7 @@ def lagrangian_acceleration_pdf(
         xmin=-15.0,
         xmax=15.0,
         ymin=1e-5,
-        ymax=1.1e0,
+        ymax=5e0,
     )
 
 
