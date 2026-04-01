@@ -2230,11 +2230,11 @@ def number_density_evo_sink_source(
     s_list_dn_dt: list[PlotSeries] = []
 
     quantities: list[str] = [
-        r"$S_a$",   # gain by coagulation
-        r"$S_b$",   # loss by coagulation
-        r"$T_a$",   # gain by fragmentation
-        r"$T_b$",   # loss by fragmentation
-        r"$\frac{\partial f(n_p)}{\partial t}$",
+        r"$S_c$",   # source by coagulation
+        r"$T_c$",   # sink by coagulation
+        r"$S_f$",   # source by fragmentation
+        r"$T_f$",   # sink by fragmentation
+        r"$Q$",     # net rate (time-averaged)
     ]
 
     pickle_file = (
@@ -2442,9 +2442,9 @@ def cumulative_floculation_balance(
         labels_local_frag: str = ""
         labels_local_dn_dt: str = ""
         if separate_plots:
-            labels_local_coag = r"$S$"  # coagulation
-            labels_local_frag = r"$T$"  # fragmentation
-            labels_local_dn_dt = r"$\partial f/\partial t$"
+            labels_local_coag = r"$S_c + T_c$"  # coagulation
+            labels_local_frag = r"$S_f + T_f$"  # fragmentation
+            labels_local_dn_dt = r"$Q$"
 
         s_coag = PlotSeries(
             data={"x": n_p, "y": T_coag_cumsum},
@@ -2493,12 +2493,12 @@ def cumulative_floculation_balance(
     s_cases: list[PlotSeries] = []
     if not separate_plots:
         quantities: list[tuple[str, str]] = [
-            (r"$S$", linestyles[0]),       # coagulation
-            (r"$T$", linestyles[1]),       # fragmentation
+            (r"$S_c + T_c$", linestyles[0]),  # coagulation
+            (r"$S_f + T_f$", linestyles[1]),  # fragmentation
         ]
         if plot_dn_dt:
             quantities.append(
-                (r"$\partial f/\partial t$", linestyles[2] if len(linestyles) > 2 else "-")
+                (r"$Q$", linestyles[2] if len(linestyles) > 2 else "-")
             )
         for i in range(len(quantities)):
             s_quantities.append(
@@ -2784,11 +2784,11 @@ def number_density_evo_sink_source_diff(
     s_list_dn_dt: list[PlotSeries] = []
 
     quantities: list[str] = [
-        r"$S_a$ (diff)",   # gain by coagulation
-        r"$S_b$ (diff)",   # loss by coagulation
-        r"$T_a$ (diff)",   # gain by fragmentation
-        r"$T_b$ (diff)",   # loss by fragmentation
-        r"$\frac{\partial f(n_p)}{\partial t}$ (diff)",
+        r"$S_c$ (diff)",   # source by coagulation
+        r"$T_c$ (diff)",   # sink by coagulation
+        r"$S_f$ (diff)",   # source by fragmentation
+        r"$T_f$ (diff)",   # sink by fragmentation
+        r"$Q$ (diff)",     # net rate (time-averaged)
     ]
 
     for data_idx, data_name in enumerate(data_names):
@@ -3079,9 +3079,9 @@ def cumulative_floculation_balance_diff(
         labels_local_frag: str = ""
         labels_local_dn_dt: str = ""
         if separate_plots:
-            labels_local_coag = r"$S$ diff"  # coagulation
-            labels_local_frag = r"$T$ diff"  # fragmentation
-            labels_local_dn_dt = r"$\partial f/\partial t$ diff"
+            labels_local_coag = r"$S_c + T_c$ diff"  # coagulation
+            labels_local_frag = r"$S_f + T_f$ diff"  # fragmentation
+            labels_local_dn_dt = r"$Q$ diff"
 
         s_coag = PlotSeries(
             data={"x": n_p_corr, "y": T_coag_cumsum_diff},

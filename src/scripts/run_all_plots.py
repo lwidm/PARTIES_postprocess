@@ -1692,14 +1692,14 @@ def main() -> None:
     #     contour_sigmas=coagulation_kernel_sigmas,
     #     normalised=False,
     # )
-    fragment_size_distribution_normalised(
-        plot_dir,
-        data_dir,
-        data_names,
-        labels,
-        corrected=False,
-        x_axis_value="np",
-    )
+    # fragment_size_distribution_normalised(
+    #     plot_dir,
+    #     data_dir,
+    #     data_names,
+    #     labels,
+    #     corrected=False,
+    #     x_axis_value="np",
+    # )
     # daughter_aggregate_size_distribution(
     #     plot_dir,
     #     data_dir,
@@ -1721,31 +1721,31 @@ def main() -> None:
     #     separate_plots=True,
     #     corrected=False,
     # )
-    # number_density_evo_sink_source(
-    #     plot_dir=plot_dir,
-    #     data_dir=data_dir,
-    #     data_names=data_names,
-    #     labels=labels,
-    #     linestyles=linestyles,
-    #     markers=markers,
-    #     colours=colours,
-    #     mass_weighted=True,
-    #     separate_plots=True,
-    #     corrected=True,
-    # )
-    # cumulative_floculation_balance(
-    #     plot_dir=plot_dir,
-    #     data_dir=data_dir,
-    #     data_names=data_names,
-    #     labels=labels,
-    #     linestyles=linestyles,
-    #     markers=markers,
-    #     colours=colours,
-    #     mass_weighted=True,
-    #     corrected=False,
-    #     separate_plots=False,
-    #     plot_dn_dt=True,
-    # )
+    number_density_evo_sink_source(
+        plot_dir=plot_dir,
+        data_dir=data_dir,
+        data_names=data_names,
+        labels=labels,
+        linestyles=linestyles,
+        markers=markers,
+        colours=colours,
+        mass_weighted=True,
+        separate_plots=True,
+        corrected=False,
+    )
+    cumulative_floculation_balance(
+        plot_dir=plot_dir,
+        data_dir=data_dir,
+        data_names=data_names,
+        labels=labels,
+        linestyles=linestyles,
+        markers=markers,
+        colours=colours,
+        mass_weighted=True,
+        corrected=False,
+        separate_plots=False,
+        plot_dn_dt=True,
+    )
 
     # ========== Used for thesis ==========
 
