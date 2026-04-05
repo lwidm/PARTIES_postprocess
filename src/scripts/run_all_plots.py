@@ -1151,9 +1151,10 @@ def daughter_aggregate_size_distribution(
         )
         s_list.append(s)
 
-    s_fit: PlotSeries = plt_series.daughter_aggregate_size_distribution_fit(s_list)
+    s_fit = plt_series.daughter_aggregate_size_distribution_fit(s_list, "none")
 
-    plt_templ.daughter_aggregate_size_distribution(plot_dir, [s_fit] + s_list, 4.7)
+    series_list = [s_fit] + s_list if s_fit is not None else s_list
+    plt_templ.daughter_aggregate_size_distribution(plot_dir, series_list, 4.7)
 
 
 def number_density_evo_sink_source(
@@ -1593,23 +1594,23 @@ def main() -> None:
     #     font_scale=1.25,
     #     show_wall_zoom=True,
     # )
-    # floc_pdf(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names,
-    #     labels,
-    #     colours,
-    #     markers,
-    # )
-    # floc_avg_diameters(
-    #     plot_dir,
-    #     data_dir,
-    #     data_names,
-    #     labels,
-    #     colours,
-    #     markers,
-    #     show_errs=False,
-    # )
+    floc_pdf(
+        plot_dir,
+        data_dir,
+        data_names,
+        labels,
+        colours,
+        markers,
+    )
+    floc_avg_diameters(
+        plot_dir,
+        data_dir,
+        data_names,
+        labels,
+        colours,
+        markers,
+        show_errs=False,
+    )
     # lagrangian_acceleration(
     #     plot_dir,
     #     data_dir,
@@ -1721,31 +1722,31 @@ def main() -> None:
     #     separate_plots=True,
     #     corrected=False,
     # )
-    number_density_evo_sink_source(
-        plot_dir=plot_dir,
-        data_dir=data_dir,
-        data_names=data_names,
-        labels=labels,
-        linestyles=linestyles,
-        markers=markers,
-        colours=colours,
-        mass_weighted=True,
-        separate_plots=True,
-        corrected=False,
-    )
-    cumulative_floculation_balance(
-        plot_dir=plot_dir,
-        data_dir=data_dir,
-        data_names=data_names,
-        labels=labels,
-        linestyles=linestyles,
-        markers=markers,
-        colours=colours,
-        mass_weighted=True,
-        corrected=False,
-        separate_plots=False,
-        plot_dn_dt=True,
-    )
+    # number_density_evo_sink_source(
+    #     plot_dir=plot_dir,
+    #     data_dir=data_dir,
+    #     data_names=data_names,
+    #     labels=labels,
+    #     linestyles=linestyles,
+    #     markers=markers,
+    #     colours=colours,
+    #     mass_weighted=True,
+    #     separate_plots=True,
+    #     corrected=False,
+    # )
+    # cumulative_floculation_balance(
+    #     plot_dir=plot_dir,
+    #     data_dir=data_dir,
+    #     data_names=data_names,
+    #     labels=labels,
+    #     linestyles=linestyles,
+    #     markers=markers,
+    #     colours=colours,
+    #     mass_weighted=True,
+    #     corrected=False,
+    #     separate_plots=False,
+    #     plot_dn_dt=True,
+    # )
 
     # ========== Used for thesis ==========
 

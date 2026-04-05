@@ -346,7 +346,7 @@ def D_g_mass_pdf(output_dir: Path, series_list: list[PlotSeries]) -> None:
 def _avg_floc_dir(
     output_dir: Path, series_list, name: str, ylabel: str, inner_units: bool
 ) -> None:
-    xlabel: str = r"$y = \tilde y/L$ [-]"
+    xlabel: str = r"$y = {\widetilde y}/{\widetilde \delta}$ [-]"
     if inner_units:
         xlabel: str = r"$y^+$"
     out_path = output_dir / f"{name}"

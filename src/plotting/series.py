@@ -2167,7 +2167,13 @@ def daughter_aggregate_size_distribution(
     return s
 
 
-def daughter_aggregate_size_distribution_fit(s_list: list[PlotSeries]):
+def daughter_aggregate_size_distribution_fit(
+    s_list: list[PlotSeries],
+    fit_type: Literal["coletti", "none"],
+) -> PlotSeries | None:
+    if fit_type == "none":
+        return None
+
     x_data: np.ndarray = np.array([])
     y_data: np.ndarray = np.array([])
 
@@ -2179,15 +2185,16 @@ def daughter_aggregate_size_distribution_fit(s_list: list[PlotSeries]):
     x_data = x_data[mask]
     y_data = y_data[mask]
 
-    def fit_func(x: np.ndarray, a: float, b: float) -> np.ndarray:
+    def coletti_func(x: np.ndarray, a: float, b: float) -> np.ndarray:
         return a * (x ** (-1) + (1 - x) ** (-1)) + b
 
-    params, _ = curve_fit(fit_func, x_data, y_data)
-    a_fit, b_fit = params
+    params, _ = curve_fit(coletti_func, x_data, y_data)
+    print(f"[daughter_aggregate] Coletti fit: a={params[0]:.4f}, b={params[1]:.4f}")
 
     x_fit: np.ndarray = np.linspace(0.01, 0.99, 200)
-    y_fit: np.ndarray = fit_func(x_fit, a_fit, b_fit)
-    s_fit: PlotSeries = PlotSeries(
+    y_fit = coletti_func(x_fit, *params)
+
+    return PlotSeries(
         data={"x": x_fit, "y": y_fit},
         x_key="x",
         y_key="y",
@@ -2199,7 +2206,6 @@ def daughter_aggregate_size_distribution_fit(s_list: list[PlotSeries]):
             "marker": "None",
         },
     )
-    return s_fit
 
 
 def number_density_evo_sink_source(
